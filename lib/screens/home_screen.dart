@@ -187,6 +187,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             ),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.lock_outline_rounded, color: AppColors.orangeAccent, size: 22),
+            tooltip: 'Lock Vault',
+            onPressed: () {
+              HapticFeedback.mediumImpact();
+              ref.read(authProvider.notifier).state = null;
+            },
+          ),
+          const SizedBox(width: 6),
+        ],
       ),
       body: key == null
           ? const Center(
@@ -409,28 +420,41 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 ),
                 const SizedBox(height: 16),
 
-                // ROW 2: UNIFIED VAULT ANALYTICS & HEALTH CARD
+                // ROW 2: MINIMAL SECURITY ADVISOR CARD
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceZinc,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.borderZinc.withValues(alpha: 0.5)),
+                    border: Border.all(color: AppColors.borderZinc.withValues(alpha: 0.4)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.analytics_outlined, color: activeAccent, size: 18),
+                          Icon(Icons.security_rounded, color: activeAccent, size: 16),
                           const SizedBox(width: 8),
                           const Text(
-                            'VAULT HEALTH & SECURITY ANALYTICS',
+                            'SECURITY ADVISOR',
                             style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.1, color: AppColors.offWhite),
+                          ),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: activeAccent.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: activeAccent.withValues(alpha: 0.25)),
+                            ),
+                            child: Text(
+                              '${report.totpCoveragePercent.round()}% 2FA Coverage',
+                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: activeAccent),
+                            ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
 
                       // Metrics 4-Column Scannable Grid
                       Row(
@@ -441,45 +465,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           Expanded(child: _AnalyticsMetricChip(label: 'Compromised', value: '${report.breachedPasswords}', color: report.breachedPasswords > 0 ? const Color(0xFFEF4444) : const Color(0xFF22C55E))),
                         ],
                       ),
-                      const SizedBox(height: 16),
-
-                      // 2FA Coverage Indicator Row
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('2FA Authentication Coverage', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMuted)),
-                              Text('${report.totpCoveragePercent.round()}%', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: activeAccent)),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: LinearProgressIndicator(
-                              value: (report.totpCoveragePercent / 100).clamp(0.0, 1.0),
-                              minHeight: 6,
-                              backgroundColor: AppColors.cardZinc,
-                              color: activeAccent,
-                            ),
-                          ),
-                        ],
-                      ),
 
                       if (report.recommendations.isNotEmpty) ...[
                         const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 12),
+                          padding: EdgeInsets.symmetric(vertical: 10),
                           child: Divider(color: AppColors.borderZinc, height: 1),
                         ),
                         Row(
                           children: [
-                            Icon(Icons.lightbulb_outline, size: 16, color: activeAccent),
+                            Icon(Icons.auto_awesome_outlined, size: 14, color: activeAccent),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 report.recommendations.first,
-                                style: const TextStyle(fontSize: 11.5, color: AppColors.offWhite, height: 1.3),
+                                style: const TextStyle(fontSize: 11, color: AppColors.offWhite, height: 1.3),
                               ),
                             ),
                           ],
@@ -667,15 +666,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       Expanded(
                         child: DropdownButtonFormField<ItemType?>(
                           value: _filterType,
-                          dropdownColor: AppColors.inputZinc,
+                          isExpanded: true,
+                          dropdownColor: AppColors.surfaceZinc,
                           borderRadius: BorderRadius.circular(12),
+                          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.orangeAccent, size: 20),
                           style: const TextStyle(color: AppColors.offWhite, fontSize: 13),
                           decoration: InputDecoration(
                             isDense: true,
                             filled: true,
                             fillColor: AppColors.inputZinc,
                             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                            prefixIcon: const Icon(Icons.filter_list_rounded, color: AppColors.orangeAccent, size: 18),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide: BorderSide(color: AppColors.borderZinc.withValues(alpha: 0.5)),
@@ -692,20 +692,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           items: [
                             DropdownMenuItem<ItemType?>(
                               value: null,
-                              child: Row(children: [
-                                const Icon(Icons.category_outlined, size: 16, color: AppColors.textMuted),
-                                const SizedBox(width: 8),
-                                const Text('All Categories', style: TextStyle(color: AppColors.offWhite, fontSize: 13)),
-                              ]),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.category_outlined, size: 16, color: AppColors.textMuted),
+                                  const SizedBox(width: 8),
+                                  const Expanded(
+                                    child: Text(
+                                      'All Categories',
+                                      style: TextStyle(color: AppColors.offWhite, fontSize: 13),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                             ...ItemType.values.map(
                               (t) => DropdownMenuItem<ItemType?>(
                                 value: t,
-                                child: Row(children: [
-                                  Icon(_getTypeIcon(t), size: 16, color: AppColors.orangeAccent),
-                                  const SizedBox(width: 8),
-                                  Text(t.label, style: const TextStyle(color: AppColors.offWhite, fontSize: 13)),
-                                ]),
+                                child: Row(
+                                  children: [
+                                    Icon(_getTypeIcon(t), size: 16, color: AppColors.orangeAccent),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        t.label,
+                                        style: const TextStyle(color: AppColors.offWhite, fontSize: 13),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ],

@@ -70,16 +70,17 @@ class _WelcomeBannerState extends State<WelcomeBanner> {
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.orangeContainer.withValues(alpha: 0.4),
-            AppColors.surfaceZinc,
-          ],
-        ),
+        color: AppColors.surfaceZinc,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.orangeBorder.withValues(alpha: 0.5)),
+        border: Border.all(color: AppColors.orangeAccent.withValues(alpha: 0.4), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.6),
+            blurRadius: 24,
+            spreadRadius: 4,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

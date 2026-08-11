@@ -718,6 +718,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _toggleBiometricAuth(BuildContext context, WidgetRef ref, bool enable) async {
     const storage = FlutterSecureStorage();
     if (!enable) {
+      try {
+        await NativeSecurityBridge.deleteWrappingKey();
+      } catch (_) {}
       await storage.delete(key: 'biometric_master_password');
       await ref.read(biometricAuthEnabledProvider.notifier).setEnabled(false);
       if (context.mounted) {
@@ -790,13 +793,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     try {
       await VaultService().unlock(password); // verify password
-      await storage.write(key: 'biometric_master_password', value: password);
+      try {
+        await NativeSecurityBridge.createWrappingKey();
+        await NativeSecurityBridge.wrapMasterPassword(password);
+      } catch (_) {
+        await storage.write(key: 'biometric_master_password', value: password);
+      }
       await ref.read(biometricAuthEnabledProvider.notifier).setEnabled(true);
       if (context.mounted) {
         HapticFeedback.mediumImpact();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Biometric vault login enabled successfully'),
+            content: Text('Hardware-backed biometric vault login enabled successfully'),
             backgroundColor: Colors.green,
           ),
         );

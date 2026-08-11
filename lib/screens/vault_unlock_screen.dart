@@ -110,8 +110,13 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
         HapticFeedback.mediumImpact();
         String? password;
         try {
-          password = await _secureStorage.read(key: _biometricPasswordKey);
+          password = await NativeSecurityBridge.unwrapMasterPassword();
         } catch (_) {}
+        if (password == null || password.isEmpty) {
+          try {
+            password = await _secureStorage.read(key: _biometricPasswordKey);
+          } catch (_) {}
+        }
         if (password != null && password.isNotEmpty) {
           _passwordController.text = password;
           await _unlock();
@@ -167,8 +172,10 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
       // Save for biometric unlock if enabled
       if (ref.read(biometricAuthEnabledProvider)) {
         try {
+          await NativeSecurityBridge.wrapMasterPassword(password);
+        } catch (_) {
           await _secureStorage.write(key: _biometricPasswordKey, value: password);
-        } catch (_) {}
+        }
       }
 
       _passwordController.clear();
@@ -604,10 +611,24 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
                               elevation: 0,
                             ),
                             child: _isLoading || _isBurning
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                ? Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        _isBurning ? 'Processing...' : 'Unlocking...',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
                                   )
                                 : const Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
