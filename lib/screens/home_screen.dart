@@ -14,8 +14,6 @@ import '../services/update_service.dart';
 import '../theme/app_theme.dart';
 import 'credential_view_screen.dart';
 import 'item_detail_screen.dart';
-import 'p2p_receive_screen.dart';
-import 'p2p_share_screen.dart';
 import 'settings_screen.dart';
 import '../widgets/welcome_banner.dart';
 import '../services/analytics_service.dart';
@@ -202,7 +200,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     _buildHomeDashboardTab(key),
                     _buildPasswordsListingTab(key),
                     _buildGeneratorTab(),
-                    const _P2PSharingTab(),
                     const SettingsScreen(),
                   ],
                 ),
@@ -1021,8 +1018,7 @@ class _FloatingBottomNavBar extends StatelessWidget {
               _NavBarItem(icon: Icons.home_outlined, activeIcon: Icons.home_rounded, label: 'Home', isSelected: currentIndex == 0, onTap: () => onTap(0)),
               _NavBarItem(icon: Icons.lock_outline_rounded, activeIcon: Icons.lock_rounded, label: 'Vault', isSelected: currentIndex == 1, onTap: () => onTap(1)),
               _NavBarItem(icon: Icons.casino_outlined, activeIcon: Icons.casino_rounded, label: 'Generate', isSelected: currentIndex == 2, onTap: () => onTap(2)),
-              _NavBarItem(icon: Icons.wifi_tethering_rounded, activeIcon: Icons.wifi_tethering_rounded, label: 'Share', isSelected: currentIndex == 3, onTap: () => onTap(3)),
-              _NavBarItem(icon: Icons.settings_outlined, activeIcon: Icons.settings_rounded, label: 'Settings', isSelected: currentIndex == 4, hasBadge: hasUpdate, onTap: () => onTap(4)),
+              _NavBarItem(icon: Icons.settings_outlined, activeIcon: Icons.settings_rounded, label: 'Settings', isSelected: currentIndex == 3, hasBadge: hasUpdate, onTap: () => onTap(3)),
             ],
           ),
         );
@@ -1276,65 +1272,6 @@ class _ItemTile extends StatelessWidget {
   }
 }
 
-// --- P2P SHARING TAB CONTAINER ---
-class _P2PSharingTab extends StatefulWidget {
-  const _P2PSharingTab();
-
-  @override
-  State<_P2PSharingTab> createState() => _P2PSharingTabState();
-}
-
-class _P2PSharingTabState extends State<_P2PSharingTab>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: AppColors.surfaceZinc,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.borderZinc.withValues(alpha: 0.4)),
-          ),
-          child: TabBar(
-            controller: _tabController,
-            indicatorColor: AppColors.orangeAccent,
-            labelColor: AppColors.orangeAccent,
-            unselectedLabelColor: AppColors.textMuted,
-            tabs: const [
-              Tab(icon: Icon(Icons.upload_outlined, size: 18), text: 'Send'),
-              Tab(icon: Icon(Icons.download_outlined, size: 18), text: 'Receive'),
-            ],
-          ),
-        ),
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: const [
-              P2PShareScreen(),
-              P2PReceiveScreen(),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
 
 class _AnalyticsMetricChip extends StatelessWidget {
   final String label;

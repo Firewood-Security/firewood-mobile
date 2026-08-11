@@ -14,7 +14,7 @@
 // This file is the Dart-side thin wrapper; all crypto happens in Kotlin.
 
 import 'package:flutter/services.dart';
-import '../p2p/transport_adapter.dart';
+
 
 class NativeSecurityBridge {
   static const _channel = MethodChannel('com.firewood.vault_security');
@@ -107,7 +107,7 @@ class NativeSecurityBridge {
     return result ?? false;
   }
 
-  /// Temporarily disables FLAG_SECURE (e.g., for QR code display in P2P).
+  /// Temporarily disables FLAG_SECURE (e.g., for QR code display).
   /// Re-enable with [enableSecureFlag] as soon as the sensitive screen is dismissed.
   static Future<bool> disableSecureFlag() async {
     final result = await _channel.invokeMethod<bool>('disableSecureFlag');
@@ -137,22 +137,7 @@ class NativeSecurityBridge {
     return result ?? false;
   }
 
-  // --- Radio State Checks ---
 
-  /// Returns true if WiFi or LAN network interface is active on the device.
-  static Future<bool> isWifiEnabled() async {
-    try {
-      final result = await _channel.invokeMethod<bool>('checkWifiEnabled');
-      if (result == true) return true;
-    } catch (_) {}
-    return await LanSocketTransport.isLanAvailable();
-  }
-
-  /// Returns true if Bluetooth is currently enabled on the device.
-  static Future<bool> isBluetoothEnabled() async {
-    final result = await _channel.invokeMethod<bool>('checkBluetoothEnabled');
-    return result ?? false;
-  }
 }
 
 /// Represents the lockout state after failed unlock attempts.

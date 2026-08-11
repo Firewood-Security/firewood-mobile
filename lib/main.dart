@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app.dart';
 import 'services/accent_color_service.dart';
 import 'services/update_service.dart';
-import 'services/p2p_size_limit_service.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,11 +52,7 @@ void main() async {
     debugPrint('Failed to initialize AccentColorService: $e');
   }
 
-  try {
-    await P2PSizeLimitService.init();
-  } catch (e) {
-    debugPrint('Failed to initialize P2PSizeLimitService: $e');
-  }
+
 
   try {
     UpdateService.initUpdateChecker();

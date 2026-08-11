@@ -256,37 +256,6 @@ class ItemService {
       throw ItemException('Failed to search items: $e');
     }
   }
-
-  /// Exports a single decrypted item as JSON map for P2P sharing
-  Future<Map<String, dynamic>> exportItemToJson(SecretKey key, String itemId) async {
-    final item = await getItem(key, itemId);
-    if (item == null) {
-      throw ItemException('Item not found for export: $itemId');
-    }
-    return {
-      'type': item.type,
-      'title': item.title,
-      'fields': item.fields,
-      'exportedAt': DateTime.now().toIso8601String(),
-    };
-  }
-
-  /// Re-encrypts and persists a received single item JSON using recipient's SecretKey
-  Future<String> addItemFromJson(SecretKey key, Map<String, dynamic> itemJson) async {
-    final type = itemJson['type']?.toString() ?? 'login';
-    final title = itemJson['title']?.toString() ?? 'Imported Item';
-    final rawFields = itemJson['fields'];
-    final Map<String, dynamic> fields = rawFields is Map
-        ? Map<String, dynamic>.from(rawFields)
-        : {};
-
-    return addItem(
-      key: key,
-      type: type,
-      title: title,
-      fields: fields,
-    );
-  }
 }
 
 class ItemException implements Exception {

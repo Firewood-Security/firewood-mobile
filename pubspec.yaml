@@ -29,13 +29,9 @@ dependencies:
   file_picker: ^8.0.0
   otp: ^3.2.0
   local_auth: ^2.3.0
-  flutter_nearby_connections_plus: ^1.0.0
   permission_handler: ^11.3.1
   shared_preferences: ^2.2.3
   flutter_secure_storage: ^9.2.0
-  flutter_blue_plus: ^2.3.11
-  flutter_ble_peripheral: ^2.1.1
-  flutter_bluetooth_serial: ^0.4.0
 
 dev_dependencies:
   flutter_test:

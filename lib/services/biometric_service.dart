@@ -1,5 +1,5 @@
 // services/biometric_service.dart
-// Provides biometric / device passcode verification for sensitive P2P actions
+// Provides biometric / device passcode verification for sensitive actions
 
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
@@ -7,7 +7,7 @@ import 'package:local_auth/local_auth.dart';
 class BiometricAuthService {
   static final LocalAuthentication _localAuth = LocalAuthentication();
 
-  /// Authenticate user via Biometrics or Device PIN/Passcode before sensitive P2P transfer
+  /// Authenticate user via Biometrics or Device PIN/Passcode before sensitive transfer
   static Future<bool> authenticateUser({required String reason}) async {
     try {
       final canCheck = await _localAuth.canCheckBiometrics;

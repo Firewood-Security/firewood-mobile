@@ -500,22 +500,7 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
                 ),
                 const SizedBox(width: 8),
               ],
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    HapticFeedback.mediumImpact();
-                    Navigator.pop(context, 'SHARE_P2P');
-                  },
-                  icon: const Icon(Icons.share_outlined, size: 16, color: AppColors.orangeAccent),
-                  label: const Text('Share', style: TextStyle(fontSize: 12, color: AppColors.offWhite)),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    side: const BorderSide(color: AppColors.borderZinc),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
+
               Expanded(
                 child: FilledButton.icon(
                   onPressed: _openEditScreen,

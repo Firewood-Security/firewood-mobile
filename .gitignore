@@ -150,4 +150,7 @@ logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
+pnpm-debug.log*decoupled_features/
+
+p2p_backup/
+decoupled_features/

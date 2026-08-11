@@ -12,7 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/accent_color_service.dart';
 import '../services/update_service.dart';
-import '../services/p2p_size_limit_service.dart';
+
 import '../providers/auth_provider.dart';
 import '../services/backup_service.dart';
 import '../services/lock_service.dart';
@@ -27,7 +27,7 @@ import '../services/app_version_service.dart';
 // Providers for Backup & Profile settings
 final autoBackupEnabledProvider = StateProvider<bool>((ref) => true);
 final autoBackupIntervalDaysProvider = StateProvider<int>((ref) => 120); // Default 4 months
-final peerAliasProvider = StateProvider<String>((ref) => 'Firewood Device');
+
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -37,7 +37,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  final TextEditingController _aliasController = TextEditingController();
+
   bool _screenshotsAllowed = false;
 
   @override
@@ -48,11 +48,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     });
   }
 
-  Future<void> _saveAlias(String alias) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('peer_alias', alias);
-    ref.read(peerAliasProvider.notifier).state = alias;
-  }
+
 
   Future<void> _saveAutoBackup(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
@@ -68,7 +64,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   void dispose() {
-    _aliasController.dispose();
     super.dispose();
   }
 
@@ -87,33 +82,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
         children: [
-          // Device Identity / Profile Section
-          const _SectionHeader(title: 'DEVICE IDENTITY & P2P SETTINGS'),
-          _SettingsCard(
-            children: [
-              ListTile(
-                title: const Text('Device Peer Alias', style: TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.bold, fontSize: 14)),
-                subtitle: Text(ref.watch(peerAliasProvider), style: const TextStyle(fontSize: 11, color: AppColors.orangeAccent)),
-                leading: const Icon(Icons.devices_outlined, color: AppColors.orangeAccent, size: 24),
-                trailing: const Icon(Icons.edit_outlined, color: AppColors.textMuted, size: 20),
-                onTap: () => _editAliasDialog(context),
-              ),
-              ValueListenableBuilder<int>(
-                valueListenable: P2PSizeLimitService.currentSizeLimitMb,
-                builder: (context, currentMb, _) {
-                  final label = currentMb == 0 ? 'No Limit (Unlimited)' : '$currentMb MB';
-                  return ListTile(
-                    title: const Text('P2P Share Transfer Size Limit', style: TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.bold, fontSize: 14)),
-                    subtitle: Text('Current Limit: $label', style: const TextStyle(fontSize: 11, color: AppColors.orangeAccent)),
-                    leading: const Icon(Icons.wifi_tethering_outlined, color: AppColors.orangeAccent, size: 24),
-                    trailing: const Icon(Icons.chevron_right, color: AppColors.textMuted, size: 20),
-                    onTap: () => _showP2PSizeLimitPicker(context),
-                  );
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
+
 
           // Appearance Section
           const _SectionHeader(title: 'APPEARANCE & ACCENT COLOR'),
@@ -408,7 +377,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Firewood ${AppVersionService.fullVersionString}\nZero-Knowledge P2P Password Vault',
+                  'Firewood ${AppVersionService.fullVersionString}\nZero-Knowledge Password Vault',
                   style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
                   textAlign: TextAlign.center,
                 ),
@@ -420,39 +389,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  void _editAliasDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surfaceZinc,
-        title: const Text('Edit Device Peer Alias', style: TextStyle(color: AppColors.offWhite, fontSize: 16)),
-        content: TextField(
-          controller: _aliasController,
-          style: const TextStyle(color: AppColors.offWhite),
-          decoration: const InputDecoration(
-            labelText: 'Peer Alias Name',
-            hintText: 'e.g. Alice Phone',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (_aliasController.text.trim().isNotEmpty) {
-                _saveAlias(_aliasController.text.trim());
-              }
-              Navigator.pop(context);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.orangeAccent, foregroundColor: Colors.white),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   String _formatDuration(Duration d) {
     if (d.inMinutes < 60) {
@@ -546,40 +483,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  void _showP2PSizeLimitPicker(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surfaceZinc,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppColors.borderZinc),
-        ),
-        title: const Text(
-          'P2P Maximum Transfer Size Limit',
-          style: TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.bold, fontSize: 16),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: P2PSizeLimitService.options.map((option) {
-            return RadioListTile<int>(
-              title: Text(option.label, style: const TextStyle(color: AppColors.offWhite, fontSize: 14)),
-              value: option.sizeMb,
-              groupValue: P2PSizeLimitService.currentSizeLimitMb.value,
-              activeColor: AppColors.orangeAccent,
-              onChanged: (val) {
-                if (val != null) {
-                  P2PSizeLimitService.setSizeLimitMb(val);
-                  Navigator.pop(context);
-                }
-              },
-            );
-          }).toList(),
         ),
       ),
     );

@@ -39,13 +39,6 @@ class _WelcomeBannerState extends State<WelcomeBanner> {
           'Your master password NEVER leaves your device. Firewood cannot access your credentials.',
     ),
     _PageData(
-      icon: Icons.bluetooth,
-      title: 'Offline P2P Transfer',
-      body: 'Share credentials securely using Bluetooth or WiFi Direct. '
-          'Transfers are end-to-end encrypted with X25519 key exchange. '
-          'SAS code verification prevents man-in-the-middle attacks.',
-    ),
-    _PageData(
       icon: Icons.fingerprint,
       title: 'Biometric Security',
       body: 'Unlock your vault with fingerprint or face recognition. '

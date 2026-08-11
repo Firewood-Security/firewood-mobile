@@ -77,7 +77,7 @@ class AboutScreen extends StatelessWidget {
           _AboutCard(
             children: [
               const Text(
-                'Firewood is an open-source, zero-knowledge password vault engineered for absolute offline privacy and instant peer-to-peer sharing between devices without cloud servers.',
+                'Firewood is an open-source, zero-knowledge password vault engineered for absolute offline privacy.',
                 style: TextStyle(color: AppColors.offWhite, fontSize: 13, height: 1.5),
               ),
             ],
@@ -93,13 +93,6 @@ class AboutScreen extends StatelessWidget {
                 icon: Icons.shield_outlined,
                 title: 'Zero-Knowledge Security',
                 subtitle: 'Master password never leaves device RAM. Client-side XChaCha20-Poly1305 encryption.',
-              ),
-              const Divider(color: AppColors.borderZinc, height: 1),
-              _FeatureTile(
-                icon: Icons.swap_horiz_outlined,
-                title: 'Direct Share P2P Protocol',
-                titleColor: AppColors.orangeAccent,
-                subtitle: 'Send credentials device-to-device via LAN/Wi-Fi Direct with X25519 ECDH key exchange.',
               ),
               const Divider(color: AppColors.borderZinc, height: 1),
               _FeatureTile(
