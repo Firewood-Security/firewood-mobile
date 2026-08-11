@@ -1,0 +1,153 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# Node.js / npm / pnpm / yarn
+node_modules/
+.pnpm-store/
+.yarn/
+.yarn-cache/
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Rust / Cargo
+target/
+**/target/
+Cargo.lock
+**/Cargo.lock
+
+# Tauri
+tauri-app/src-tauri/target/
+tauri-app/target/
+
+# Kotlin / Gradle
+.gradle/
+build/
+**/build/
+*.kt.bin
+*.class
+*.jar
+*.war
+*.ear
+*.apk
+*.ap_
+*.dex
+local.properties
+.gradletasknamecache
+
+# Android
+/android/app/debug
+/android/app/profile
+/android/app/release
+/android/app/build/
+/android/build/
+/android/.gradle/
+/android/gradle/
+/android/gradlew
+/android/gradlew.bat
+/android/local.properties
+/android/*.iml
+/android/app/*.iml
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# macOS
+*.dmg
+*.app
+
+# iOS
+/ios/Flutter/
+/ios/Pods/
+/ios/Podfile.lock
+/ios/Runner.xcworkspace/
+/ios/Runner.xcodeproj/xcshareddata/
+/ios/Runner.xcodeproj/project.xcworkspace/
+/ios/.generated/
+/ios/Flutter/flutter_export_environment.sh
+/ios/Flutter/Generated.xcconfig
+/ios/Flutter/app.flx
+/ios/Flutter/app.zip
+/ios/Flutter/Debug.xcconfig
+/ios/Flutter/Release.xcconfig
+/ios/Flutter/ephemeral/
+/ios/Flutter/flutter_assets/
+/ios/Flutter/flutter_assets/.last_build_id
+*.ipa
+*.mobileprovision
+*.p12
+*.cer
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+*.xcworkspace/
+*.xcscheme
+*.xcconfig
+
+# Windows
+*.exe
+*.msi
+*.appx
+*.msix
+
+# Linux
+*.AppImage
+*.snap
+*.deb
+*.rpm
+*.flatpak
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+
+# IDE
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Test coverage
+coverage/
+*.lcov
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*

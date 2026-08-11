@@ -1,0 +1,50 @@
+name: firewood
+description: "Offline-first single-vault password manager"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+  flutter: ">=3.22.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # Cryptography
+  cryptography: ^2.7.0
+
+  # Database (Isar - no encryption key, manual field-level encryption)
+  isar: ^3.1.0+1
+  isar_flutter_libs: ^3.1.0+1
+
+  # State management
+  flutter_riverpod: ^2.5.0
+
+  # Utilities
+  uuid: ^4.4.0
+  path_provider: ^2.1.2
+  url_launcher: ^6.2.0
+  file_picker: ^8.0.0
+  otp: ^3.2.0
+  local_auth: ^2.3.0
+  flutter_nearby_connections_plus: ^1.0.0
+  permission_handler: ^11.3.1
+  shared_preferences: ^2.2.3
+  flutter_secure_storage: ^9.2.0
+  flutter_blue_plus: ^2.3.11
+  flutter_ble_peripheral: ^2.1.1
+  flutter_bluetooth_serial: ^0.4.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  isar_generator: ^3.1.0+1
+  build_runner: ^2.4.8
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/FWS.png

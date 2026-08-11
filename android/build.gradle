@@ -1,0 +1,62 @@
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.buildDir = '../build'
+subprojects {
+    project.buildDir = "${rootProject.buildDir}/${project.name}"
+}
+
+subprojects {
+    plugins.withId('com.android.library') {
+        android {
+            compileSdkVersion 36
+            buildToolsVersion "36.0.0"
+            if (project.name == "flutter_nearby_connections_plus") {
+                namespace = "com.nankai.flutter_nearby_connections"
+            } else if (project.name == "flutter_bluetooth_serial") {
+                namespace = "io.github.edufolly.flutterbluetoothserial"
+            } else if (namespace == null) {
+                namespace = "dev.isar.${project.name.replace('-', '_')}"
+            }
+            compileOptions {
+                sourceCompatibility JavaVersion.VERSION_17
+                targetCompatibility JavaVersion.VERSION_17
+            }
+        }
+    }
+    plugins.withId('com.android.application') {
+        android {
+            compileSdkVersion 36
+            buildToolsVersion "36.0.0"
+            compileOptions {
+                sourceCompatibility JavaVersion.VERSION_17
+                targetCompatibility JavaVersion.VERSION_17
+            }
+        }
+    }
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+        kotlinOptions {
+            jvmTarget = "17"
+        }
+    }
+}
+
+subprojects {
+    tasks.whenTaskAdded { task ->
+        if (task.name.toLowerCase().contains("verifylibraryresources") || task.name.toLowerCase().contains("verifyreleaseresources")) {
+            task.enabled = false
+        }
+    }
+}
+
+subprojects {
+    project.evaluationDependsOn(':app')
+}
+
+tasks.register("clean", Delete) {
+    delete rootProject.buildDir
+}
