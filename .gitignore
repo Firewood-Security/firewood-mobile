@@ -18,8 +18,14 @@ migrate_working_dir/
 *.iws
 .idea/
 
-# Node.js / npm / pnpm / yarn
+# Node.js / npm / pnpm / yarn / Web builds
 node_modules/
+dist/
+**/dist/
+out/
+**/out/
+.vite/
+.cache/
 .pnpm-store/
 .yarn/
 .yarn-cache/
