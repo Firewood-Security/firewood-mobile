@@ -32,11 +32,15 @@ void main() {
     late BackupService backupService;
 
     setUpAll(() async {
-      final isarLibPath =
-          '/home/tp24/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/linux/libisar.so';
-      await Isar.initializeIsarCore(libraries: {
-        Abi.linuxX64: isarLibPath,
-      });
+      final home = Platform.environment['HOME'] ?? '';
+      final pubCache = Platform.environment['PUB_CACHE'] ?? '$home/.pub-cache';
+      final localIsarPath = '$pubCache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/linux/libisar.so';
+
+      if (File(localIsarPath).existsSync()) {
+        await Isar.initializeIsarCore(libraries: {Abi.linuxX64: localIsarPath});
+      } else {
+        await Isar.initializeIsarCore(download: true);
+      }
     });
 
     setUp(() async {
