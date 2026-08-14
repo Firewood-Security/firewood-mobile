@@ -26,7 +26,18 @@ jobs:
         run: npm run build
         working-directory: web
 
+      - name: Check Firebase Service Account Secret
+        id: check_secret
+        run: |
+          if [ -z "${{ secrets.FIREBASE_SERVICE_ACCOUNT_FIREWOOD }}" ]; then
+            echo "SECRET_PRESENT=false" >> $GITHUB_OUTPUT
+            echo "::warning ::FIREBASE_SERVICE_ACCOUNT_FIREWOOD secret is missing in GitHub Secrets. Skipping automated Firebase deployment."
+          else
+            echo "SECRET_PRESENT=true" >> $GITHUB_OUTPUT
+          fi
+
       - name: Deploy to Firebase Hosting
+        if: steps.check_secret.outputs.SECRET_PRESENT == 'true'
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}

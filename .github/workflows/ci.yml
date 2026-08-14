@@ -1,17 +1,19 @@
-name: CI
+name: CI & Main Branch Builds
 
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-  flutter-check:
-    name: Flutter Lint & Tests
+  flutter-build:
+    name: Flutter Android Build & Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -34,13 +36,33 @@ jobs:
       - name: Run Flutter Tests
         run: flutter test
 
-  tauri-check:
-    name: Tauri Desktop Check & Lint
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
+      - name: Build Release APK
+        run: flutter build apk --release
 
-      - name: Install System Dependencies for Tauri
+      - name: Upload Android APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: firewood-android-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+  tauri-build:
+    name: Tauri Desktop Build (${{ matrix.platform }})
+    runs-on: ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ubuntu-22.04
+            os-name: linux
+          - platform: windows-latest
+            os-name: windows
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Linux Dependencies
+        if: matrix.os-name == 'linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -75,10 +97,6 @@ jobs:
         run: npm install
         working-directory: tauri-app
 
-      - name: Check Frontend Build (Vite)
-        run: npm run build
-        working-directory: tauri-app
-
       - name: Check Rust Formatting
         run: cargo fmt --all --check
         working-directory: tauri-app/src-tauri
@@ -91,11 +109,38 @@ jobs:
         run: cargo test
         working-directory: tauri-app/src-tauri
 
+      - name: Configure OS-Specific Bundle Targets
+        shell: bash
+        run: |
+          OS_NAME="${{ matrix.os-name }}"
+          node -e '
+            const fs = require("fs");
+            const conf = JSON.parse(fs.readFileSync("tauri-app/src-tauri/tauri.conf.json"));
+            if ("'"${OS_NAME}"'" === "linux") {
+              conf.bundle.targets = ["deb", "appimage"];
+            } else if ("'"${OS_NAME}"'" === "windows") {
+              conf.bundle.targets = ["nsis"];
+            }
+            fs.writeFileSync("tauri-app/src-tauri/tauri.conf.json", JSON.stringify(conf, null, 2));
+          '
+
+      - name: Build Tauri Desktop Binary
+        uses: tauri-apps/tauri-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: ./tauri-app
+          tagName: main-build-${{ github.sha }}
+          releaseName: 'Firewood Dev Build'
+          releaseDraft: true
+          prerelease: true
+
   website-check:
-    name: Product Website Check
+    name: Product Website Build Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
