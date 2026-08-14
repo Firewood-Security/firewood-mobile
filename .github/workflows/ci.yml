@@ -69,9 +69,9 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
-          cache-dependency-path: tauri-app/package-lock.json
+          cache-dependency-path: '**/package-lock.json'
 
       - name: Install Frontend Dependencies
         run: npm ci
@@ -102,9 +102,9 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: '**/package-lock.json'
 
       - name: Install Website Dependencies
         run: npm ci
