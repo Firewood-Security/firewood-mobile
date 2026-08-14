@@ -70,8 +70,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'npm'
-          cache-dependency-path: '**/package-lock.json'
 
       - name: Install Frontend Dependencies
         run: npm ci
@@ -103,8 +101,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'npm'
-          cache-dependency-path: '**/package-lock.json'
 
       - name: Install Website Dependencies
         run: npm ci
