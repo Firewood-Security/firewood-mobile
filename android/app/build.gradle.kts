@@ -32,6 +32,8 @@ android {
         release {
             // Sign with debug keys for now; replace with production keystore
             signingConfig = signingConfigs.getByName("debug")
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

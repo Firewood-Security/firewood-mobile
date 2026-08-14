@@ -2,6 +2,7 @@
 // Main vault view with floating bottom navigation, logo-only navbar, analytics, password listing, generator, security info, and settings
 
 import 'dart:math';
+import 'dart:ui';
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -215,10 +216,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ],
                 ),
                 if (_showWelcomeBanner)
-                  Positioned(
-                    left: 0, right: 0, top: 0,
-                    child: WelcomeBanner(
-                      onDismiss: () => setState(() => _showWelcomeBanner = false),
+                  Positioned.fill(
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0.65),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                        child: SafeArea(
+                          child: Center(
+                            child: SingleChildScrollView(
+                              padding: const EdgeInsets.symmetric(vertical: 24),
+                              child: WelcomeBanner(
+                                onDismiss: () => setState(() => _showWelcomeBanner = false),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 Positioned(

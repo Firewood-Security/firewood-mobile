@@ -1,0 +1,225 @@
+name: Release Pipeline
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag to release (e.g. v1.4.2)'
+        required: true
+        default: 'v1.4.2'
+
+permissions:
+  contents: write
+
+jobs:
+  build-tauri:
+    name: Build Desktop (${{ matrix.platform }})
+    runs-on: ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ubuntu-22.04
+            os-name: linux
+          - platform: windows-latest
+            os-name: windows
+          # To enable macOS builds (noting macOS runners are 10x billed):
+          # - platform: macos-latest
+          #   os-name: macos
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Linux Dependencies
+        if: matrix.os-name == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libglib2.0-dev \
+            libgtk-3-dev \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libssl-dev \
+            libxdo-dev \
+            libdbus-1-dev \
+            udev \
+            libudev-dev \
+            pkg-config
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: tauri-app/package-lock.json
+
+      - name: Install Frontend Dependencies
+        run: npm ci
+        working-directory: tauri-app
+
+      - name: Extract Release Version
+        id: get_version
+        shell: bash
+        run: |
+          TAG="${{ github.ref_name }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.version }}"
+          fi
+          CLEAN_VERSION="${TAG#v}"
+          echo "VERSION=${CLEAN_VERSION}" >> $GITHUB_OUTPUT
+          echo "TAG_NAME=${TAG}" >> $GITHUB_OUTPUT
+
+      - name: Configure OS-Specific Tauri Bundle Targets
+        shell: bash
+        run: |
+          VER="${{ steps.get_version.outputs.VERSION }}"
+          OS_NAME="${{ matrix.os-name }}"
+          node -e '
+            const fs = require("fs");
+            const conf = JSON.parse(fs.readFileSync("tauri-app/src-tauri/tauri.conf.json"));
+            conf.version = "'"${VER}"'";
+            if ("'"${OS_NAME}"'" === "linux") {
+              conf.bundle.targets = ["deb", "appimage"];
+            } else if ("'"${OS_NAME}"'" === "windows") {
+              conf.bundle.targets = ["nsis"];
+            } else if ("'"${OS_NAME}"'" === "macos") {
+              conf.bundle.targets = ["dmg"];
+            }
+            fs.writeFileSync("tauri-app/src-tauri/tauri.conf.json", JSON.stringify(conf, null, 2));
+          '
+
+      - name: Build Tauri Application
+        uses: tauri-apps/tauri-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: ./tauri-app
+          tagName: ${{ steps.get_version.outputs.TAG_NAME }}
+          releaseName: 'Firewood ${{ steps.get_version.outputs.TAG_NAME }}'
+          releaseDraft: true
+          prerelease: false
+
+  build-flutter-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Extract Release Version
+        id: get_version
+        shell: bash
+        run: |
+          TAG="${{ github.ref_name }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.version }}"
+          fi
+          CLEAN_VERSION="${TAG#v}"
+          echo "VERSION=${CLEAN_VERSION}" >> $GITHUB_OUTPUT
+          echo "TAG_NAME=${TAG}" >> $GITHUB_OUTPUT
+
+      - name: Update Flutter pubspec.yaml Version
+        shell: bash
+        run: |
+          VER="${{ steps.get_version.outputs.VERSION }}"
+          sed -i "s/^version: .*/version: ${VER}+1/" pubspec.yaml
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build Release APK
+        run: flutter build apk --release
+
+      - name: Upload Android APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+  publish-release:
+    name: Finalize Release, Artifact Naming & Checksums
+    needs: [build-tauri, build-flutter-android]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Extract Release Version
+        id: get_version
+        shell: bash
+        run: |
+          TAG="${{ github.ref_name }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.version }}"
+          fi
+          CLEAN_VERSION="${TAG#v}"
+          echo "VERSION=${CLEAN_VERSION}" >> $GITHUB_OUTPUT
+          echo "TAG_NAME=${TAG}" >> $GITHUB_OUTPUT
+
+      - name: Download Existing Release Assets from Draft
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          TAG="${{ steps.get_version.outputs.TAG_NAME }}"
+          mkdir -p ./release-assets
+          gh release download "$TAG" --dir ./release-assets || true
+
+      - name: Download Android Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: android-apk
+          path: ./release-assets
+
+      - name: Prepare Binary Names for Website Downloads
+        shell: bash
+        run: |
+          VER="${{ steps.get_version.outputs.VERSION }}"
+          cd ./release-assets
+          
+          # Standardize Android APK name to Firewood-1.4.2.apk
+          if [ -f app-release.apk ]; then
+            mv app-release.apk "Firewood-${VER}.apk"
+          fi
+
+      - name: Finalize GitHub Release & Checksums
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          TAG="${{ steps.get_version.outputs.TAG_NAME }}"
+          
+          # Compute SHA-256 for all binaries in release-assets
+          cd release-assets
+          sha256sum * > SHA256SUMS.txt
+          
+          # Upload all binaries and SHA256SUMS.txt
+          gh release upload "$TAG" * --clobber
+          
+          # Publish draft release to public release
+          gh release edit "$TAG" --draft=false
