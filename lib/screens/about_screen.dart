@@ -391,13 +391,11 @@ class _FeatureTile extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
-  final Color? titleColor;
 
   const _FeatureTile({
     required this.icon,
     required this.title,
     required this.subtitle,
-    this.titleColor,
   });
 
   @override
@@ -422,8 +420,8 @@ class _FeatureTile extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: TextStyle(
-                    color: titleColor ?? AppColors.offWhite,
+                  style: const TextStyle(
+                    color: AppColors.offWhite,
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
                   ),

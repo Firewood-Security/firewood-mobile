@@ -30,7 +30,7 @@ jobs:
           node-version: 22
 
       - name: Install Website Dependencies
-        run: npm ci
+        run: npm install
         working-directory: web
 
       - name: Build Static Website

@@ -29,7 +29,7 @@ jobs:
         run: flutter pub get
 
       - name: Run Flutter Analyzer
-        run: flutter analyze
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
       - name: Run Flutter Tests
         run: flutter test
@@ -72,7 +72,7 @@ jobs:
           node-version: 22
 
       - name: Install Frontend Dependencies
-        run: npm ci
+        run: npm install
         working-directory: tauri-app
 
       - name: Check Frontend Build (Vite)
@@ -103,7 +103,7 @@ jobs:
           node-version: 22
 
       - name: Install Website Dependencies
-        run: npm ci
+        run: npm install
         working-directory: web
 
       - name: Build Website

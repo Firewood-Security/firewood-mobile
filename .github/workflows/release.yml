@@ -65,7 +65,7 @@ jobs:
           node-version: 22
 
       - name: Install Frontend Dependencies
-        run: npm ci
+        run: npm install
         working-directory: tauri-app
 
       - name: Extract Release Version
