@@ -199,7 +199,7 @@ jobs:
         run: |
           VER="${{ steps.get_version.outputs.VERSION }}"
           cd ./release-assets
-          
+
           # Standardize Android APK name to Firewood-1.4.2.apk
           if [ -f app-release.apk ]; then
             mv app-release.apk "Firewood-${VER}.apk"
@@ -211,13 +211,19 @@ jobs:
         shell: bash
         run: |
           TAG="${{ steps.get_version.outputs.TAG_NAME }}"
-          
+
           # Compute SHA-256 for all binaries in release-assets
           cd release-assets
           sha256sum * > SHA256SUMS.txt
-          
+
           # Upload all binaries and SHA256SUMS.txt
           gh release upload "$TAG" * --clobber
-          
+
           # Publish draft release to public release
           gh release edit "$TAG" --draft=false
+
+      # ── APK Distribution ──────────────────────────────────────────────────
+      # APK binaries (~56 MB) are served directly from GitHub Releases.
+      # The gh release upload step above already publishes them.
+      # Supabase free plan caps file uploads at 50 MB, so we use GitHub CDN.
+      # The download page links: github.com/firas-rasheed/firewood/releases/latest/download/Firewood-<ver>.apk
