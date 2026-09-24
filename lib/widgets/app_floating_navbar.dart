@@ -2,7 +2,6 @@
 // Flat floating bottom navigation bar with sliding selection indicator.
 
 import 'package:flutter/material.dart';
-import 'package:hugeicons/hugeicons.dart';
 import '../services/update_service.dart';
 import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
@@ -67,25 +66,25 @@ class AppFloatingNavBar extends StatelessWidget {
                   Row(
                     children: [
                       _NavItem(
-                        icon: HugeIcons.strokeRoundedHome01,
+                        icon: Icons.home,
                         label: 'Home',
                         isSelected: currentIndex == 0,
                         onTap: () => onTap(0),
                       ),
                       _NavItem(
-                        icon: HugeIcons.strokeRoundedSafeBox,
+                        icon: AppIcons.vault,
                         label: 'Vault',
                         isSelected: currentIndex == 1,
                         onTap: () => onTap(1),
                       ),
                       _NavItem(
-                        icon: HugeIcons.strokeRoundedDice,
+                        icon: Icons.casino,
                         label: 'Generate',
                         isSelected: currentIndex == 2,
                         onTap: () => onTap(2),
                       ),
                       _NavItem(
-                        icon: HugeIcons.strokeRoundedSettings01,
+                        icon: Icons.settings,
                         label: 'Settings',
                         isSelected: currentIndex == 3,
                         hasBadge: hasUpdate,
@@ -135,13 +134,19 @@ class _NavItem extends StatelessWidget {
                   duration: const Duration(milliseconds: 250),
                   curve: Curves.easeOutBack,
                   scale: isSelected ? 1.1 : 1.0,
-                  // Line icons tint cleanly: active = pure accent, inactive = muted.
-                  child: AppIcon(
-                    icon,
-                    size: 28,
-                    color: isSelected
-                        ? Theme.of(context).colorScheme.primary
-                        : AppColors.textMuted,
+                  // Solid icons tint cleanly (active = accent, inactive = muted);
+                  // the 3D vault lock is full-color artwork and dims instead.
+                  child: Opacity(
+                    opacity: icon is String && !isSelected ? 0.5 : 1.0,
+                    child: AppIcon(
+                      icon,
+                      size: 28,
+                      color: icon is String
+                          ? null
+                          : isSelected
+                              ? Theme.of(context).colorScheme.primary
+                              : AppColors.textMuted,
+                    ),
                   ),
                 ),
                 if (hasBadge)
