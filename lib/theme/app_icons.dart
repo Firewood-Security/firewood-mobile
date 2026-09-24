@@ -28,14 +28,14 @@ class AppIcons {
   // Categories & Item Types (3D assets; passport has no generated asset yet)
   static const String categoryLogin = '$_cut/user-login.png';
   static const String categoryCard = '$_cut/credit-card.png';
-  static const categoryIdentity = HugeIcons.strokeRoundedPassport;
+  static const String categoryIdentity = '$_cut/passport.png';
   static const String categoryNote = '$_cut/secure-note.png';
   static const categoryLicense = HugeIcons.strokeRoundedLicense;
   static const categoryBank = HugeIcons.strokeRoundedBank;
 
   static const String typeLogin = '$_cut/user-login.png';
   static const String typeCard = '$_cut/credit-card.png';
-  static const typeIdentity = HugeIcons.strokeRoundedPassport;
+  static const String typeIdentity = '$_cut/passport.png';
   static const String typeNote = '$_cut/secure-note.png';
   static const String typeDeveloperSecret = '$_cut/api-key.png';
 
@@ -43,18 +43,18 @@ class AppIcons {
   static const String lock = '$_cut/lock.png';
   static const String lockOpen = '$_cut/lock.png';
   static const String lockClock = '$_cut/timer-clock.png';
-  static const unlock = HugeIcons.strokeRoundedLockKey;
+  static const String unlock = '$_cut/unlock-open.png';
   static const String shield = '$_cut/shield.png';
   static const String shieldCheck = '$_cut/shield-check.png';
   static const String shieldKey = '$_cut/shield-key.png';
   static const String fingerprint = '$_cut/fingerprint.png';
-  static const fire = HugeIcons.strokeRoundedFire;
+  static const String fire = '$_cut/fire-flame.png';
   static const String key = '$_cut/api-key.png';
 
   // Interactions & State
   static const String search = '$_cut/search.png';
-  static const String add = '$_cut/plus-add.png';
-  static const String addCircle = '$_cut/plus-add.png';
+  static const add = HugeIcons.strokeRoundedPlusSign;
+  static const addCircle = HugeIcons.strokeRoundedPlusSignCircle;
   static const String copy = '$_cut/copy.png';
   static const String edit = '$_cut/edit-pencil.png';
   static const String delete = '$_cut/trash-delete.png';
@@ -70,8 +70,8 @@ class AppIcons {
   static const magic = HugeIcons.strokeRoundedAiMagic;
   static const sparkles = HugeIcons.strokeRoundedSparkles;
   static const star = HugeIcons.strokeRoundedStar;
-  static const share = HugeIcons.strokeRoundedShare01;
-  static const qrCode = HugeIcons.strokeRoundedQrCode;
+  static const String share = '$_cut/share.png';
+  static const String qrCode = '$_cut/qr-code.png';
   static const String timer = '$_cut/timer-clock.png';
   static const time = HugeIcons.strokeRoundedClock01;
   static const String help = '$_cut/info.png';
@@ -79,40 +79,40 @@ class AppIcons {
   static const String alertCircle = '$_cut/warning-triangle.png';
   static const error = HugeIcons.strokeRoundedAlertCircle;
   static const String info = '$_cut/info.png';
-  static const String arrowBack = '$_cut/chevron-left.png';
-  static const String arrowLeft = '$_cut/chevron-left.png';
-  static const String arrowRight = '$_cut/chevron-right.png';
-  static const String chevronRight = '$_cut/chevron-right.png';
-  static const String chevronDown = '$_cut/chevron-down.png';
-  static const String chevronUp = '$_cut/chevron-up.png';
+  static const arrowBack = HugeIcons.strokeRoundedArrowLeft01;
+  static const arrowLeft = HugeIcons.strokeRoundedArrowLeft01;
+  static const arrowRight = HugeIcons.strokeRoundedArrowRight01;
+  static const chevronRight = HugeIcons.strokeRoundedArrowRight01;
+  static const chevronDown = HugeIcons.strokeRoundedArrowDown01;
+  static const chevronUp = HugeIcons.strokeRoundedArrowUp01;
 
   // Fields & Detail (mixed: asset where available)
-  static const title = HugeIcons.strokeRoundedText;
+  static const String title = '$_cut/title-text.png';
   static const String user = '$_cut/user-login.png';
-  static const link = HugeIcons.strokeRoundedLink01;
+  static const String link = '$_cut/link-chain.png';
   static const String globe = '$_cut/globe-network.png';
-  static const calendar = HugeIcons.strokeRoundedCalendar03;
-  static const location = HugeIcons.strokeRoundedLocation01;
+  static const String calendar = '$_cut/calendar.png';
+  static const String location = '$_cut/location-pin.png';
   static const car = HugeIcons.strokeRoundedCar01;
   static const String note = '$_cut/secure-note.png';
-  static const hash = HugeIcons.strokeRoundedPinCode;
+  static const String hash = '$_cut/hash-tag.png';
   static const number = HugeIcons.strokeRoundedPinCode;
-  static const file = HugeIcons.strokeRoundedFile01;
+  static const String file = '$_cut/file-document.png';
   static const folder = HugeIcons.strokeRoundedFolder01;
-  static const palette = HugeIcons.strokeRoundedPaintBoard;
+  static const String palette = '$_cut/artist-palette.png';
   static const String download = '$_cut/download.png';
   static const String upload = '$_cut/upload.png';
-  static const cloud = HugeIcons.strokeRoundedCloud;
+  static const String cloud = '$_cut/cloud.png';
   static const String cloudUpload = '$_cut/upload.png';
   static const cloudDownload = HugeIcons.strokeRoundedCloudDownload;
   static const sync = HugeIcons.strokeRoundedRefresh;
   static const github = HugeIcons.strokeRoundedGithub;
   static const heart = HugeIcons.strokeRoundedFavourite;
-  static const sort = HugeIcons.strokeRoundedSorting01;
-  static const filter = HugeIcons.strokeRoundedFilter;
-  static const history = HugeIcons.strokeRoundedClock02;
-  static const image = HugeIcons.strokeRoundedImage01;
-  static const terminal = HugeIcons.strokeRoundedCode;
+  static const String sort = '$_cut/sort-arrows.png';
+  static const String filter = '$_cut/filter-funnel.png';
+  static const String history = '$_cut/history-clock.png';
+  static const String image = '$_cut/image-picture.png';
+  static const String terminal = '$_cut/terminal-code.png';
 }
 
 /// Line-icon set reserved for text-input chrome (TextField prefix/suffix

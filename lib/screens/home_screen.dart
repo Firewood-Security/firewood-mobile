@@ -237,7 +237,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               const SizedBox(height: 18),
               Row(
                 children: [
-                  AppIcon(AppIcons.vault, size: 30),
+                  AppIcon(AppIcons.vault, size: 34),
                   const SizedBox(width: 12),
                   const Expanded(
                     child: Column(
@@ -281,7 +281,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       child: Row(
                         children: [
-                          AppIcon(AppIcons.add, size: 32),
+                          AppIcon(AppIcons.add, size: 36),
                           const SizedBox(width: 14),
                           const Expanded(
                             child: Column(
@@ -594,7 +594,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           children: [
                             Row(
                               children: [
-                                AppIcon(AppIcons.shield, size: 34),
+                                AppIcon(AppIcons.shield, size: 40),
                                 const Spacer(),
                                 Text(
                                   '${report.totalItems}',
@@ -642,7 +642,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               children: [
                                 AppIcon(
                                   AppIcons.shieldCheck,
-                                  size: 34,
+                                  size: 40,
                                 ),
                                 const Spacer(),
                                 Text(
@@ -1657,7 +1657,7 @@ class _CategorySummaryCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  AppIcon(icon, size: 32),
+                  AppIcon(icon, size: 36),
                   Text(
                     '$count',
                     style: TextStyle(
@@ -1718,7 +1718,7 @@ class _ItemTile extends StatelessWidget {
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        leading: AppIcon(_getTypeIcon(type), size: 36),
+        leading: AppIcon(_getTypeIcon(type), size: 42),
         title: Text(
           item.title,
           maxLines: 1,

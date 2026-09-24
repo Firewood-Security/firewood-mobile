@@ -242,7 +242,7 @@ class SecurityAdvisorSheet {
                                     children: [
                                       AppIcon(
                                         _iconFor(issue.item),
-                                        size: 22,
+                                        size: 26,
                                         color: issue.color,
                                       ),
                                       const SizedBox(width: 12),

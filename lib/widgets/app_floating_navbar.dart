@@ -148,7 +148,7 @@ class _NavItem extends StatelessWidget {
                       opacity: isSelected ? 1.0 : 0.45,
                       child: AppIcon(
                         isSelected ? activeIcon : icon,
-                        size: 26,
+                        size: 30,
                         color: isSelected ? activeAccent : AppColors.textMuted.withValues(alpha: 0.7),
                       ),
                     ),
