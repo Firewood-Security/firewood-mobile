@@ -13,7 +13,9 @@ import 'package:hugeicons/hugeicons.dart';
 class AppIcons {
   AppIcons._();
 
-  static const _cut = 'assets/icons/cutouts';
+  // TESTING ONLY: dark icon set. The 18 sheet-2 icons have no dark
+  // variants yet and fall back to light art (copied into cutouts_dark).
+  static const _cut = 'assets/icons/cutouts_dark';
 
   // Navigation (3D assets)
   static const String home = '$_cut/home.png';
