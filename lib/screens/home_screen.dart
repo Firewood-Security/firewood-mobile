@@ -1267,7 +1267,7 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'SECURITY GENERATOR',
+                'GENERATOR',
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
@@ -1275,21 +1275,13 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
                   color: AppColors.textMuted,
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: activeAccent.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: activeAccent.withValues(alpha: 0.25)),
-                ),
-                child: Text(
-                  'CSPRNG Secure',
-                  style: TextStyle(
-                    color: activeAccent,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+              IconButton(
+                tooltip: 'Regenerate',
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  _regenerate();
+                },
+                icon: AppIcon(AppIcons.refresh, size: 18, color: AppColors.textMuted),
               ),
             ],
           ),
@@ -1307,19 +1299,16 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
               children: [
                 _buildModeOption(
                   mode: _GeneratorMode.password,
-                  label: 'Password',
                   icon: AppIcons.lock,
                   activeAccent: activeAccent,
                 ),
                 _buildModeOption(
                   mode: _GeneratorMode.passphrase,
-                  label: 'Passphrase',
                   icon: AppIcons.title,
                   activeAccent: activeAccent,
                 ),
                 _buildModeOption(
                   mode: _GeneratorMode.pin,
-                  label: 'PIN',
                   icon: AppIcons.hash,
                   activeAccent: activeAccent,
                 ),
@@ -1362,32 +1351,31 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
                 // Real-Time Strength Meter
                 PasswordStrengthMeter(
                   password: _generatedSecret,
-                  compact: false,
-                  showRecommendation: true,
+                  compact: true,
+                  showRecommendation: false,
                 ),
 
                 const SizedBox(height: 14),
                 Row(
                   children: [
                     Expanded(
-                      child: OutlinedButton.icon(
+                      child: OutlinedButton(
                         onPressed: () {
                           HapticFeedback.lightImpact();
                           _regenerate();
                         },
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.offWhite,
-                          side: BorderSide(color: AppColors.borderZinc.withValues(alpha: 0.8)),
+                          side: const BorderSide(color: AppColors.borderZinc),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
-                        icon: const AppIcon(AppIcons.refresh, size: 18),
-                        label: const Text('Regenerate', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                        child: const AppIcon(AppIcons.refresh, size: 20),
                       ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: ElevatedButton.icon(
+                      child: ElevatedButton(
                         onPressed: () {
                           ref.read(lockServiceProvider).copySecret(_generatedSecret);
                           HapticFeedback.selectionClick();
@@ -1398,14 +1386,13 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
                           );
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: activeAccent,
-                          foregroundColor: Colors.white,
+                          backgroundColor: AppColors.pastelPrimaryFill,
+                          foregroundColor: AppColors.pastelPrimaryText,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          elevation: 2,
+                          elevation: 0,
                         ),
-                        icon: const AppIcon(AppIcons.copy, size: 18, color: Colors.white),
-                        label: const Text('Copy', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                        child: const AppIcon(AppIcons.copy, size: 20),
                       ),
                     ),
                   ],
@@ -1418,8 +1405,8 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
           // Dynamic Options based on selected Mode
           if (_mode == _GeneratorMode.password) ...[
             _buildSliderRow(
-              title: 'Password Length',
-              value: '${_passwordLength.round()} chars',
+              title: 'Length',
+              value: '${_passwordLength.round()}',
               activeAccent: activeAccent,
             ),
             Slider(
@@ -1432,10 +1419,12 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
                 _regenerate();
               },
             ),
-            _buildSwitchTile('Uppercase (A-Z)', _includeUpper, activeAccent, (v) {
-              setState(() => _includeUpper = v);
-              _regenerate();
-            }),
+            _buildGlyphRow([
+              ('Aa', _includeUpper, () {
+                setState(() => _includeUpper = !_includeUpper);
+                _regenerate();
+              }),
+            ]),
             _buildSwitchTile('Lowercase (a-z)', _includeLower, activeAccent, (v) {
               setState(() => _includeLower = v);
               _regenerate();
@@ -1454,8 +1443,8 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
             }),
           ] else if (_mode == _GeneratorMode.passphrase) ...[
             _buildSliderRow(
-              title: 'Word Count',
-              value: '${_wordCount.round()} words',
+              title: 'Words',
+              value: '${_wordCount.round()}',
               activeAccent: activeAccent,
             ),
             Slider(
@@ -1522,8 +1511,8 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
             }),
           ] else if (_mode == _GeneratorMode.pin) ...[
             _buildSliderRow(
-              title: 'PIN Digits',
-              value: '${_pinLength.round()} digits',
+              title: 'Digits',
+              value: '${_pinLength.round()}',
               activeAccent: activeAccent,
             ),
             Slider(
@@ -1545,7 +1534,6 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
 
   Widget _buildModeOption({
     required _GeneratorMode mode,
-    required String label,
     required dynamic icon,
     required Color activeAccent,
   }) {
@@ -1561,31 +1549,18 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: isSelected ? activeAccent.withValues(alpha: 0.18) : Colors.transparent,
+            color: isSelected ? AppColors.pastelPrimaryFill : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: isSelected ? activeAccent : Colors.transparent,
+              color: isSelected ? AppColors.pastelPrimaryBorder : Colors.transparent,
               width: 1,
             ),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              AppIcon(
-                icon,
-                size: 16,
-                color: isSelected ? activeAccent : AppColors.textMuted,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  color: isSelected ? Colors.white : AppColors.textMuted,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                  fontSize: 12,
-                ),
-              ),
-            ],
+          child: Center(
+            child: AppIcon(
+              icon,
+              size: 22,
+            ),
           ),
         ),
       ),
@@ -1613,14 +1588,14 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: activeAccent.withValues(alpha: 0.15),
+              color: AppColors.pastelPrimaryFill,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: activeAccent.withValues(alpha: 0.3)),
+              border: Border.all(color: AppColors.pastelPrimaryBorder),
             ),
             child: Text(
               value,
               style: TextStyle(
-                color: activeAccent,
+                color: AppColors.pastelPrimaryText,
                 fontWeight: FontWeight.bold,
                 fontSize: 12.5,
               ),
@@ -1680,10 +1655,10 @@ class _CategorySummaryCard extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: isSelected ? effectiveAccent.withValues(alpha: 0.15) : AppColors.surfaceZinc,
+            color: isSelected ? AppColors.pastelPrimaryFill : AppColors.surfaceZinc,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: isSelected ? effectiveAccent : AppColors.borderZinc.withValues(alpha: 0.5),
+              color: isSelected ? AppColors.pastelPrimaryBorder : AppColors.borderZinc,
               width: isSelected ? 1.5 : 1.0,
             ),
           ),
@@ -1700,7 +1675,7 @@ class _CategorySummaryCard extends StatelessWidget {
                     style: TextStyle(
                       fontWeight: FontWeight.w800,
                       fontSize: 16,
-                      color: isSelected ? effectiveAccent : AppColors.offWhite,
+                      color: isSelected ? AppColors.pastelPrimaryText : AppColors.offWhite,
                     ),
                   ),
                 ],
@@ -1713,7 +1688,7 @@ class _CategorySummaryCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: isSelected ? accentColor : AppColors.offWhite,
+                  color: isSelected ? AppColors.pastelPrimaryText : AppColors.offWhite,
                   letterSpacing: -0.1,
                 ),
               ),
