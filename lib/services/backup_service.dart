@@ -3,6 +3,8 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:file_picker/file_picker.dart';
 import 'package:cryptography/cryptography.dart';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
@@ -291,37 +293,45 @@ class BackupService {
     output.addAll(fileEncrypted.nonce);
     output.addAll(fileEncrypted.ciphertext);
 
-    // Determine file path
-    String filePath;
-    if (customPath != null) {
-      filePath = customPath;
-      if (!filePath.endsWith(_fileExtension)) {
-        filePath += _fileExtension;
+    // Destination. On Android the file is written through the Storage Access
+    // Framework (file_picker.saveFile), which needs no storage permission and
+    // is Play-policy compliant. Explicit paths (tests, desktop) are unchanged.
+    final timestamp =
+        DateTime.now().toIso8601String().replaceAll(':', '-').split('.')[0];
+    final defaultName = 'firewood-backup-$timestamp$_fileExtension';
+
+    if (customPath == null && Platform.isAndroid) {
+      final saved = await FilePicker.platform.saveFile(
+        fileName: defaultName,
+        bytes: Uint8List.fromList(output),
+      );
+      if (saved == null) {
+        throw BackupException('Export cancelled');
       }
-    } else {
-      final dir = await _getExportDirectory();
-      final timestamp =
-          DateTime.now().toIso8601String().replaceAll(':', '-').split('.')[0];
-      filePath = '${dir.path}/firewood-backup-$timestamp$_fileExtension';
+      return saved;
     }
 
-    // Write file
+    final String filePath;
+    if (customPath != null) {
+      filePath = customPath.endsWith(_fileExtension)
+          ? customPath
+          : '$customPath$_fileExtension';
+    } else {
+      final dir = await _getExportDirectory();
+      filePath = '${dir.path}/$defaultName';
+    }
+
     final file = File(filePath);
     await file.writeAsBytes(output, flush: true);
 
     return filePath;
   }
 
-  /// Helper to locate Downloads directory (/storage/emulated/0/Download/Firewood)
+  /// Desktop export directory. Android uses the Storage Access Framework in
+  /// [exportVault] instead (no MANAGE_EXTERNAL_STORAGE, Play-policy compliant).
   Future<Directory> _getExportDirectory() async {
     try {
-      if (Platform.isAndroid) {
-        final downloadDir = Directory('/storage/emulated/0/Download/Firewood');
-        if (!await downloadDir.exists()) {
-          await downloadDir.create(recursive: true);
-        }
-        return downloadDir;
-      } else if (!Platform.isIOS) {
+      if (!Platform.isIOS && !Platform.isAndroid) {
         final downloads = await getDownloadsDirectory();
         if (downloads != null) {
           final firewoodDir = Directory('${downloads.path}/Firewood');

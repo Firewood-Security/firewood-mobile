@@ -1,13 +1,11 @@
 // screens/home_screen.dart
 // Main vault view with floating bottom navigation, logo-only navbar, analytics, password listing, generator, security info, and settings
 
-import 'dart:io';
 import 'package:cryptography/cryptography.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 import '../models/item_type.dart';
 import '../providers/auth_provider.dart';
@@ -108,20 +106,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   Future<void> _importBackup(SecretKey currentKey) async {
     HapticFeedback.lightImpact();
-
-    // Request file & storage permissions
-    try {
-      if (Platform.isAndroid) {
-        final storageStatus = await Permission.storage.status;
-        if (!storageStatus.isGranted) {
-          await Permission.storage.request();
-        }
-        final manageStatus = await Permission.manageExternalStorage.status;
-        if (!manageStatus.isGranted && !manageStatus.isRestricted) {
-          await Permission.manageExternalStorage.request();
-        }
-      }
-    } catch (_) {}
 
     final result = await FilePicker.platform.pickFiles(
       type: FileType.any,

@@ -3,6 +3,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'package:cryptography/cryptography.dart';
 import 'app_version_service.dart';
 import 'package:flutter/foundation.dart';
 
@@ -119,6 +120,28 @@ class UpdateService {
     } finally {
       client.close();
     }
+  }
+
+  /// Verifies a downloaded artifact against the SHA-256 published with the
+  /// release (see the pipeline's SHA256SUMS / checksums.json and the update
+  /// manifest). Comparison is constant-time; any mismatch, missing file or
+  /// empty expectation fails closed.
+  static Future<bool> verifySha256(String filePath, String expectedHex) async {
+    final expected = expectedHex.trim().toLowerCase();
+    if (expected.isEmpty) return false;
+    final file = File(filePath);
+    if (!await file.exists()) return false;
+
+    final digest = await Sha256().hash(await file.readAsBytes());
+    final actual =
+        digest.bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+    if (actual.length != expected.length) return false;
+
+    var diff = 0;
+    for (var i = 0; i < expected.length; i++) {
+      diff |= expected.codeUnitAt(i) ^ actual.codeUnitAt(i);
+    }
+    return diff == 0;
   }
 
   bool _isVersionHigher(String newVer, String currentVer) {

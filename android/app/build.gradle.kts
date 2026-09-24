@@ -20,7 +20,7 @@ fun signingProp(name: String): String? =
     System.getenv("FIREWOOD_${name.uppercase()}") ?: keystoreProperties.getProperty(name)
 
 android {
-    namespace = "com.example.firewood"
+    namespace = "net.firewood.app"
     compileSdk = 35
     ndkVersion = "27.0.12077973"
 
@@ -34,7 +34,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.firewood"
+        applicationId = "net.firewood.app"
         minSdk = maxOf(flutter.minSdkVersion.toInt(), 24)
         targetSdk = flutter.targetSdkVersion
         // Straight from pubspec `version:` so the manifest, PackageInfo and
@@ -64,6 +64,17 @@ android {
 
     buildTypes {
         release {
+            // Play uploads must be signed with the upload key: pass
+            // -PrequireReleaseSigning=true in CI/release builds to fail hard
+            // when no keystore is configured instead of silently using debug.
+            val requireReleaseSigning =
+                (project.findProperty("requireReleaseSigning") as String?)?.toBoolean() ?: false
+            if (requireReleaseSigning && signingProp("store_file") == null) {
+                throw GradleException(
+                    "FIREWOOD: requireReleaseSigning=true but no release keystore is configured. " +
+                        "Create android/key.properties (see key.properties.template) or set FIREWOOD_STORE_FILE/FIREWOOD_STORE_PASSWORD/FIREWOOD_KEY_ALIAS/FIREWOOD_KEY_PASSWORD."
+                )
+            }
             signingConfig = if (signingProp("store_file") != null) {
                 signingConfigs.getByName("release")
             } else {

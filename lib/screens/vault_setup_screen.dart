@@ -1,12 +1,10 @@
 // screens/vault_setup_screen.dart
 // First launch: create master password with strength indicator (Non-scrollable, Minimalist)
 
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:permission_handler/permission_handler.dart';
 import '../services/vault_service.dart';
 import '../services/backup_service.dart';
 import '../providers/auth_provider.dart';
@@ -66,17 +64,6 @@ class _VaultSetupScreenState extends ConsumerState<VaultSetupScreen>
     setState(() => _error = null);
 
     try {
-      if (Platform.isAndroid) {
-        final storageStatus = await Permission.storage.status;
-        if (!storageStatus.isGranted) {
-          await Permission.storage.request();
-        }
-        final manageStatus = await Permission.manageExternalStorage.status;
-        if (!manageStatus.isGranted && !manageStatus.isRestricted) {
-          await Permission.manageExternalStorage.request();
-        }
-      }
-
       final result = await FilePicker.platform.pickFiles(
         type: FileType.any,
         allowMultiple: false,

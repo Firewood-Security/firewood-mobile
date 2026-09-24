@@ -1,14 +1,12 @@
 // screens/vault_unlock_screen.dart
 // Firewood Vault Unlock Screen: Master password entry with seamless duress/burner detection.
 
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
-import 'package:permission_handler/permission_handler.dart';
 import '../providers/auth_provider.dart';
 import '../services/vault_service.dart';
 import '../services/burner_service.dart';
@@ -277,17 +275,6 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
   Future<void> _importBackup() async {
     setState(() => _error = null);
     try {
-      if (Platform.isAndroid) {
-        final storageStatus = await Permission.storage.status;
-        if (!storageStatus.isGranted) {
-          await Permission.storage.request();
-        }
-        final manageStatus = await Permission.manageExternalStorage.status;
-        if (!manageStatus.isGranted && !manageStatus.isRestricted) {
-          await Permission.manageExternalStorage.request();
-        }
-      }
-
       final result = await FilePicker.platform.pickFiles(
         type: FileType.any,
         allowMultiple: false,

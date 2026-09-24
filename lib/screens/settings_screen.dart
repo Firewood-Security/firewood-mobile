@@ -1,14 +1,14 @@
 // screens/settings_screen.dart
 // Settings for auto-lock, auto-backup schedule, device alias, security info, and backup import/export
 
-import 'dart:io';
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/update_service.dart';
@@ -629,23 +629,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
-  Future<void> _requestStoragePermission() async {
-    try {
-      if (Platform.isAndroid) {
-        final storageStatus = await Permission.storage.status;
-        if (!storageStatus.isGranted) {
-          await Permission.storage.request();
-        }
-        final manageStatus = await Permission.manageExternalStorage.status;
-        if (!manageStatus.isGranted && !manageStatus.isRestricted) {
-          await Permission.manageExternalStorage.request();
-        }
-      }
-    } catch (_) {}
-  }
-
   void _exportVault(BuildContext context, WidgetRef ref) async {
-    await _requestStoragePermission();
     if (!context.mounted) return;
 
     final passwordController = TextEditingController();
@@ -1043,26 +1027,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               onPressed: envContent.isEmpty
                                   ? null
                                   : () async {
-                                      await _requestStoragePermission();
                                       try {
-                                        final dir = Directory(
-                                            '/storage/emulated/0/Download/Firewood');
-                                        if (!await dir.exists()) {
-                                          await dir.create(recursive: true);
-                                        }
+                                        // Storage Access Framework: no storage
+                                        // permission required (Play policy).
                                         final now = DateTime.now()
                                             .millisecondsSinceEpoch;
-                                        final file = File(
-                                            '${dir.path}/firewood_secrets_$now.env');
-                                        await file.writeAsString(envContent);
+                                        final saved =
+                                            await FilePicker.platform.saveFile(
+                                          fileName: 'firewood_secrets_$now.env',
+                                          bytes: Uint8List.fromList(
+                                              utf8.encode(envContent)),
+                                        );
+                                        if (saved == null) return;
                                         HapticFeedback.heavyImpact();
                                         if (ctx.mounted) Navigator.pop(ctx);
                                         if (context.mounted) {
                                           ScaffoldMessenger.of(context)
                                               .showSnackBar(
                                             SnackBar(
-                                              content:
-                                                  Text('Saved to ${file.path}'),
+                                              content: Text('Saved to $saved'),
                                               backgroundColor: Colors.green,
                                             ),
                                           );
@@ -1231,7 +1214,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   void _importVault(BuildContext context, WidgetRef ref) async {
-    await _requestStoragePermission();
     if (!context.mounted) return;
 
     final result = await FilePicker.platform.pickFiles(
