@@ -20,8 +20,8 @@ class AppIcons {
   // Navigation (3D assets)
   static const home = HugeIcons.strokeRoundedHome01;
   static const homeFilled = HugeIcons.strokeRoundedHome02;
-  static const vault = HugeIcons.strokeRoundedLockPassword;
-  static const vaultFilled = HugeIcons.strokeRoundedLockPassword;
+  static const String vault = '$_cut/vault-lock.png';
+  static const String vaultFilled = '$_cut/vault-lock.png';
   static const generate = HugeIcons.strokeRoundedSlidersHorizontal;
   static const generateFilled = HugeIcons.strokeRoundedPasswordValidation;
   static const settings = HugeIcons.strokeRoundedSettings01;

@@ -53,7 +53,11 @@ class AppFloatingNavBar extends StatelessWidget {
                     child: Container(
                       decoration: BoxDecoration(
                         color: activeAccent,
-                        borderRadius: BorderRadius.circular(18),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: AppColors.orangeDark,
+                          width: 1,
+                        ),
                       ),
                     ),
                   ),
@@ -142,7 +146,7 @@ class _NavItem extends StatelessWidget {
                     scale: isSelected ? 1.08 : 1.0,
                     child: AppIcon(
                       isSelected ? activeIcon : icon,
-                      size: 24,
+                      size: 28,
                       color: isSelected ? Colors.white : AppColors.textMuted,
                     ),
                   ),

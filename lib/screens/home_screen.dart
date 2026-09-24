@@ -527,13 +527,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       width: 56,
                       height: 56,
                       decoration: BoxDecoration(
-                        shape: BoxShape.circle,
+                        borderRadius: BorderRadius.circular(18),
                         color: Theme.of(context).colorScheme.primary,
+                        border: Border.all(
+                          color: AppColors.orangeDark,
+                          width: 1,
+                        ),
                       ),
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
-                          customBorder: const CircleBorder(),
+                          customBorder: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
                           onTap: () => _showPlusActionSheet(key),
                           child: const Center(
                             child: AppIcon(AppIcons.add, color: Colors.white, size: 26, strokeWidth: 2.2),
@@ -565,6 +571,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         final notes = items.where((i) => ItemTypeExt.fromString(i.type) == ItemType.note).length;
         final devSecrets = items.where((i) => ItemTypeExt.fromString(i.type) == ItemType.developerSecret).length;
         final report = VaultAnalyticsService.computeReport(items);
+        final issueCount =
+            SecurityAdvisorSheet.collectIssues(items, DateTime.now()).length;
         final activeAccent = Theme.of(context).colorScheme.primary;
 
         return RefreshIndicator(
@@ -712,16 +720,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.1, color: AppColors.offWhite),
                           ),
                           const Spacer(),
+                          Text(
+                            '${report.totpCoveragePercent.round()}% 2FA',
+                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textMuted),
+                          ),
+                          const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: activeAccent.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: activeAccent.withValues(alpha: 0.25)),
+                              color: issueCount > 0 ? AppColors.roseAccent : AppColors.mintAccent,
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              '${report.totpCoveragePercent.round()}% 2FA Coverage',
-                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: activeAccent),
+                              issueCount > 0 ? '$issueCount issue${issueCount == 1 ? '' : 's'}' : 'All clear',
+                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
                             ),
                           ),
                         ],
@@ -731,10 +743,53 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       // Metrics 4-Column Scannable Grid
                       Row(
                         children: [
-                          Expanded(child: _AnalyticsMetricChip(label: 'Strong', value: '${report.strongPasswords}', color: const Color(0xFF22C55E))),
-                          Expanded(child: _AnalyticsMetricChip(label: 'Weak', value: '${report.weakPasswords}', color: report.weakPasswords > 0 ? const Color(0xFFEF4444) : AppColors.textMuted)),
-                          Expanded(child: _AnalyticsMetricChip(label: 'Reused', value: '${report.reusedPasswords}', color: report.reusedPasswords > 0 ? const Color(0xFFF59E0B) : AppColors.textMuted)),
-                          Expanded(child: _AnalyticsMetricChip(label: 'Compromised', value: '${report.breachedPasswords}', color: report.breachedPasswords > 0 ? const Color(0xFFEF4444) : const Color(0xFF22C55E))),
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              decoration: BoxDecoration(
+                                color: AppColors.cardZinc,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppColors.borderZinc, width: 1),
+                              ),
+                              child: _AnalyticsMetricChip(label: 'Strong', value: '${report.strongPasswords}', color: const Color(0xFF22C55E)),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              decoration: BoxDecoration(
+                                color: AppColors.cardZinc,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppColors.borderZinc, width: 1),
+                              ),
+                              child: _AnalyticsMetricChip(label: 'Weak', value: '${report.weakPasswords}', color: report.weakPasswords > 0 ? const Color(0xFFEF4444) : AppColors.textMuted),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              decoration: BoxDecoration(
+                                color: AppColors.cardZinc,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppColors.borderZinc, width: 1),
+                              ),
+                              child: _AnalyticsMetricChip(label: 'Reused', value: '${report.reusedPasswords}', color: report.reusedPasswords > 0 ? const Color(0xFFF59E0B) : AppColors.textMuted),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              decoration: BoxDecoration(
+                                color: AppColors.cardZinc,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppColors.borderZinc, width: 1),
+                              ),
+                              child: _AnalyticsMetricChip(label: 'Compromised', value: '${report.breachedPasswords}', color: report.breachedPasswords > 0 ? const Color(0xFFEF4444) : const Color(0xFF22C55E)),
+                            ),
+                          ),
                         ],
                       ),
 
