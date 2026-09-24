@@ -423,7 +423,6 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
 
   void _showCategoryFieldGuide(BuildContext context) {
     HapticFeedback.lightImpact();
-    final activeAccent = Theme.of(context).colorScheme.primary;
 
     final List<_FieldGuideItem> guideItems;
     final String categoryTitle;

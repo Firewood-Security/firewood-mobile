@@ -1715,7 +1715,6 @@ class _ItemTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final type = ItemTypeExt.fromString(item.type);
-    final activeAccent = Theme.of(context).colorScheme.primary;
     final subtitle = item.fields['username']?.toString() ??
         item.fields['cardholder']?.toString() ??
         '••••••••••••';
