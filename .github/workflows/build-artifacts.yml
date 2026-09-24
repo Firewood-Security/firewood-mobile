@@ -1,217 +1,78 @@
-name: Firewood Multi-Platform Build & Artifact Distribution
+name: Firewood Mobile CI
 
 on:
   workflow_dispatch:
-    inputs:
-      platform:
-        description: 'Target platform to build (all, android, linux, windows)'
-        required: false
-        default: 'all'
   push:
     tags:
       - 'v*'
   pull_request:
 
 jobs:
-  # Phase 3 Gate-3 quality gates (REQ-CI-01): analyze + tests + secret scan
-  # run on every PR/tag/dispatch before any artifact is built.
   quality:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           cache: true
-
-      - name: Install Dependencies
+      - name: Install dependencies
         run: flutter pub get
-
-      - name: Static Analysis (blocking)
+      - name: Format check (blocking)
+        run: dart format --output=none --set-exit-if-changed lib test
+      - name: Static analysis (blocking)
         run: flutter analyze --no-fatal-infos
-
-      - name: Secret Scan (blocking, lightweight)
+      - name: Secret scan (blocking, lightweight)
         run: |
           set -e
-          echo "Scanning tracked files for committed secret material..."
-          if git grep -n -E "BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY" -- . ; then
-            echo "FAIL: private key material found in tracked files"; exit 1
+          if git grep -n -E "BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|storePassword\s*=\s*\S|keyPassword\s*=\s*\S" \
+              -- ':(exclude)android/key.properties.template' ':(exclude)**/*.md' . ; then
+            echo "Potential secret material committed"; exit 1
           fi
-          if git grep -n -E "keystorePassword\s*=\s*\S|storePassword\s*=\s*\S" -- ':(exclude)android/key.properties.template' ':(exclude)**/*.md' . ; then
-            echo "FAIL: keystore password value found in tracked files"; exit 1
-          fi
-          echo "Secret scan clean."
 
   test:
     runs-on: ubuntu-latest
-    needs: [quality]
+    needs: quality
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           cache: true
-
-      - name: Install Dependencies
-        run: flutter pub get
-
-      - name: Unit & Integration Tests (blocking)
+      - run: flutter pub get
+      - name: Unit & widget tests (blocking)
         run: flutter test
-        env:
-          FIREWOOD_ISAR_LIB: ""
 
   build-android:
-    needs: [quality, test]
-    if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == 'android' || github.event.inputs.platform == '' }}
     runs-on: ubuntu-latest
+    needs: [quality, test]
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
+          distribution: 'temurin'
           java-version: '17'
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           cache: true
-
-      - name: Install Dependencies
-        run: flutter pub get
-
-      - name: Build Android Release APK
+      - run: flutter pub get
+      - name: Build release APK
         run: flutter build apk --release
-
-      - name: Upload Artifact to GitHub Actions
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: firewood-android-apk
           path: build/app/outputs/flutter-apk/app-release.apk
 
-      - name: Push APK to Firewood late5530 Server
-        if: env.FIREWOOD_SERVER_URL != ''
-        env:
-          FIREWOOD_SERVER_URL: ${{ secrets.FIREWOOD_SERVER_URL }}
-          FIREWOOD_ADMIN_TOKEN: ${{ secrets.FIREWOOD_ADMIN_TOKEN }}
-        run: |
-          curl -X POST "${FIREWOOD_SERVER_URL}/api/v1/artifacts/upload" \
-            -H "Authorization: Bearer ${FIREWOOD_ADMIN_TOKEN}" \
-            -F "platform=android" \
-            -F "file=@build/app/outputs/flutter-apk/app-release.apk;filename=firewood-release.apk"
-
-  build-linux:
+  build-ios:
+    runs-on: macos-latest
     needs: [quality, test]
-    if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == 'linux' || github.event.inputs.platform == '' }}
-    runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Install Linux Build Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libsecret-1-dev dpkg
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           cache: true
-
-      - name: Install Dependencies
-        run: flutter pub get
-
-      - name: Build Linux Release
-        run: flutter build linux --release
-
-      - name: Package Debian Package (.deb)
-        run: |
-          mkdir -p deb-pkg/DEBIAN
-          mkdir -p deb-pkg/usr/bin
-          mkdir -p deb-pkg/usr/lib/firewood
-          mkdir -p deb-pkg/usr/share/applications
-          mkdir -p deb-pkg/usr/share/icons/hicolor/512x512/apps
-
-          cat << 'EOF' > deb-pkg/DEBIAN/control
-          Package: firewood
-          Version: 1.0.0
-          Section: utils
-          Priority: optional
-          Architecture: amd64
-          Maintainer: Firewood Team <contact@firewood.app>
-          Description: Zero-knowledge, local-first offline password manager.
-          EOF
-
-          cp -r build/linux/x64/release/bundle/* deb-pkg/usr/lib/firewood/
-          ln -s /usr/lib/firewood/firewood deb-pkg/usr/bin/firewood
-
-          dpkg-deb --build deb-pkg firewood-amd64.deb
-
-      - name: Upload Linux Artifact to GitHub Actions
-        uses: actions/upload-artifact@v4
-        with:
-          name: firewood-linux-deb
-          path: firewood-amd64.deb
-
-      - name: Push DEB to Firewood late5530 Server
-        if: env.FIREWOOD_SERVER_URL != ''
-        env:
-          FIREWOOD_SERVER_URL: ${{ secrets.FIREWOOD_SERVER_URL }}
-          FIREWOOD_ADMIN_TOKEN: ${{ secrets.FIREWOOD_ADMIN_TOKEN }}
-        run: |
-          curl -X POST "${FIREWOOD_SERVER_URL}/api/v1/artifacts/upload" \
-            -H "Authorization: Bearer ${FIREWOOD_ADMIN_TOKEN}" \
-            -F "platform=linux" \
-            -F "file=@firewood-amd64.deb"
-
-  build-windows:
-    needs: [quality, test]
-    if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == 'windows' || github.event.inputs.platform == '' }}
-    runs-on: windows-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
-
-      - name: Install Dependencies
-        run: flutter pub get
-
-      - name: Build Windows Release
-        run: flutter build windows --release
-
-      - name: Compress Windows Release Bundle
-        run: |
-          Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath firewood-windows-x64.zip
-
-      - name: Upload Windows Artifact to GitHub Actions
-        uses: actions/upload-artifact@v4
-        with:
-          name: firewood-windows-zip
-          path: firewood-windows-x64.zip
-
-      - name: Push Windows Zip/Exe to Firewood late5530 Server
-        if: env.FIREWOOD_SERVER_URL != ''
-        env:
-          FIREWOOD_SERVER_URL: ${{ secrets.FIREWOOD_SERVER_URL }}
-          FIREWOOD_ADMIN_TOKEN: ${{ secrets.FIREWOOD_ADMIN_TOKEN }}
-        shell: bash
-        run: |
-          curl -X POST "${FIREWOOD_SERVER_URL}/api/v1/artifacts/upload" \
-            -H "Authorization: Bearer ${FIREWOOD_ADMIN_TOKEN}" \
-            -F "platform=windows" \
-            -F "file=@firewood-windows-x64.zip"
+      - run: flutter pub get
+      - name: Build iOS (unsigned)
+        run: flutter build ios --release --no-codesign

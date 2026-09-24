@@ -1,24 +1,30 @@
 # firewood-mobile
 
-Offline-first, single-vault password manager for Android and iOS. This is the
-Play Store / F-Droid client (`net.firewood.app`).
+Offline-first, single-vault password manager for Android and iOS. The master
+password never touches disk; every vault field is encrypted with Argon2id-
+derived keys and XChaCha20-Poly1305, and all data stays on the device.
 
-## Status
+## Features
 
-Flutter app with a local encrypted Isar vault, biometric unlock, screenshot
-protection (`FLAG_SECURE`), encrypted `.firewood` backup/restore, an on-device
-security advisor, and Bluetooth P2P vault sharing (native Kotlin BLE transport,
-`P2pSharingScreen` under Settings).
+- Zero-knowledge single vault with biometric unlock and auto-lock.
+- Screenshot/recents protection (`FLAG_SECURE`) and cleared clipboard.
+- Encrypted `.firewood` backup export/import through the Storage Access Framework.
+- On-device security advisor (weak/reused/old passwords, 2FA gaps).
+- Bluetooth P2P sharing of `.firewood` files (native BLE transport).
+- Local password & passphrase generator.
 
 ## Layout
 
 | Path | Contents |
 |---|---|
-| `lib/` | app code (screens, services, database, theme, widgets) |
-| `android/` | Android platform: signing (ADR-002), R8 rules, native security bridge (`net.firewood.app.security`) |
+| `lib/screens/` | unlock, setup, home, credential view/detail, settings, P2P sharing, update, about |
+| `lib/services/` | crypto-facing services: vault, backup, file crypto, BLE P2P, advisor, updater |
+| `lib/database/` | Isar schemas and service |
+| `lib/theme/`, `lib/widgets/` | design system, icons, navigation, dialogs |
+| `android/` | Android platform, R8 rules, native security bridge (`net.firewood.app.security`) |
 | `ios/` | iOS platform |
-| `assets/` | 3D icon cutouts, fonts |
 | `test/` | unit + widget tests (`dart_test.yaml` pins concurrency for Argon2id) |
+| `docs/` | in-repo design/engineering notes |
 
 ## Develop
 
@@ -28,16 +34,16 @@ flutter analyze
 flutter test
 ```
 
-## Release
+## Android identity & signing
 
-Build, sign, publish and the update manifest are handled by the
-**firewood-release** toolchain (`tool/deploy.sh`, `tool/release.sh`,
-`tool/pipeline`). See `firewood-release/docs/play-store-readiness.md`.
-
-The version in `pubspec.yaml` (`X.Y.Z+N`) is the single source of truth for
-`versionName` and `versionCode`.
-
-## Related repositories
-
-`firewood-core` (shared crypto/format), `firewood-desktop`, `firewood-web`,
-`firewood-release`. See `firewood-release/docs/repository-map.md`.
+- `applicationId` / namespace: `net.firewood.app`.
+- Version comes from `pubspec.yaml` (`X.Y.Z+N`) — the single source of truth for
+  `versionName` and `versionCode`.
+- Release builds read `android/key.properties` (see `key.properties.template`).
+  A build with `-PrequireReleaseSigning=true` fails if it is missing, so a
+  public upload can never be accidentally debug-signed.
+- R8 minify + resource shrinking are enabled; keep rules live in
+  `android/app/proguard-rules.pro`.
+- Declared permissions are only `USE_BIOMETRIC` and `INTERNET`; file
+  import/export uses the Storage Access Framework (no storage permission), and
+  vault data is excluded from Android backup.
