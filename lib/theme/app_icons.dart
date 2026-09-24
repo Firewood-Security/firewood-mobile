@@ -5,7 +5,6 @@
 // path constants; navigation, buttons and input chrome use HugeIcons line
 // icons explicitly at their call sites. AppIcon renders both.
 // Rollback: git revert; hugeicons dep retained.
-// See docs/ICON_MIGRATION.md for the mapping table and gap list.
 
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';

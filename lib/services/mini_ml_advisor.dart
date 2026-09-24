@@ -3,7 +3,7 @@
 //
 // Folds the former decision-tree tip classifier, the dashboard analytics
 // counters, and the per-item issue collector into one deterministic engine
-// (Finding -> Requirement -> ADR-class QA change; see docs/MODULE_CATALOG.md).
+// (Finding -> Requirement -> ADR-class QA change.)
 // No network calls; passwords are inspected in RAM only and never persisted,
 // logged, or exported. The "Compromised" metric was removed: with no breach
 // corpus on-device it was a permanent 0 and false reassurance.
