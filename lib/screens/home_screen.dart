@@ -463,7 +463,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             ),
             actions: [
               IconButton(
-                icon: AppIcon(AppIcons.lock3d, color: AppColors.orangeAccent, size: 30),
+                icon: AppIcon(AppIcons.lock, color: AppColors.orangeAccent, size: 30),
                 tooltip: 'Lock Vault',
                 onPressed: () {
                   HapticFeedback.mediumImpact();
