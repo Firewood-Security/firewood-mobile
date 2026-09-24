@@ -142,10 +142,15 @@ class _NavItem extends StatelessWidget {
                     duration: const Duration(milliseconds: 250),
                     curve: Curves.easeOutBack,
                     scale: isSelected ? 1.08 : 1.0,
-                    child: AppIcon(
-                      isSelected ? activeIcon : icon,
-                      size: 20,
-                      color: isSelected ? activeAccent : AppColors.textMuted.withValues(alpha: 0.7),
+                    // 3D asset icons carry their own color, so selection is
+                    // expressed with opacity instead of tinting.
+                    child: Opacity(
+                      opacity: isSelected ? 1.0 : 0.45,
+                      child: AppIcon(
+                        isSelected ? activeIcon : icon,
+                        size: 22,
+                        color: isSelected ? activeAccent : AppColors.textMuted.withValues(alpha: 0.7),
+                      ),
                     ),
                   ),
                   if (hasBadge)
