@@ -1,0 +1,4 @@
+# The crypto tests derive Argon2id keys with a 64 MB cost each, so several test
+# files running in parallel exhaust memory/CPU and blow past their timeouts.
+# Two isolates at a time keeps the suite reliable without making it crawl.
+concurrency: 2

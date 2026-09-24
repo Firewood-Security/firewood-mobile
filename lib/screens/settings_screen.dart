@@ -27,6 +27,7 @@ import 'package:hugeicons/hugeicons.dart';
 import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
 import 'about_screen.dart';
+import 'p2p_sharing_screen.dart';
 import 'update_screen.dart';
 import '../services/app_version_service.dart';
 
@@ -367,6 +368,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     leading: AppIcon(AppIcons.upload,
                         color: AppColors.orangeAccent, size: 34),
                     onTap: () => _importVault(context, ref),
+                  ),
+                  ListTile(
+                    title: const Text('Bluetooth P2P Sharing',
+                        style:
+                            TextStyle(color: AppColors.offWhite, fontSize: 14)),
+                    subtitle: const Text(
+                        'Send/receive .firewood files with nearby devices',
+                        style: TextStyle(
+                            fontSize: 11, color: AppColors.textMuted)),
+                    leading: AppIcon(AppIcons.share,
+                        color: AppColors.orangeAccent, size: 34),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => const P2pSharingScreen()),
+                    ),
                   ),
                 ],
               ),
