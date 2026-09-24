@@ -176,8 +176,8 @@ class AppIcon extends StatelessWidget {
 
     if (icon is String) {
       // 3D asset icon: full-color artwork, tint never applies.
-      // Displayed at 2x the nominal size (global 3D scale factor).
-      final double displaySize = size * 2;
+      // Displayed at nominal size (tight-cropped art has no padding).
+      final double displaySize = size;
       return SizedBox(
         width: displaySize,
         height: displaySize,
