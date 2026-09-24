@@ -510,9 +510,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       height: 56,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(18),
-                        color: AppColors.pastelPrimaryFill,
+                        color: Theme.of(context).colorScheme.primary,
                         border: Border.all(
-                          color: AppColors.pastelPrimaryBorder,
+                          color: AppColors.orangeDark,
                           width: 1,
                         ),
                       ),
@@ -524,7 +524,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           ),
                           onTap: () => _showPlusActionSheet(key),
                           child: const Center(
-                            child: AppIcon(AppIcons.add, color: AppColors.pastelPrimaryText, size: 26, strokeWidth: 2.2),
+                            child: AppIcon(AppIcons.add, color: Colors.white, size: 26, strokeWidth: 2.2),
                           ),
                         ),
                       ),
@@ -1386,8 +1386,8 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
                           );
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.pastelPrimaryFill,
-                          foregroundColor: AppColors.pastelPrimaryText,
+                          backgroundColor: activeAccent,
+                          foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           elevation: 0,
@@ -1549,10 +1549,10 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.pastelPrimaryFill : Colors.transparent,
+            color: isSelected ? AppColors.orangeAccent : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: isSelected ? AppColors.pastelPrimaryBorder : Colors.transparent,
+              color: isSelected ? AppColors.orangeAccent : Colors.transparent,
               width: 1,
             ),
           ),
@@ -1583,12 +1583,12 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
                   const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
                 color: chip.$2
-                    ? AppColors.pastelPrimaryFill
+                    ? AppColors.orangeAccent
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
                   color: chip.$2
-                      ? AppColors.pastelPrimaryBorder
+                      ? AppColors.orangeAccent
                       : AppColors.borderZinc,
                   width: 1,
                 ),
@@ -1597,7 +1597,7 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
                 chip.$1,
                 style: TextStyle(
                   color: chip.$2
-                      ? AppColors.pastelPrimaryText
+                      ? Colors.white
                       : AppColors.textMuted,
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
@@ -1630,14 +1630,14 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: AppColors.pastelPrimaryFill,
+              color: activeAccent,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.pastelPrimaryBorder),
+              border: Border.all(color: AppColors.orangeDark),
             ),
             child: Text(
               value,
               style: TextStyle(
-                color: AppColors.pastelPrimaryText,
+                color: Colors.white,
                 fontWeight: FontWeight.bold,
                 fontSize: 12.5,
               ),
@@ -1697,10 +1697,10 @@ class _CategorySummaryCard extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.pastelPrimaryFill : AppColors.surfaceZinc,
+            color: isSelected ? effectiveAccent : AppColors.surfaceZinc,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: isSelected ? AppColors.pastelPrimaryBorder : AppColors.borderZinc,
+              color: isSelected ? effectiveAccent : AppColors.borderZinc,
               width: isSelected ? 1.5 : 1.0,
             ),
           ),
@@ -1717,7 +1717,7 @@ class _CategorySummaryCard extends StatelessWidget {
                     style: TextStyle(
                       fontWeight: FontWeight.w800,
                       fontSize: 16,
-                      color: isSelected ? AppColors.pastelPrimaryText : AppColors.offWhite,
+                      color: isSelected ? Colors.white : AppColors.offWhite,
                     ),
                   ),
                 ],
@@ -1730,7 +1730,7 @@ class _CategorySummaryCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: isSelected ? AppColors.pastelPrimaryText : AppColors.offWhite,
+                  color: isSelected ? Colors.white : AppColors.offWhite,
                   letterSpacing: -0.1,
                 ),
               ),

@@ -449,16 +449,16 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
-                                color: AppColors.pastelPrimaryFill,
+                                color: AppColors.orangeAccent,
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: AppColors.pastelPrimaryBorder),
+                                border: Border.all(color: AppColors.orangeDark),
                               ),
                               child: Text(
                                 'v2.0',
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
-                                  color: AppColors.pastelPrimaryText,
+                                  color: Colors.white,
                                 ),
                               ),
                             ),

@@ -1724,7 +1724,7 @@ class _PasswordGeneratorSheetState extends State<_PasswordGeneratorSheet> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.pastelPrimaryFill : Colors.transparent,
+            color: isSelected ? activeAccent : Colors.transparent,
             borderRadius: BorderRadius.circular(9),
             border: Border.all(color: isSelected ? activeAccent : Colors.transparent),
           ),
@@ -1744,12 +1744,12 @@ class _PasswordGeneratorSheetState extends State<_PasswordGeneratorSheet> {
 
   Widget _buildChip(String label, bool value, Color activeAccent, ValueChanged<bool> onChanged) {
     return FilterChip(
-      label: Text(label, style: TextStyle(color: value ? AppColors.pastelPrimaryText : AppColors.offWhite, fontSize: 12)),
+      label: Text(label, style: TextStyle(color: value ? Colors.white : AppColors.offWhite, fontSize: 12)),
       selected: value,
-      selectedColor: AppColors.pastelPrimaryFill,
+      selectedColor: activeAccent,
       backgroundColor: AppColors.surfaceZinc,
-      side: BorderSide(color: value ? AppColors.pastelPrimaryBorder : AppColors.borderZinc),
-      checkmarkColor: AppColors.pastelPrimaryText,
+      side: BorderSide(color: value ? activeAccent : AppColors.borderZinc),
+      checkmarkColor: Colors.white,
       onSelected: onChanged,
     );
   }

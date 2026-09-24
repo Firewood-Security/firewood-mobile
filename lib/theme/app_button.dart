@@ -48,24 +48,20 @@ class AppButton extends StatelessWidget {
 
     switch (variant) {
       case AppButtonVariant.primary:
-        background = AppColors.pastelPrimaryFill;
-        borderColor = AppColors.pastelPrimaryBorder;
-        textColor = AppColors.pastelPrimaryText;
-        break;
       case AppButtonVariant.neon:
-        background = AppColors.pastelPrimaryFill;
-        borderColor = AppColors.pastelPrimaryBorder;
-        textColor = AppColors.pastelPrimaryText;
+        background = AppColors.orangeAccent;
+        borderColor = AppColors.orangeDark;
+        textColor = Colors.white;
         break;
       case AppButtonVariant.danger:
-        background = AppColors.pastelDangerFill;
-        borderColor = AppColors.pastelDangerBorder;
-        textColor = AppColors.pastelDangerText;
+        background = AppColors.roseAccent;
+        borderColor = const Color(0xFFB91C1C);
+        textColor = Colors.white;
         break;
       case AppButtonVariant.success:
-        background = AppColors.pastelSuccessFill;
-        borderColor = AppColors.pastelSuccessBorder;
-        textColor = AppColors.pastelSuccessText;
+        background = AppColors.mintAccent;
+        borderColor = const Color(0xFF15803D);
+        textColor = Colors.white;
         break;
       case AppButtonVariant.secondary:
         background = AppColors.cardZinc;

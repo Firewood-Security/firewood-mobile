@@ -186,8 +186,8 @@ class AppTheme {
       // --- Matte Flat Button Themes (no elevation, no glow) ---
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: AppColors.pastelPrimaryFill,
-          foregroundColor: AppColors.pastelPrimaryText,
+          backgroundColor: accentColor,
+          foregroundColor: Colors.white,
           elevation: 0,
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 22),
           shape: RoundedRectangleBorder(
