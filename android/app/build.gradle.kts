@@ -37,8 +37,10 @@ android {
         applicationId = "com.example.firewood"
         minSdk = maxOf(flutter.minSdkVersion.toInt(), 24)
         targetSdk = flutter.targetSdkVersion
-        versionCode = (flutter.versionCode ?: 1) + 1
-        versionName = flutter.versionName ?: "1.0.1"
+        // Straight from pubspec `version:` so the manifest, PackageInfo and
+        // the in-app version text always agree. Bump pubspec to change these.
+        versionCode = flutter.versionCode ?: 1
+        versionName = flutter.versionName ?: "1.0.0"
     }
 
     signingConfigs {
