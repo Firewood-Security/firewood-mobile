@@ -162,9 +162,18 @@ class SecurityAdvisorEngine {
         .toList();
 
     if (logins.isEmpty) {
-      // Stale detection still applies to non-login items.
+      // No logins, but stale detection still applies to the other item types.
       final stale = _staleIssues(items, at);
-      final groups = _buildGroups(<SecurityFindingGroup>[]);
+      final groups = _buildGroups([
+        if (stale.isNotEmpty)
+          SecurityFindingGroup(
+            category: SecurityTipCategory.staleCredentials,
+            severity: SecuritySeverity.info,
+            headline: _plural(stale.length, 'stale credential'),
+            advice: 'Rotate long-lived passwords every few months.',
+            issues: stale,
+          ),
+      ]);
       return VaultAdvisory(
         evaluatedAt: at,
         totalItems: items.length,
