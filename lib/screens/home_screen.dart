@@ -17,6 +17,7 @@ import '../services/backup_service.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
+import '../theme/app_button.dart';
 import '../theme/app_feedback.dart';
 import 'credential_view_screen.dart';
 import 'item_detail_screen.dart';
@@ -511,7 +512,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       height: 56,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(18),
-                        color: AppColors.pastelDeepOrangeFill,
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            AppColors.shade(AppColors.pastelDeepOrangeFill, 0.05),
+                            AppColors.pastelDeepOrangeFill,
+                            AppColors.shade(AppColors.pastelDeepOrangeFill, -0.05),
+                          ],
+                          stops: const [0.0, 0.6, 1.0],
+                        ),
                         border: Border.all(
                           color: AppColors.pastelDeepOrangeBorder,
                           width: 1,
@@ -1383,7 +1393,12 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: ElevatedButton(
+                      child: AppButton(
+                        icon: HugeIcons.strokeRoundedCopy01,
+                        label: '',
+                        fontSize: 16,
+                        fullWidth: true,
+                        height: 46,
                         onPressed: () {
                           ref.read(lockServiceProvider).copySecret(_generatedSecret);
                           HapticFeedback.selectionClick();
@@ -1393,15 +1408,6 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
                             type: ToastType.success,
                           );
                         },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.pastelDeepOrangeFill,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          elevation: 2,
-                          shadowColor: AppColors.pastelDeepOrangeLip,
-                        ),
-                        child: const AppIcon(HugeIcons.strokeRoundedCopy01, size: 20),
                       ),
                     ),
                   ],

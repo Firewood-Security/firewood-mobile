@@ -1689,24 +1689,16 @@ class _PasswordGeneratorSheetState extends State<_PasswordGeneratorSheet> {
             const SizedBox(height: 20),
 
             // Action Button
-            ElevatedButton.icon(
+            AppButton(
+              label: 'Apply to Password Field',
+              icon: HugeIcons.strokeRoundedCheckmarkCircle01,
+              variant: AppButtonVariant.primary,
+              fullWidth: true,
+              height: 48,
               onPressed: () {
                 HapticFeedback.selectionClick();
                 Navigator.pop(context, _generated);
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.pastelDeepOrangeFill,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                elevation: 2,
-                shadowColor: AppColors.pastelDeepOrangeLip,
-              ),
-              icon: const AppIcon(HugeIcons.strokeRoundedCheckmarkCircle01, size: 20, color: Colors.white),
-              label: const Text(
-                'Apply to Password Field',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-              ),
             ),
           ],
         ),

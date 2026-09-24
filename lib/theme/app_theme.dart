@@ -41,6 +41,13 @@ class AppColors {
     final hsl = HSLColor.fromColor(orangeAccent);
     return hsl.withLightness(0.85).toColor();
   }
+
+  /// Shifts [color]'s HSL lightness by [delta] — subtle gradient faces for
+  /// the matte soft-3D buttons (light crown, deep base).
+  static Color shade(Color color, double delta) {
+    final hsl = HSLColor.fromColor(color);
+    return hsl.withLightness((hsl.lightness + delta).clamp(0.0, 1.0)).toColor();
+  }
   // Matte pastel deep-orange for 3D button faces: softer (non-neon) orange
   // derived from the live accent so the accent picker keeps working.
   static Color get pastelDeepOrangeFill {
@@ -156,7 +163,7 @@ class AppTheme {
         outline: AppColors.borderZinc,
         outlineVariant: primaryBorder,
       ),
-      fontFamily: 'Roboto',
+      fontFamily: 'Inter',
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.surfaceZinc,
         foregroundColor: AppColors.offWhite,

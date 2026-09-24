@@ -66,12 +66,8 @@ class _SplashScreenState extends State<SplashScreen>
         body: Stack(
           fit: StackFit.expand,
           children: [
-            // 1. Background Layer: Image if available or Procedural 3D Isometric Glass Cube Matrix Canvas
-            Image.asset(
-              'assets/wallpapers/splash_background.png',
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const _ProceduralCubeMatrixBackground(),
-            ),
+            // 1. Background Layer: Procedural 3D isometric glass cube matrix (blocks)
+            const _ProceduralCubeMatrixBackground(),
 
             // 2. Subtle Dark Shading Overlay (Fades upwards to reveal 3D cubes on middle-top & top-right)
             Container(

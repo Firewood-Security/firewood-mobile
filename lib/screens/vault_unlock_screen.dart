@@ -18,6 +18,7 @@ import '../theme/app_icons.dart';
 import '../services/app_version_service.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../theme/app_theme.dart';
+import '../theme/app_button.dart';
 import 'vault_setup_screen.dart';
 
 const _secureStorage = FlutterSecureStorage();
@@ -415,33 +416,8 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
 
     return Scaffold(
       backgroundColor: AppColors.backgroundZinc,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Background: splash wallpaper
-          Image.asset(
-            'assets/wallpapers/splash_background.png',
-            fit: BoxFit.cover,
-            // Transparent on failure -> Scaffold background color shows through.
-            errorBuilder: (_, __, ___) => const SizedBox.expand(),
-          ),
-          // Dark -> transparent overlay, top to bottom
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  const Color(0xFF0C0C0E).withValues(alpha: 0.94),
-                  const Color(0xFF0C0C0E).withValues(alpha: 0.62),
-                  const Color(0xFF0C0C0E).withValues(alpha: 0.18),
-                ],
-                stops: const [0.0, 0.55, 1.0],
-              ),
-            ),
-          ),
-          SafeArea(
-            child: FadeTransition(
+      body: SafeArea(
+        child: FadeTransition(
           opacity: _fadeAnimation,
           child: Center(
             child: SingleChildScrollView(
@@ -598,52 +574,15 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
                           ),
                         ),
                         const SizedBox(height: 16),
-                        SizedBox(
+                        AppButton(
+                          label: 'Unlock Vault',
+                          icon: HugeIcons.strokeRoundedArrowRight01,
+                          variant: AppButtonVariant.primary,
+                          isLoading: _isLoading || _isBurning,
+                          loadingLabel: _isBurning ? 'Processing...' : 'Unlocking...',
+                          fullWidth: true,
                           height: 48,
-                          child: FilledButton(
-                            onPressed: _isLoading || _isBurning ? null : _unlock,
-                            style: FilledButton.styleFrom(
-                              backgroundColor: AppColors.pastelDeepOrangeFill,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              elevation: 2,
-                              shadowColor: AppColors.pastelDeepOrangeLip,
-                            ),
-                            child: _isLoading || _isBurning
-                                ? Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const SizedBox(
-                                        width: 18,
-                                        height: 18,
-                                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Text(
-                                        _isBurning ? 'Processing...' : 'Unlocking...',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ],
-                                  )
-                                : Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const Text(
-                                        'Unlock Vault',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      AppIcon(AppIcons.arrowRight, size: 18, color: Colors.white),
-                                    ],
-                                  ),
-                          ),
+                          onPressed: _isLoading || _isBurning ? null : _unlock,
                         ),
                       ],
                     ),
@@ -699,8 +638,6 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
             ),
           ),
         ),
-        ),
-        ],
       ),
     );
   }

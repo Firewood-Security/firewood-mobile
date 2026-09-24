@@ -46,6 +46,16 @@ flutter:
   assets:
     - assets/
     - assets/FWS.png
-    - assets/wallpapers/
     - assets/icons/cutouts/
     - assets/icons/cutouts_dark/
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/inter/Inter-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/inter/Inter-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/inter/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/inter/Inter-Bold.ttf
+          weight: 700

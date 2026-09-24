@@ -22,6 +22,7 @@ class AppButton extends StatelessWidget {
   final dynamic icon;
   final AppButtonVariant variant;
   final bool isLoading;
+  final String? loadingLabel;
   final bool fullWidth;
   final double height;
   final double fontSize;
@@ -33,6 +34,7 @@ class AppButton extends StatelessWidget {
     this.icon,
     this.variant = AppButtonVariant.primary,
     this.isLoading = false,
+    this.loadingLabel,
     this.fullWidth = false,
     this.height = 48,
     this.fontSize = 14,
@@ -87,6 +89,10 @@ class AppButton extends StatelessWidget {
         break;
     }
 
+    final Color face = isDisabled ? AppColors.cardZinc : background;
+    final bool useGradient = !isDisabled && background != Colors.transparent;
+    final String shownLabel = isLoading ? (loadingLabel ?? 'Loading...') : label;
+
     Widget content = Row(
       mainAxisAlignment: MainAxisAlignment.center,
       mainAxisSize: fullWidth ? MainAxisSize.max : MainAxisSize.min,
@@ -100,19 +106,20 @@ class AppButton extends StatelessWidget {
               color: textColor,
             ),
           )
-        else if (icon != null) ...[
+        else if (icon != null)
           AppIcon(icon, size: fontSize + 4, color: textColor),
-          const SizedBox(width: 8),
-        ],
-        Text(
-          isLoading ? 'Loading...' : label,
-          style: TextStyle(
-            color: textColor,
-            fontSize: fontSize,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.2,
+        if (shownLabel.isNotEmpty) ...[
+          if (isLoading || icon != null) const SizedBox(width: 8),
+          Text(
+            shownLabel,
+            style: TextStyle(
+              color: textColor,
+              fontSize: fontSize,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.2,
+            ),
           ),
-        ),
+        ],
       ],
     );
 
@@ -122,14 +129,26 @@ class AppButton extends StatelessWidget {
       child: Container(
         height: height,
         decoration: BoxDecoration(
-          color: isDisabled ? AppColors.cardZinc : background,
+          color: useGradient ? null : face,
+          gradient: useGradient
+              ? LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppColors.shade(background, 0.05),
+                    background,
+                    AppColors.shade(background, -0.05),
+                  ],
+                  stops: const [0.0, 0.6, 1.0],
+                )
+              : null,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isDisabled ? AppColors.borderZinc : borderColor,
             width: 1,
           ),
-          // Soft-3D: a solid lip under the button (zero blur = matte edge,
-          // not a glow) gives the pressed-key depth the design calls for.
+          // Matte soft-3D: subtle vertical gradient face (light crown to deep
+          // base) + solid zero-blur lip = a pressed key, never a glow.
           boxShadow: isDisabled
               ? null
               : [
