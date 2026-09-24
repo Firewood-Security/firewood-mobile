@@ -89,14 +89,14 @@ class AccentColorPickerDialog extends StatelessWidget {
                               margin: const EdgeInsets.only(bottom: 8),
                               decoration: BoxDecoration(
                                 color: isSelected
-                                    ? preset.color.withValues(alpha: 0.14)
-                                    : AppColors.surfaceZinc.withValues(alpha: 0.5),
+                                    ? AppColors.cardZinc
+                                    : Colors.transparent,
                                 borderRadius: BorderRadius.circular(14),
                                 border: Border.all(
                                   color: isSelected
-                                      ? preset.color.withValues(alpha: 0.6)
-                                      : AppColors.borderZinc.withValues(alpha: 0.4),
-                                  width: isSelected ? 1.4 : 1,
+                                      ? preset.color
+                                      : AppColors.borderZinc,
+                                  width: isSelected ? 1.5 : 1,
                                 ),
                               ),
                               child: Material(
@@ -149,15 +149,31 @@ class AccentColorPickerDialog extends StatelessWidget {
                                             ],
                                           ),
                                         ),
-                                        if (isSelected)
-                                          Container(
-                                            padding: const EdgeInsets.all(4),
-                                            decoration: BoxDecoration(
-                                              color: preset.color,
-                                              shape: BoxShape.circle,
+                                        Container(
+                                          width: 22,
+                                          height: 22,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: isSelected
+                                                  ? preset.color
+                                                  : AppColors.borderZinc,
+                                              width: 1.5,
                                             ),
-                                            child: AppIcon(AppIcons.checkCircle, color: Colors.white, size: 14),
                                           ),
+                                          child: isSelected
+                                              ? Center(
+                                                  child: Container(
+                                                    width: 10,
+                                                    height: 10,
+                                                    decoration: BoxDecoration(
+                                                      color: preset.color,
+                                                      shape: BoxShape.circle,
+                                                    ),
+                                                  ),
+                                                )
+                                              : null,
+                                        ),
                                       ],
                                     ),
                                   ),
