@@ -1223,27 +1223,14 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'GENERATOR',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.2,
-                  color: AppColors.textMuted,
-                ),
-              ),
-              IconButton(
-                tooltip: 'Regenerate',
-                onPressed: () {
-                  HapticFeedback.lightImpact();
-                  _regenerate();
-                },
-                icon: AppIcon(HugeIcons.strokeRoundedRefresh, size: 18, color: AppColors.textMuted),
-              ),
-            ],
+          const Text(
+            'GENERATOR',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.2,
+              color: AppColors.textMuted,
+            ),
           ),
           const SizedBox(height: 12),
 
@@ -1376,28 +1363,58 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
                 _regenerate();
               },
             ),
-            _buildGlyphRow([
-              ('Aa', _includeUpper, () {
-                setState(() => _includeUpper = !_includeUpper);
-                _regenerate();
-              }),
-            ]),
-            _buildSwitchTile('Lowercase (a-z)', _includeLower, activeAccent, (v) {
-              setState(() => _includeLower = v);
-              _regenerate();
-            }),
-            _buildSwitchTile('Numbers (0-9)', _includeDigits, activeAccent, (v) {
-              setState(() => _includeDigits = v);
-              _regenerate();
-            }),
-            _buildSwitchTile('Symbols (!@#\$%^&*)', _includeSymbols, activeAccent, (v) {
-              setState(() => _includeSymbols = v);
-              _regenerate();
-            }),
-            _buildSwitchTile('Exclude Ambiguous ({ } [ ] ( ) / \\ ~)', _excludeAmbiguous, activeAccent, (v) {
-              setState(() => _excludeAmbiguous = v);
-              _regenerate();
-            }),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _buildIconToggle(
+                  icon: HugeIcons.strokeRoundedArrangeByLettersAZ,
+                  selected: _includeUpper,
+                  tooltip: 'Uppercase (A-Z)',
+                  onTap: () {
+                    setState(() => _includeUpper = !_includeUpper);
+                    _regenerate();
+                  },
+                ),
+                _buildIconToggle(
+                  icon: HugeIcons.strokeRoundedArrangeByLettersZA,
+                  selected: _includeLower,
+                  tooltip: 'Lowercase (a-z)',
+                  onTap: () {
+                    setState(() => _includeLower = !_includeLower);
+                    _regenerate();
+                  },
+                ),
+                _buildIconToggle(
+                  icon: HugeIcons.strokeRoundedArrangeByNumbers19,
+                  selected: _includeDigits,
+                  tooltip: 'Numbers (0-9)',
+                  onTap: () {
+                    setState(() => _includeDigits = !_includeDigits);
+                    _regenerate();
+                  },
+                ),
+                _buildIconToggle(
+                  icon: HugeIcons.strokeRoundedAsterisk,
+                  selected: _includeSymbols,
+                  tooltip: 'Symbols',
+                  onTap: () {
+                    setState(() => _includeSymbols = !_includeSymbols);
+                    _regenerate();
+                  },
+                ),
+                _buildIconToggle(
+                  icon: HugeIcons.strokeRoundedBlocked,
+                  selected: _excludeAmbiguous,
+                  tooltip: 'Exclude ambiguous characters',
+                  onTap: () {
+                    setState(() => _excludeAmbiguous = !_excludeAmbiguous);
+                    _regenerate();
+                  },
+                ),
+              ],
+            ),
           ] else if (_mode == _GeneratorMode.passphrase) ...[
             _buildSliderRow(
               title: 'Words',
@@ -1415,57 +1432,84 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
                 _regenerate();
               },
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Separator Symbol', style: TextStyle(color: AppColors.offWhite, fontSize: 14)),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: ['-', '.', '_', ' '].map((sep) {
-                      final isSelected = _separator == sep;
-                      return GestureDetector(
-                        onTap: () {
-                          HapticFeedback.selectionClick();
-                          setState(() => _separator = sep);
-                          _regenerate();
-                        },
-                        child: Container(
-                          margin: const EdgeInsets.only(left: 6),
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: isSelected ? activeAccent : AppColors.surfaceZinc,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: isSelected ? activeAccent : AppColors.borderZinc,
-                            ),
-                          ),
-                          child: Text(
-                            sep == ' ' ? 'Space' : sep,
-                            style: TextStyle(
-                              color: isSelected ? Colors.white : AppColors.offWhite,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
+                  const Text(
+                    'SEPARATOR',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.0,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                  const Spacer(),
+                  for (final sep in ['-', '.', '_', ' '])
+                    GestureDetector(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        setState(() => _separator = sep);
+                        _regenerate();
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(left: 6),
+                        width: 36,
+                        height: 28,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: _separator == sep
+                              ? activeAccent
+                              : AppColors.surfaceZinc,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: _separator == sep
+                                ? AppColors.orangeDark
+                                : AppColors.borderZinc,
                           ),
                         ),
-                      );
-                    }).toList(),
-                  ),
+                        child: Text(
+                          sep == ' ' ? 'SPC' : sep,
+                          style: TextStyle(
+                            color: _separator == sep
+                                ? Colors.white
+                                : AppColors.offWhite,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
             const SizedBox(height: 12),
-            _buildSwitchTile('Capitalize Each Word', _capitalizePassphrase, activeAccent, (v) {
-              setState(() => _capitalizePassphrase = v);
-              _regenerate();
-            }),
-            _buildSwitchTile('Append 4-Digit Number', _includePassphraseNumber, activeAccent, (v) {
-              setState(() => _includePassphraseNumber = v);
-              _regenerate();
-            }),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _buildIconToggle(
+                  icon: HugeIcons.strokeRoundedTextFont,
+                  selected: _capitalizePassphrase,
+                  tooltip: 'Capitalize each word',
+                  onTap: () {
+                    setState(() => _capitalizePassphrase = !_capitalizePassphrase);
+                    _regenerate();
+                  },
+                ),
+                _buildIconToggle(
+                  icon: HugeIcons.strokeRoundedArrangeByNumbers19,
+                  selected: _includePassphraseNumber,
+                  tooltip: 'Append 4-digit number',
+                  onTap: () {
+                    setState(() => _includePassphraseNumber = !_includePassphraseNumber);
+                    _regenerate();
+                  },
+                ),
+              ],
+            ),
           ] else if (_mode == _GeneratorMode.pin) ...[
             _buildSliderRow(
               title: 'Digits',
@@ -1524,45 +1568,43 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
     );
   }
 
-  Widget _buildGlyphRow(List<(String, bool, VoidCallback)> chips) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (final chip in chips)
-          GestureDetector(
-            onTap: () {
-              HapticFeedback.selectionClick();
-              chip.$3();
-            },
-            child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: chip.$2
-                    ? AppColors.orangeAccent
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: chip.$2
-                      ? AppColors.orangeAccent
-                      : AppColors.borderZinc,
-                  width: 1,
-                ),
-              ),
-              child: Text(
-                chip.$1,
-                style: TextStyle(
-                  color: chip.$2
-                      ? Colors.white
-                      : AppColors.textMuted,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
-              ),
+  /// Compact icon-only generator toggle: selected = accent fill + white
+  /// glyph, unselected = muted outline. The label lives in the tooltip so the
+  /// screen stays text-light.
+  Widget _buildIconToggle({
+    required dynamic icon,
+    required bool selected,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          width: 46,
+          height: 40,
+          decoration: BoxDecoration(
+            color: selected ? AppColors.orangeAccent : AppColors.surfaceZinc,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: selected ? AppColors.orangeDark : AppColors.borderZinc,
+              width: 1,
             ),
           ),
-      ],
+          child: Center(
+            child: AppIcon(
+              icon,
+              size: 19,
+              color: selected ? Colors.white : AppColors.textMuted,
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -1602,20 +1644,6 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildSwitchTile(String title, bool value, Color activeAccent, ValueChanged<bool> onChanged) {
-    return SwitchListTile(
-      title: Text(title, style: const TextStyle(color: AppColors.offWhite, fontSize: 13.5)),
-      value: value,
-      activeColor: activeAccent,
-      dense: true,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-      onChanged: (val) {
-        HapticFeedback.selectionClick();
-        onChanged(val);
-      },
     );
   }
 }
