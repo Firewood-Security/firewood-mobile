@@ -580,11 +580,13 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
 
           Text(
             'DECRYPTED CREDENTIALS',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: AppColors.textMuted,
-                  letterSpacing: 1.2,
-                  fontWeight: FontWeight.bold,
-                ),
+            // Match dashboard section headers: 11px / bold / 1.2 tracking.
+            style: const TextStyle(
+              fontSize: 11,
+              color: AppColors.textMuted,
+              letterSpacing: 1.2,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 12),
 
@@ -619,7 +621,7 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                             color: AppColors.textMuted,
-                            letterSpacing: 0.8,
+                            letterSpacing: 1.1,
                           ),
                         ),
                         const Spacer(),
@@ -666,11 +668,13 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
           const SizedBox(height: 12),
           Text(
             'METADATA & TIMESTAMPS',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: AppColors.textMuted,
-                  letterSpacing: 1.2,
-                  fontWeight: FontWeight.bold,
-                ),
+            // Match dashboard section headers: 11px / bold / 1.2 tracking.
+            style: const TextStyle(
+              fontSize: 11,
+              color: AppColors.textMuted,
+              letterSpacing: 1.2,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 8),
           Container(
