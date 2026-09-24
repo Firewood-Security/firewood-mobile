@@ -18,6 +18,8 @@ class AppFloatingNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final activeAccent = Theme.of(context).colorScheme.primary;
+
     return ValueListenableBuilder<bool>(
       valueListenable: UpdateService.hasUpdateAvailable,
       builder: (context, hasUpdate, _) {
@@ -50,12 +52,8 @@ class AppFloatingNavBar extends StatelessWidget {
                     height: itemHeight,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: AppColors.orangeContainer,
+                        color: activeAccent,
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(
-                          color: AppColors.orangeBorder,
-                          width: 1,
-                        ),
                       ),
                     ),
                   ),
@@ -142,15 +140,10 @@ class _NavItem extends StatelessWidget {
                     duration: const Duration(milliseconds: 250),
                     curve: Curves.easeOutBack,
                     scale: isSelected ? 1.08 : 1.0,
-                    // 3D asset icons carry their own color, so selection is
-                    // expressed with opacity instead of tinting.
-                    child: Opacity(
-                      opacity: isSelected ? 1.0 : 0.45,
-                      child: AppIcon(
-                        isSelected ? activeIcon : icon,
-                        size: 30,
-                        color: isSelected ? activeAccent : AppColors.textMuted.withValues(alpha: 0.7),
-                      ),
+                    child: AppIcon(
+                      isSelected ? activeIcon : icon,
+                      size: 24,
+                      color: isSelected ? Colors.white : AppColors.textMuted,
                     ),
                   ),
                   if (hasBadge)

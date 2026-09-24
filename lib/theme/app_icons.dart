@@ -18,14 +18,14 @@ class AppIcons {
   static const _cut = 'assets/icons/cutouts_dark';
 
   // Navigation (3D assets)
-  static const String home = '$_cut/home.png';
-  static const String homeFilled = '$_cut/home.png';
-  static const String vault = '$_cut/vault-lock.png';
-  static const String vaultFilled = '$_cut/vault-lock.png';
-  static const String generate = '$_cut/password-generator.png';
-  static const String generateFilled = '$_cut/password-generator.png';
-  static const String settings = '$_cut/settings-gear.png';
-  static const String settingsFilled = '$_cut/settings-gear.png';
+  static const home = HugeIcons.strokeRoundedHome01;
+  static const homeFilled = HugeIcons.strokeRoundedHome02;
+  static const vault = HugeIcons.strokeRoundedLockPassword;
+  static const vaultFilled = HugeIcons.strokeRoundedLockPassword;
+  static const generate = HugeIcons.strokeRoundedSlidersHorizontal;
+  static const generateFilled = HugeIcons.strokeRoundedPasswordValidation;
+  static const settings = HugeIcons.strokeRoundedSettings01;
+  static const settingsFilled = HugeIcons.strokeRoundedSettings02;
 
   // Categories & Item Types (3D assets; passport has no generated asset yet)
   static const String categoryLogin = '$_cut/user-login.png';
