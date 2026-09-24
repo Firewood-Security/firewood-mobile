@@ -319,23 +319,11 @@ class _VaultSetupScreenState extends ConsumerState<VaultSetupScreen>
                     // Header
                     Column(
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(3),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: AppColors.orangeAccent.withValues(alpha: 0.5),
-                              width: 2,
-                            ),
-                          ),
-                          child: ClipOval(
-                            child: Image.asset(
-                              'assets/FWS.png',
-                              width: 56,
-                              height: 56,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
+                        Image.asset(
+                          'assets/FWS.png',
+                          width: 64,
+                          height: 64,
+                          fit: BoxFit.contain,
                         ),
                         const SizedBox(height: 10),
                         Text(

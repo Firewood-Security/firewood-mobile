@@ -350,13 +350,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                ClipOval(
-                  child: Image.asset(
-                    'assets/FWS.png',
-                    width: 44,
-                    height: 44,
-                    fit: BoxFit.cover,
-                  ),
+                Image.asset(
+                  'assets/FWS.png',
+                  width: 48,
+                  height: 48,
+                  fit: BoxFit.contain,
                 ),
                 const SizedBox(height: 10),
                 Text(

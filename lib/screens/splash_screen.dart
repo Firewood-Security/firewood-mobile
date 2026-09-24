@@ -116,23 +116,12 @@ class _SplashScreenState extends State<SplashScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Circular logo with tiny orange outline
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppColors.orangeAccent,
-                          width: 1.5,
-                        ),
-                      ),
-                      child: ClipOval(
-                        child: Image.asset(
-                          'assets/FWS.png',
-                          fit: BoxFit.cover,
-                        ),
-                      ),
+                    // Bare logo, no container or outline
+                    Image.asset(
+                      'assets/FWS.png',
+                      width: 64,
+                      height: 64,
+                      fit: BoxFit.contain,
                     ),
                     const SizedBox(height: 14),
                     const Text(

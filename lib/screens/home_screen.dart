@@ -331,14 +331,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       child: Row(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF27272A),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const AppIcon(AppIcons.download, color: AppColors.offWhite, size: 20),
-                          ),
+                          const AppIcon(AppIcons.download, size: 26),
                           const SizedBox(width: 14),
                           const Expanded(
                             child: Column(
@@ -449,22 +442,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             centerTitle: false,
             title: Row(
               children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppColors.orangeAccent,
-                      width: 1.2,
-                    ),
-                  ),
-                  child: ClipOval(
-                    child: Image.asset(
-                      'assets/FWS.png',
-                      fit: BoxFit.cover,
-                    ),
-                  ),
+                Image.asset(
+                  'assets/FWS.png',
+                  width: 30,
+                  height: 30,
+                  fit: BoxFit.contain,
                 ),
                 const SizedBox(width: 10),
                 const Text(

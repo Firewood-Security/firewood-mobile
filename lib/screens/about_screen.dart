@@ -27,22 +27,11 @@ class AboutScreen extends StatelessWidget {
           Center(
             child: Column(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceZinc,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.borderZinc),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(17),
-                    child: Image.asset(
-                      'assets/FWS.png',
-                      width: 72,
-                      height: 72,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
+                Image.asset(
+                  'assets/FWS.png',
+                  width: 72,
+                  height: 72,
+                  fit: BoxFit.contain,
                 ),
                 const SizedBox(height: 14),
                 const Text(
