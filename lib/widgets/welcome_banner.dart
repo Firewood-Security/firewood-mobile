@@ -73,16 +73,8 @@ class _WelcomeBannerState extends State<WelcomeBanner> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppColors.surfaceZinc,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: activeAccent.withValues(alpha: 0.4), width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.6),
-            blurRadius: 24,
-            spreadRadius: 4,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderZinc, width: 1),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

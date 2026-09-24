@@ -97,26 +97,14 @@ class _GuideModalState extends State<GuideModal> with SingleTickerProviderStateM
               constraints: const BoxConstraints(maxWidth: 380),
               decoration: BoxDecoration(
                 color: const Color(0xFF16161A),
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: AppColors.borderZinc.withValues(alpha: 0.8),
-                  width: 1.2,
+                  color: AppColors.borderZinc,
+                  width: 1,
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.8),
-                    blurRadius: 32,
-                    offset: const Offset(0, 12),
-                  ),
-                  BoxShadow(
-                    color: activeAccent.withValues(alpha: 0.15),
-                    blurRadius: 20,
-                    spreadRadius: -4,
-                  ),
-                ],
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(20),
                 child: Padding(
                   padding: const EdgeInsets.all(24),
                   child: Column(
@@ -157,19 +145,12 @@ class _GuideModalState extends State<GuideModal> with SingleTickerProviderStateM
                                   width: 64,
                                   height: 64,
                                   decoration: BoxDecoration(
-                                    color: activeAccent.withValues(alpha: 0.12),
+                                    color: AppColors.orangeContainer,
                                     shape: BoxShape.circle,
                                     border: Border.all(
-                                      color: activeAccent.withValues(alpha: 0.35),
-                                      width: 1.5,
+                                      color: AppColors.orangeBorder,
+                                      width: 1,
                                     ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: activeAccent.withValues(alpha: 0.2),
-                                        blurRadius: 12,
-                                        spreadRadius: 2,
-                                      ),
-                                    ],
                                   ),
                                   child: Center(child: AppIcon(page.icon, color: activeAccent, size: 28)),
                                 ),
@@ -249,24 +230,8 @@ class _GuideModalState extends State<GuideModal> with SingleTickerProviderStateM
                           const Spacer(),
                           Container(
                             decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [
-                                  activeAccent,
-                                  HSLColor.fromColor(activeAccent)
-                                      .withLightness((HSLColor.fromColor(activeAccent).lightness - 0.12).clamp(0.0, 1.0))
-                                      .toColor(),
-                                ],
-                              ),
+                              color: activeAccent,
                               borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: activeAccent.withValues(alpha: 0.35),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
                             ),
                             child: Material(
                               color: Colors.transparent,

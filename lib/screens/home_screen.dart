@@ -218,11 +218,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         return Container(
           decoration: BoxDecoration(
             color: const Color(0xFF16161A),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            border: Border.all(color: AppColors.borderZinc.withValues(alpha: 0.8), width: 1.2),
-            boxShadow: const [
-              BoxShadow(color: Colors.black87, blurRadius: 24, offset: Offset(0, -6)),
-            ],
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            border: Border.all(color: AppColors.borderZinc, width: 1),
           ),
           padding: EdgeInsets.fromLTRB(20, 12, 20, MediaQuery.of(ctx).padding.bottom + 20),
           child: Column(
@@ -276,21 +273,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               // Button 1: Add Credentials
               Container(
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      activeAccent.withValues(alpha: 0.18),
-                      activeAccent.withValues(alpha: 0.06),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: activeAccent.withValues(alpha: 0.4), width: 1.2),
+                  color: AppColors.cardZinc,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.borderZinc, width: 1),
                 ),
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(14),
                     onTap: () {
                       Navigator.pop(ctx);
                       _addItem(key);
@@ -302,7 +292,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: activeAccent.withValues(alpha: 0.25),
+                              color: AppColors.orangeContainer,
                               shape: BoxShape.circle,
                             ),
                             child: AppIcon(AppIcons.add, color: activeAccent, size: 20),
@@ -553,24 +543,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       height: 56,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Theme.of(context).colorScheme.primary.withValues(alpha: 0.95),
-                            HSLColor.fromColor(Theme.of(context).colorScheme.primary)
-                                .withLightness((HSLColor.fromColor(Theme.of(context).colorScheme.primary).lightness - 0.15).clamp(0.0, 1.0))
-                                .toColor(),
-                          ],
-                        ),
-                        border: Border.all(color: Theme.of(context).colorScheme.primary, width: 1),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Colors.black54,
-                            offset: Offset(0, 4),
-                            blurRadius: 10,
-                          ),
-                        ],
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                       child: Material(
                         color: Colors.transparent,
@@ -1359,18 +1332,11 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: AppColors.surfaceZinc,
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: activeAccent.withValues(alpha: 0.4),
-                width: 1.2,
+                color: AppColors.borderZinc,
+                width: 1,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: activeAccent.withValues(alpha: 0.08),
-                  blurRadius: 16,
-                  offset: const Offset(0, 4),
-                ),
-              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,

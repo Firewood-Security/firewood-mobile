@@ -1474,16 +1474,10 @@ class _PasswordGeneratorSheetState extends State<_PasswordGeneratorSheet> {
         top: 20,
         bottom: MediaQuery.of(context).viewInsets.bottom + MediaQuery.of(context).padding.bottom + 20,
       ),
-      decoration: const BoxDecoration(
-        color: Color(0xFF141418),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black87,
-            blurRadius: 30,
-            offset: Offset(0, -6),
-          ),
-        ],
+      decoration: BoxDecoration(
+        color: const Color(0xFF141418),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        border: Border.all(color: AppColors.borderZinc, width: 1),
       ),
       child: SingleChildScrollView(
         child: Column(

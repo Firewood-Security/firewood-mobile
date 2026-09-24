@@ -432,14 +432,7 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: AppColors.orangeContainer,
-                            border: Border.all(color: AppColors.pastelOrangeBorder, width: 1.5),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.orangeAccent.withValues(alpha: 0.15),
-                                blurRadius: 20,
-                                spreadRadius: 2,
-                              ),
-                            ],
+                            border: Border.all(color: AppColors.orangeBorder, width: 1),
                           ),
                           child: ClipOval(
                             child: Image.asset(
@@ -584,18 +577,11 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       color: AppColors.surfaceZinc,
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: AppColors.orangeAccent.withValues(alpha: 0.3),
-                        width: 1.2,
+                        color: AppColors.borderZinc,
+                        width: 1,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.25),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,

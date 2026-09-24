@@ -169,22 +169,10 @@ class AppDialog {
                     const SizedBox(width: 10),
                     Container(
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: isDanger
-                              ? [const Color(0xFFEF4444), const Color(0xFFB91C1C)]
-                              : [const Color(0xFFFF6F40), const Color(0xFFE64A19)],
-                        ),
+                        color: isDanger
+                            ? AppColors.roseAccent
+                            : Theme.of(context).colorScheme.primary,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: primaryColor, width: 1),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Colors.black45,
-                            offset: Offset(0, 2),
-                            blurRadius: 4,
-                          ),
-                        ],
                       ),
                       child: Material(
                         color: Colors.transparent,

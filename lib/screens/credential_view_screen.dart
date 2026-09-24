@@ -297,18 +297,11 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
                 decoration: BoxDecoration(
                   color: AppColors.orangeContainer,
                   shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.orangeAccent.withValues(alpha: 0.3)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.orangeAccent.withValues(alpha: 0.2),
-                      blurRadius: 28,
-                      spreadRadius: 4,
-                    ),
-                  ],
+                  border: Border.all(color: AppColors.orangeBorder, width: 1),
                 ),
                 child: AppIcon(
                   AppIcons.shield,
-                  size: 56,
+                  size: 48,
                   color: AppColors.orangeAccent,
                 ),
               ),

@@ -40,10 +40,10 @@ class CategorySegmentedBar extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF141417),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: AppColors.borderZinc.withValues(alpha: 0.8),
-          width: 1.2,
+          color: AppColors.borderZinc,
+          width: 1,
         ),
       ),
       clipBehavior: Clip.antiAlias,
@@ -73,15 +73,6 @@ class CategorySegmentedBar extends StatelessWidget {
                     color: isSelected
                         ? activeAccent
                         : Colors.transparent,
-                    boxShadow: isSelected
-                        ? [
-                            BoxShadow(
-                              color: activeAccent.withValues(alpha: 0.35),
-                              blurRadius: 8,
-                              offset: const Offset(0, 1),
-                            ),
-                          ]
-                        : null,
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,

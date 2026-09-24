@@ -30,18 +30,11 @@ class AccentColorPickerDialog extends StatelessWidget {
               constraints: const BoxConstraints(maxWidth: 360),
               decoration: BoxDecoration(
                 color: const Color(0xFF16161A),
-                borderRadius: BorderRadius.circular(22),
+                borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: AppColors.borderZinc.withValues(alpha: 0.8),
-                  width: 1.2,
+                  color: AppColors.borderZinc,
+                  width: 1,
                 ),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black87,
-                    blurRadius: 28,
-                    offset: Offset(0, 10),
-                  ),
-                ],
               ),
               child: Padding(
                 padding: const EdgeInsets.all(20),
@@ -136,16 +129,9 @@ class AccentColorPickerDialog extends StatelessWidget {
                                             color: preset.color,
                                             shape: BoxShape.circle,
                                             border: Border.all(
-                                              color: Colors.white.withValues(alpha: 0.2),
-                                              width: 1.5,
+                                              color: AppColors.borderZinc,
+                                              width: 1,
                                             ),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: preset.color.withValues(alpha: 0.4),
-                                                blurRadius: 8,
-                                                offset: const Offset(0, 2),
-                                              ),
-                                            ],
                                           ),
                                         ),
                                         const SizedBox(width: 14),
@@ -224,14 +210,7 @@ class AccentColorPickerTile extends StatelessWidget {
             decoration: BoxDecoration(
               color: activeColor,
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1.5),
-              boxShadow: [
-                BoxShadow(
-                  color: activeColor.withValues(alpha: 0.4),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+              border: Border.all(color: AppColors.borderZinc, width: 1),
             ),
           ),
           title: const Text(

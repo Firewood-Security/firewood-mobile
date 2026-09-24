@@ -1,5 +1,5 @@
 // widgets/app_floating_navbar.dart
-// Raised floating bottom navigation bar with animated sliding pill indicator, glowing active state, and gesture clearance
+// Flat floating bottom navigation bar with sliding selection indicator.
 
 import 'package:flutter/material.dart';
 import '../services/update_service.dart';
@@ -18,8 +18,6 @@ class AppFloatingNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final activeAccent = Theme.of(context).colorScheme.primary;
-
     return ValueListenableBuilder<bool>(
       valueListenable: UpdateService.hasUpdateAvailable,
       builder: (context, hasUpdate, _) {
@@ -28,23 +26,11 @@ class AppFloatingNavBar extends StatelessWidget {
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
             color: const Color(0xFF141418),
-            borderRadius: BorderRadius.circular(30),
+            borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: AppColors.borderZinc.withValues(alpha: 0.9),
-              width: 1.2,
+              color: AppColors.borderZinc,
+              width: 1,
             ),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black87,
-                blurRadius: 24,
-                offset: Offset(0, 8),
-              ),
-              BoxShadow(
-                color: Color(0x1AFFFFFF),
-                blurRadius: 1,
-                offset: Offset(0, 1),
-              ),
-            ],
           ),
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -64,27 +50,12 @@ class AppFloatingNavBar extends StatelessWidget {
                     height: itemHeight,
                     child: Container(
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            activeAccent.withValues(alpha: 0.28),
-                            activeAccent.withValues(alpha: 0.09),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(24),
+                        color: AppColors.orangeContainer,
+                        borderRadius: BorderRadius.circular(18),
                         border: Border.all(
-                          color: activeAccent.withValues(alpha: 0.5),
-                          width: 1.2,
+                          color: AppColors.orangeBorder,
+                          width: 1,
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: activeAccent.withValues(alpha: 0.2),
-                            blurRadius: 10,
-                            spreadRadius: 1,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
                       ),
                     ),
                   ),
