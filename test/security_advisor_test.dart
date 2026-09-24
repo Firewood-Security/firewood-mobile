@@ -139,6 +139,23 @@ void main() {
       expect(g!.issues.first.detail, contains('200 days'));
     });
 
+    test('stale findings apply to non-login-only vaults', () {
+      final oldCard = DecryptedItem(
+        itemId: 'card-1',
+        type: ItemType.card.name,
+        title: 'Old Card',
+        fields: const <String, dynamic>{'number': '4111111111111111'},
+        updatedAt: _now.subtract(const Duration(days: 300)),
+        createdAt: _now.subtract(const Duration(days: 300)),
+      );
+      final a = SecurityAdvisorEngine.analyze([oldCard], now: _now);
+      final g = _group(a, SecurityTipCategory.staleCredentials);
+      expect(g, isNotNull);
+      expect(g!.count, 1);
+      expect(a.totalLogins, 0);
+      expect(a.securityScore, 100);
+    });
+
     test('score stays clamped within 0..100 on extreme input', () {
       final a = SecurityAdvisorEngine.analyze([
         _login('A', password: 'x'),
