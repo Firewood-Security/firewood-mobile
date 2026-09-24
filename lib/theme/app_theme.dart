@@ -207,10 +207,10 @@ class AppTheme {
       // --- Matte Flat Button Themes (no elevation, no glow) ---
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: AppColors.pastelDeepOrangeFill,
+          backgroundColor: AppColors.orangeAccent,
           foregroundColor: Colors.white,
           elevation: 2,
-          shadowColor: AppColors.pastelDeepOrangeLip,
+          shadowColor: AppColors.shade(AppColors.orangeAccent, -0.18),
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 22),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -240,10 +240,10 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.pastelDeepOrangeFill,
+          backgroundColor: AppColors.orangeAccent,
           foregroundColor: Colors.white,
           elevation: 2,
-          shadowColor: AppColors.pastelDeepOrangeLip,
+          shadowColor: AppColors.shade(AppColors.orangeAccent, -0.18),
           side: BorderSide(color: primaryBorder, width: 1),
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
           shape: RoundedRectangleBorder(

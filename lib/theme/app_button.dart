@@ -52,10 +52,10 @@ class AppButton extends StatelessWidget {
     switch (variant) {
       case AppButtonVariant.primary:
       case AppButtonVariant.neon:
-        background = AppColors.pastelDeepOrangeFill;
-        borderColor = AppColors.pastelDeepOrangeBorder;
+        background = AppColors.orangeAccent;
+        borderColor = AppColors.orangeDark;
         textColor = Colors.white;
-        lipColor = AppColors.pastelDeepOrangeLip;
+        lipColor = AppColors.shade(AppColors.orangeAccent, -0.18);
         break;
       case AppButtonVariant.danger:
         background = AppColors.roseAccent;
@@ -135,11 +135,9 @@ class AppButton extends StatelessWidget {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    AppColors.shade(background, 0.05),
                     background,
-                    AppColors.shade(background, -0.05),
+                    AppColors.shade(background, -0.08),
                   ],
-                  stops: const [0.0, 0.6, 1.0],
                 )
               : null,
           borderRadius: BorderRadius.circular(12),
@@ -147,8 +145,9 @@ class AppButton extends StatelessWidget {
             color: isDisabled ? AppColors.borderZinc : borderColor,
             width: 1,
           ),
-          // Matte soft-3D: subtle vertical gradient face (light crown to deep
-          // base) + solid zero-blur lip = a pressed key, never a glow.
+          // Matte soft-3D: deep accent face fading to a slightly darker shade
+          // of the same accent + solid zero-blur lip. No light crown (washes
+          // out), never a glow.
           boxShadow: isDisabled
               ? null
               : [

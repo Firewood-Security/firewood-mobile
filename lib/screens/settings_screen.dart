@@ -530,7 +530,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 Navigator.pop(context, passwordController.text);
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.pastelDeepOrangeFill, foregroundColor: Colors.white, shadowColor: AppColors.pastelDeepOrangeLip),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.orangeAccent, foregroundColor: Colors.white, shadowColor: AppColors.shade(AppColors.orangeAccent, -0.18)),
             child: const Text('Export'),
           ),
         ],
@@ -589,7 +589,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
               ElevatedButton(
                 onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.pastelDeepOrangeFill, foregroundColor: Colors.white, shadowColor: AppColors.pastelDeepOrangeLip),
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.orangeAccent, foregroundColor: Colors.white, shadowColor: AppColors.shade(AppColors.orangeAccent, -0.18)),
                 child: const Text('Done'),
               ),
             ],
@@ -953,7 +953,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 Navigator.pop(context, passwordController.text);
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.pastelDeepOrangeFill, foregroundColor: Colors.white, shadowColor: AppColors.pastelDeepOrangeLip),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.orangeAccent, foregroundColor: Colors.white, shadowColor: AppColors.shade(AppColors.orangeAccent, -0.18)),
             child: const Text('Confirm'),
           ),
         ],
@@ -1048,7 +1048,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 Navigator.pop(context, passwordController.text);
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.pastelDeepOrangeFill, foregroundColor: Colors.white, shadowColor: AppColors.pastelDeepOrangeLip),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.orangeAccent, foregroundColor: Colors.white, shadowColor: AppColors.shade(AppColors.orangeAccent, -0.18)),
             child: const Text('Import'),
           ),
         ],
