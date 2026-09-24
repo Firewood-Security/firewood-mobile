@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
 
 class AboutScreen extends StatelessWidget {
@@ -19,7 +20,7 @@ class AboutScreen extends StatelessWidget {
         iconTheme: const IconThemeData(color: AppColors.offWhite),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 140),
         children: [
           // App Logo & Header
           // App Logo & Header (Minimalist, No Glows)
@@ -61,7 +62,7 @@ class AboutScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: AppColors.borderZinc),
                   ),
-                  child: const Text(
+                  child: Text(
                     'Version 1.0.0 • Zero-Knowledge Vault',
                     style: TextStyle(fontSize: 11, color: AppColors.orangeAccent, fontWeight: FontWeight.w600),
                   ),
@@ -90,19 +91,19 @@ class AboutScreen extends StatelessWidget {
           _AboutCard(
             children: [
               _FeatureTile(
-                icon: Icons.shield_outlined,
+                icon: AppIcons.shield,
                 title: 'Zero-Knowledge Security',
                 subtitle: 'Master password never leaves device RAM. Client-side XChaCha20-Poly1305 encryption.',
               ),
               const Divider(color: AppColors.borderZinc, height: 1),
               _FeatureTile(
-                icon: Icons.timer_outlined,
+                icon: AppIcons.timer,
                 title: 'Integrated TOTP Authenticator',
                 subtitle: 'Generate 2-factor authentication codes with built-in countdown timers.',
               ),
               const Divider(color: AppColors.borderZinc, height: 1),
               _FeatureTile(
-                icon: Icons.psychology_outlined,
+                icon: AppIcons.shield,
                 title: 'Mini ML Security Advisor',
                 subtitle: 'On-device Decision Tree classifier tracking vault health and recommending security tips.',
               ),
@@ -116,19 +117,19 @@ class AboutScreen extends StatelessWidget {
           _AboutCard(
             children: [
               _FeatureTile(
-                icon: Icons.vpn_key_outlined,
+                icon: AppIcons.key,
                 title: 'Argon2id Key Derivation',
                 subtitle: 'Master key derived using Argon2id with 16-byte random salt to resist GPU brute-force attacks.',
               ),
               const Divider(color: AppColors.borderZinc, height: 1),
               _FeatureTile(
-                icon: Icons.lock_outline,
+                icon: AppIcons.lock,
                 title: 'XChaCha20-Poly1305 Field Cipher',
                 subtitle: 'Individual fields encrypted with 256-bit stream cipher and Poly1305 authentication tags.',
               ),
               const Divider(color: AppColors.borderZinc, height: 1),
               _FeatureTile(
-                icon: Icons.cloud_off_outlined,
+                icon: AppIcons.cloud,
                 title: 'Offline Storage Isolation',
                 subtitle: 'Zero cloud dependencies. All data stored strictly in local Isar NoSQL encrypted database.',
               ),
@@ -144,7 +145,7 @@ class AboutScreen extends StatelessWidget {
               _DeveloperTile(
                 name: 'Yahya',
                 role: 'Cloud Engineer',
-                icon: Icons.cloud_outlined,
+                icon: AppIcons.cloud,
                 details: 'Cloud Infrastructure & Security Architecture.',
                 githubUrl: 'https://github.com/yahyaoncloud',
                 websiteUrl: 'https://yahyaoncloud.vercel.app',
@@ -153,7 +154,7 @@ class AboutScreen extends StatelessWidget {
               _DeveloperTile(
                 name: 'Firas Rasheed',
                 role: 'Backend Engineer',
-                icon: Icons.dns_outlined,
+                icon: AppIcons.typeDeveloperSecret,
                 details: 'Backend Architecture & Database Optimization.',
               ),
             ],
@@ -165,18 +166,18 @@ class AboutScreen extends StatelessWidget {
           _AboutCard(
             children: [
               ListTile(
-                leading: const Icon(Icons.privacy_tip_outlined, color: AppColors.orangeAccent, size: 20),
+                leading: AppIcon(AppIcons.shield, color: AppColors.orangeAccent, size: 20),
                 title: const Text('Privacy Policy', style: TextStyle(color: AppColors.offWhite, fontSize: 13, fontWeight: FontWeight.bold)),
                 subtitle: const Text('100% Offline • Zero Analytics • Zero Data Collection', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                trailing: const Icon(Icons.chevron_right, color: AppColors.textMuted, size: 18),
+                trailing: AppIcon(AppIcons.chevronRight, color: AppColors.textMuted, size: 18),
                 onTap: () => _showPrivacyDialog(context),
               ),
               const Divider(color: AppColors.borderZinc, height: 1),
               ListTile(
-                leading: const Icon(Icons.copy_outlined, color: AppColors.orangeAccent, size: 20),
+                leading: AppIcon(AppIcons.file, color: AppColors.orangeAccent, size: 20),
                 title: const Text('License & Legal', style: TextStyle(color: AppColors.offWhite, fontSize: 13, fontWeight: FontWeight.bold)),
                 subtitle: const Text('MIT Open Source License', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                trailing: const Icon(Icons.chevron_right, color: AppColors.textMuted, size: 18),
+                trailing: AppIcon(AppIcons.chevronRight, color: AppColors.textMuted, size: 18),
                 onTap: () => _showLicenseDialog(context),
               ),
             ],
@@ -284,7 +285,7 @@ class _AboutCard extends StatelessWidget {
 class _DeveloperTile extends StatelessWidget {
   final String name;
   final String role;
-  final IconData icon;
+  final dynamic icon;
   final String details;
   final String? githubUrl;
   final String? websiteUrl;
@@ -318,7 +319,7 @@ class _DeveloperTile extends StatelessWidget {
               color: AppColors.orangeContainer,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: AppColors.orangeAccent, size: 20),
+            child: AppIcon(icon, color: AppColors.orangeAccent, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -326,7 +327,7 @@ class _DeveloperTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(name, style: const TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.bold, fontSize: 13)),
-                Text(role, style: const TextStyle(color: AppColors.orangeAccent, fontSize: 11, fontWeight: FontWeight.w600)),
+                Text(role, style: TextStyle(color: AppColors.orangeAccent, fontSize: 11, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 4),
                 Text(details, style: const TextStyle(color: AppColors.textMuted, fontSize: 11, height: 1.4)),
                 if (githubUrl != null || websiteUrl != null) const SizedBox(height: 8),
@@ -345,11 +346,11 @@ class _DeveloperTile extends StatelessWidget {
                             borderRadius: BorderRadius.circular(6),
                             border: Border.all(color: AppColors.orangeAccent.withValues(alpha: 0.4)),
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.code, size: 12, color: AppColors.orangeAccent),
-                              SizedBox(width: 4),
+                              AppIcon(AppIcons.typeDeveloperSecret, size: 12, color: AppColors.orangeAccent),
+                              const SizedBox(width: 4),
                               Text('github.com/yahyaoncloud', style: TextStyle(fontSize: 10, color: AppColors.orangeAccent, fontWeight: FontWeight.bold)),
                             ],
                           ),
@@ -366,11 +367,11 @@ class _DeveloperTile extends StatelessWidget {
                             borderRadius: BorderRadius.circular(6),
                             border: Border.all(color: AppColors.orangeAccent.withValues(alpha: 0.4)),
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.language, size: 12, color: AppColors.orangeAccent),
-                              SizedBox(width: 4),
+                              AppIcon(AppIcons.globe, size: 12, color: AppColors.orangeAccent),
+                              const SizedBox(width: 4),
                               Text('yahyaoncloud.vercel.app', style: TextStyle(fontSize: 10, color: AppColors.orangeAccent, fontWeight: FontWeight.bold)),
                             ],
                           ),
@@ -388,16 +389,14 @@ class _DeveloperTile extends StatelessWidget {
 }
 
 class _FeatureTile extends StatelessWidget {
-  final IconData icon;
+  final dynamic icon;
   final String title;
   final String subtitle;
-  final Color? titleColor;
 
   const _FeatureTile({
     required this.icon,
     required this.title,
     required this.subtitle,
-    this.titleColor,
   });
 
   @override
@@ -413,7 +412,7 @@ class _FeatureTile extends StatelessWidget {
               color: AppColors.orangeContainer,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: AppColors.orangeAccent, size: 18),
+            child: AppIcon(icon, color: AppColors.orangeAccent, size: 18),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -422,8 +421,8 @@ class _FeatureTile extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: TextStyle(
-                    color: titleColor ?? AppColors.offWhite,
+                  style: const TextStyle(
+                    color: AppColors.offWhite,
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
                   ),

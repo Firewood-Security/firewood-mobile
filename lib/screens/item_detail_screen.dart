@@ -14,7 +14,7 @@ import '../services/generator_service.dart';
 import '../widgets/password_strength_meter.dart';
 import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
-import '../theme/app_3d_button.dart';
+import '../theme/app_button.dart';
 import '../theme/app_feedback.dart';
 import '../widgets/category_segmented_bar.dart';
 
@@ -723,10 +723,10 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           if (isEditing)
             Padding(
               padding: const EdgeInsets.only(right: 12),
-              child: App3DButton(
+              child: AppButton(
                 label: 'Delete',
                 icon: AppIcons.delete,
-                variant: App3DButtonVariant.danger,
+                variant: AppButtonVariant.danger,
                 height: 36,
                 fontSize: 12,
                 onPressed: _confirmDelete,
@@ -796,10 +796,10 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                     const SizedBox(height: 32),
 
                     // Save Action Button
-                    App3DButton(
+                    AppButton(
                       label: _isLoading ? 'Saving...' : (isEditing ? 'Save Changes' : 'Save Credential'),
                       icon: AppIcons.checkCircle,
-                      variant: App3DButtonVariant.primary,
+                      variant: AppButtonVariant.primary,
                       isLoading: _isLoading,
                       fullWidth: true,
                       height: 52,
@@ -877,7 +877,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                     },
                   ),
                 IconButton(
-                  icon: AppIcon(AppIcons.magic, color: AppColors.orangeAccent, size: 20),
+                  icon: AppIcon(AppIcons.refresh, color: AppColors.orangeAccent, size: 20),
                   tooltip: 'Generate Password',
                   onPressed: _generatePassword,
                 ),

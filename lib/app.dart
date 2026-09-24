@@ -4,12 +4,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'providers/auth_provider.dart';
+import 'screens/splash_screen.dart';
 import 'screens/vault_setup_screen.dart';
 import 'screens/vault_unlock_screen.dart';
 import 'screens/home_screen.dart';
 import 'services/vault_service.dart';
 import 'services/lock_service.dart';
 import 'services/accent_color_service.dart';
+import 'theme/app_icons.dart';
 import 'theme/app_theme.dart';
 
 class FirewoodApp extends ConsumerStatefulWidget {
@@ -90,18 +92,34 @@ class _FirewoodAppState extends ConsumerState<FirewoodApp>
   }
 }
 
-class _AuthGate extends ConsumerWidget {
+class _AuthGate extends ConsumerStatefulWidget {
   const _AuthGate();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends ConsumerState<_AuthGate> {
+  bool _splashCompleted = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_splashCompleted) {
+      return SplashScreen(
+        onComplete: () {
+          if (mounted) setState(() => _splashCompleted = true);
+        },
+      );
+    }
+
     final isUnlocked = ref.watch(authProvider) != null;
 
     return FutureBuilder<bool>(
       future: VaultService().hasAnyVault(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
+          return Scaffold(
+            backgroundColor: const Color(0xFF0C0C0E),
             body: Center(
               child: CircularProgressIndicator(
                 color: AppColors.orangeAccent,
@@ -119,7 +137,7 @@ class _AuthGate extends ConsumerWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.warning_amber_rounded, color: Colors.orangeAccent, size: 48),
+                    AppIcon(AppIcons.alertCircle, color: Colors.orangeAccent, size: 48),
                     const SizedBox(height: 16),
                     const Text(
                       'Failed to initialize vault database',

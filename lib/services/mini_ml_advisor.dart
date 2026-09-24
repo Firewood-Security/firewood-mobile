@@ -55,7 +55,7 @@ class MiniMLSecurityAdvisor {
   static SecurityTip? classifyVaultHealth(List<DecryptedItem> items) {
     if (items.isEmpty) return null;
 
-    final logins = items.where((i) => i.type == ItemType.login.label).toList();
+    final logins = items.where((i) => ItemTypeExt.fromString(i.type) == ItemType.login).toList();
     if (logins.isEmpty) return null;
 
     int weakCount = 0;

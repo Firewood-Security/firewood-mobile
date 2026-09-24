@@ -1,9 +1,27 @@
 // services/generator_service.dart
-// Password generator and TOTP generator
+// Advanced Password, Diceware Passphrase, PIN and RFC 6238 TOTP Generator with Cryptographic Strength Assessment
 
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:otp/otp.dart';
+
+class StrengthResult {
+  final int score; // 0 to 4
+  final String label;
+  final Color color;
+  final double entropyBits;
+  final String crackTimeEstimate;
+  final String recommendation;
+
+  const StrengthResult({
+    required this.score,
+    required this.label,
+    required this.color,
+    required this.entropyBits,
+    required this.crackTimeEstimate,
+    required this.recommendation,
+  });
+}
 
 class GeneratorService {
   static const String _lowercase = 'abcdefghijklmnopqrstuvwxyz';
@@ -73,34 +91,224 @@ class GeneratorService {
     return chars.join();
   }
 
+  /// Generate a secure numeric PIN
+  static String generatePIN({int length = 6}) {
+    if (length < 4) length = 4;
+    if (length > 16) length = 16;
+    final random = Random.secure();
+    final buffer = StringBuffer();
+    for (int i = 0; i < length; i++) {
+      buffer.write(random.nextInt(10));
+    }
+    return buffer.toString();
+  }
+
+  /// Generate Diceware-style passphrase
+  static String generatePassphrase({
+    int wordCount = 4,
+    String separator = '-',
+    bool capitalize = false,
+    bool includeNumber = true,
+  }) {
+    if (wordCount < 3) wordCount = 3;
+    if (wordCount > 10) wordCount = 10;
+
+    const words = [
+      'abandon', 'ability', 'absent', 'absorb', 'abstract', 'academy', 'access', 'accident',
+      'account', 'accuse', 'achieve', 'acoustic', 'acquire', 'across', 'action', 'actor',
+      'actress', 'adapt', 'addition', 'address', 'adjust', 'admit', 'adult', 'advance',
+      'advice', 'aerobic', 'afford', 'afraid', 'agent', 'agree', 'ahead', 'aim',
+      'airport', 'alarm', 'album', 'alcohol', 'alert', 'alien', 'allied', 'almond',
+      'almost', 'alone', 'alpha', 'already', 'alter', 'always', 'amateur', 'amazing',
+      'among', 'amount', 'amused', 'analyst', 'anchor', 'ancient', 'anger', 'angle',
+      'angry', 'animal', 'ankle', 'announce', 'annual', 'another', 'answer', 'antenna',
+      'antique', 'anxiety', 'anybody', 'apart', 'apology', 'appear', 'apple', 'approve',
+      'april', 'arch', 'arctic', 'area', 'arena', 'argue', 'armour', 'army',
+      'around', 'arrange', 'arrest', 'arrive', 'arrow', 'artist', 'aspect', 'assault',
+      'asset', 'assist', 'assume', 'asthma', 'athlete', 'atom', 'attack', 'attend',
+      'attitude', 'attract', 'auction', 'audit', 'august', 'aunt', 'author', 'auto',
+      'autumn', 'average', 'avocado', 'avoid', 'awake', 'aware', 'away', 'awesome',
+      'awful', 'awkward', 'axis', 'baby', 'bachelor', 'bacon', 'badge', 'bag',
+      'balance', 'balcony', 'ball', 'bamboo', 'banana', 'banner', 'bar', 'barely',
+      'bargain', 'barrel', 'base', 'basic', 'basket', 'battle', 'beach', 'beacon',
+      'beam', 'beauty', 'because', 'become', 'beef', 'before', 'begin', 'behave',
+      'behind', 'belief', 'below', 'belt', 'bench', 'benefit', 'best', 'betray',
+      'better', 'between', 'beyond', 'bicycle', 'bid', 'bike', 'bind', 'biology',
+      'bird', 'birth', 'bitter', 'black', 'blade', 'blame', 'blanket', 'blast',
+      'bleak', 'bless', 'blind', 'blood', 'blossom', 'blouse', 'blue', 'blur',
+      'blush', 'board', 'boat', 'body', 'boil', 'bomb', 'bone', 'bonus',
+      'book', 'boost', 'border', 'boring', 'borrow', 'boss', 'bottom', 'bounce',
+      'box', 'boy', 'bracket', 'brain', 'brand', 'brass', 'brave', 'bread',
+      'breeze', 'brick', 'bridge', 'brief', 'bright', 'bring', 'brisk', 'broccoli',
+      'broken', 'bronze', 'broom', 'brother', 'brown', 'brush', 'bubble', 'buddy',
+      'budget', 'buffalo', 'build', 'bulb', 'bulk', 'bullet', 'bundle', 'bunker',
+      'burden', 'burger', 'burst', 'bus', 'business', 'busy', 'butter', 'buyer',
+      'cabin', 'cable', 'cactus', 'cage', 'cake', 'call', 'calm', 'camera',
+      'camp', 'canal', 'cancel', 'candy', 'cannon', 'canoe', 'canvas', 'canyon',
+      'capable', 'capital', 'captain', 'carbon', 'card', 'cargo', 'carpet', 'carry',
+      'cart', 'case', 'cash', 'casino', 'castle', 'casual', 'cat', 'catalog',
+      'catch', 'category', 'cattle', 'caught', 'cause', 'caution', 'cave', 'ceiling',
+      'celery', 'cement', 'census', 'century', 'cereal', 'certain', 'chair', 'chalk',
+      'champion', 'change', 'chaos', 'chapter', 'charge', 'chase', 'chat', 'cheap',
+      'check', 'cheese', 'chef', 'cherry', 'chest', 'chicken', 'chief', 'child',
+      'chimney', 'choice', 'choose', 'chronic', 'chuckle', 'chunk', 'churn', 'cigar',
+      'cinnamon', 'circle', 'citizen', 'city', 'civil', 'claim', 'clap', 'clarify',
+      'claw', 'clay', 'clean', 'clerk', 'clever', 'click', 'client', 'cliff',
+      'climb', 'clinic', 'clip', 'clock', 'clog', 'close', 'cloth', 'cloud',
+      'clown', 'club', 'clump', 'cluster', 'clutch', 'coach', 'coast', 'coconut',
+      'code', 'coffee', 'coil', 'coin', 'collect', 'color', 'column', 'combine',
+      'come', 'comfort', 'comic', 'common', 'company', 'concert', 'conduct', 'confirm',
+      'congress', 'connect', 'consider', 'control', 'convince', 'cook', 'cool', 'copper',
+      'copy', 'coral', 'core', 'corn', 'correct', 'cost', 'cotton', 'couch',
+      'country', 'couple', 'course', 'cousin', 'cover', 'coyote', 'crack', 'cradle',
+      'craft', 'cram', 'crane', 'crash', 'crater', 'crawl', 'crazy', 'cream',
+      'credit', 'creek', 'crew', 'cricket', 'crime', 'crisp', 'critic', 'crop',
+      'cross', 'crouch', 'crowd', 'crucial', 'cruel', 'cruise', 'crumble', 'crunch',
+      'crush', 'cry', 'crystal', 'cube', 'culture', 'cup', 'cupboard', 'curious',
+      'current', 'curtain', 'curve', 'cushion', 'custom', 'cute', 'cycle', 'cylinder',
+    ];
+
+    final random = Random.secure();
+    final selected = <String>[];
+
+    for (int i = 0; i < wordCount; i++) {
+      selected.add(words[random.nextInt(words.length)]);
+    }
+
+    var result = selected.join(separator);
+
+    if (capitalize) {
+      result = result
+          .split(separator)
+          .map((w) => w.isNotEmpty ? w[0].toUpperCase() + w.substring(1) : w)
+          .join(separator);
+    }
+
+    if (includeNumber) {
+      result += '$separator${random.nextInt(10000).toString().padLeft(4, '0')}';
+    }
+
+    return result;
+  }
+
   static String _randomFrom(String charset, Random random) {
     return charset[random.nextInt(charset.length)];
   }
 
   static bool _hasMatch(String s, RegExp regExp) => regExp.hasMatch(s);
 
-  /// Calculate password strength (0-4)
-  static int calculateStrength(String password) {
-    if (password.length < 6) return 0;
-    int score = 0;
-    
-    // Length
-    if (password.length >= 8) score++;
-    if (password.length >= 12) score++;
-    if (password.length >= 16) score++;
-    if (password.length >= 24) score++;
-    
-    // Character variety
-    if (password.contains(RegExp(r'[a-z]'))) score++;
-    if (password.contains(RegExp(r'[A-Z]'))) score++;
-    if (password.contains(RegExp(r'[0-9]'))) score++;
-    if (password.contains(RegExp(r'[^a-zA-Z0-9]'))) score++;
+  /// Calculate password strength & entropy evaluation
+  static StrengthResult evaluateStrength(String password) {
+    if (password.isEmpty) {
+      return const StrengthResult(
+        score: 0,
+        label: 'Empty',
+        color: Colors.grey,
+        entropyBits: 0,
+        crackTimeEstimate: 'Instant',
+        recommendation: 'Enter a password to evaluate strength.',
+      );
+    }
 
-    if (score >= 7) return 4;
-    if (score >= 5) return 3;
-    if (score >= 3) return 2;
-    if (score >= 1) return 1;
-    return 0;
+    // 1. Calculate pool size for entropy calculation
+    int poolSize = 0;
+    if (password.contains(RegExp(r'[a-z]'))) poolSize += 26;
+    if (password.contains(RegExp(r'[A-Z]'))) poolSize += 26;
+    if (password.contains(RegExp(r'[0-9]'))) poolSize += 10;
+    if (password.contains(RegExp(r'[^a-zA-Z0-9]'))) poolSize += 33;
+    if (poolSize == 0) poolSize = 10;
+
+    // Shannon/NIST Entropy in bits = length * log2(poolSize)
+    final entropyBits = password.length * (log(poolSize) / log(2));
+
+    // 2. Score calculation based on length, entropy & character sets
+    int score = 0;
+
+    // Checks
+    final hasLower = password.contains(RegExp(r'[a-z]'));
+    final hasUpper = password.contains(RegExp(r'[A-Z]'));
+    final hasDigits = password.contains(RegExp(r'[0-9]'));
+    final hasSpecial = password.contains(RegExp(r'[^a-zA-Z0-9]'));
+
+    final varietyCount = (hasLower ? 1 : 0) +
+        (hasUpper ? 1 : 0) +
+        (hasDigits ? 1 : 0) +
+        (hasSpecial ? 1 : 0);
+
+    // Score based on entropy bits
+    if (entropyBits < 28 || password.length < 6) {
+      score = 0; // Very Weak
+    } else if (entropyBits < 45 || password.length < 9) {
+      score = 1; // Weak
+    } else if (entropyBits < 65 || varietyCount < 2) {
+      score = 2; // Fair
+    } else if (entropyBits < 85 || varietyCount < 3) {
+      score = 3; // Strong
+    } else {
+      score = 4; // Very Strong
+    }
+
+    // Penalize trivial repeating or sequential patterns
+    if (RegExp(r'(.)\1{3,}').hasMatch(password) ||
+        password == '123456' ||
+        password == 'password' ||
+        password == 'admin123') {
+      score = (score > 0) ? score - 1 : 0;
+    }
+
+    // Label, Color and Crack-Time estimation
+    String label;
+    Color color;
+    String crackTime;
+    String recommendation;
+
+    switch (score) {
+      case 0:
+        label = 'Very Weak';
+        color = const Color(0xFFEF4444);
+        crackTime = '< 1 second';
+        recommendation = 'Easily cracked by brute-force. Add more characters and symbols.';
+        break;
+      case 1:
+        label = 'Weak';
+        color = const Color(0xFFF97316);
+        crackTime = 'Few minutes';
+        recommendation = 'Vulnerable to online dictionary attacks. Make it at least 12 characters.';
+        break;
+      case 2:
+        label = 'Fair';
+        color = const Color(0xFFFBBF24);
+        crackTime = 'Few days / weeks';
+        recommendation = 'Decent, but could be stronger with uppercase letters and special symbols.';
+        break;
+      case 3:
+        label = 'Strong';
+        color = const Color(0xFF84CC16);
+        crackTime = 'Centuries';
+        recommendation = 'Great password. Resistant to modern offline GPU cracking.';
+        break;
+      case 4:
+      default:
+        label = 'Very Strong';
+        color = const Color(0xFF10B981);
+        crackTime = 'Millions of years';
+        recommendation = 'Exceptional cryptographic entropy. Highly secure.';
+        break;
+    }
+
+    return StrengthResult(
+      score: score,
+      label: label,
+      color: color,
+      entropyBits: entropyBits,
+      crackTimeEstimate: crackTime,
+      recommendation: recommendation,
+    );
+  }
+
+  /// Legacy helper returning integer 0-4
+  static int calculateStrength(String password) {
+    return evaluateStrength(password).score;
   }
 
   static String getStrengthLabel(int strength) {
@@ -116,11 +324,11 @@ class GeneratorService {
 
   static Color getStrengthColor(int strength) {
     switch (strength) {
-      case 0: return Colors.red;
-      case 1: return Colors.orange;
-      case 2: return Colors.amber;
-      case 3: return Colors.lightGreen;
-      case 4: return Colors.green;
+      case 0: return const Color(0xFFEF4444);
+      case 1: return const Color(0xFFF97316);
+      case 2: return const Color(0xFFFBBF24);
+      case 3: return const Color(0xFF84CC16);
+      case 4: return const Color(0xFF10B981);
       default: return Colors.grey;
     }
   }
@@ -176,10 +384,9 @@ class GeneratorService {
     int period = 30,
     String algorithm = 'SHA1',
   }) {
-    // Normalize secret (remove spaces, uppercase)
     final normalizedSecret = secret.replaceAll(' ', '').toUpperCase();
     final nowMs = DateTime.now().millisecondsSinceEpoch;
-    
+
     Algorithm algo;
     switch (algorithm.toUpperCase()) {
       case 'SHA256':
@@ -191,7 +398,7 @@ class GeneratorService {
       default:
         algo = Algorithm.SHA1;
     }
-    
+
     return OTP.generateTOTPCodeString(
       normalizedSecret,
       nowMs,
@@ -219,46 +426,5 @@ class GeneratorService {
     final normalized = secret.replaceAll(' ', '').toUpperCase();
     if (normalized.length < 16 || normalized.length > 64) return false;
     return RegExp(r'^[A-Z2-7]+$').hasMatch(normalized);
-  }
-
-  /// Generate passphrase (diceware-style)
-  static String generatePassphrase({
-    int wordCount = 4,
-    String separator = '-',
-    bool capitalize = false,
-    bool includeNumber = true,
-  }) {
-    const words = [
-      'apple', 'banana', 'cherry', 'diamond', 'elephant', 'forest', 'guitar',
-      'horizon', 'island', 'journey', 'keyboard', 'laptop', 'mountain', 'notebook',
-      'ocean', 'pencil', 'quartz', 'river', 'sunset', 'tiger', 'umbrella',
-      'violin', 'waterfall', 'xylophone', 'yellow', 'zebra', 'anchor', 'bridge',
-      'crystal', 'dolphin', 'eagle', 'feather', 'garden', 'harmony', 'inspire',
-      'jazz', 'kangaroo', 'lighthouse', 'meadow', 'nebula', 'orchard', 'penguin',
-      'quantum', 'rainbow', 'starlight', 'thunder', 'universe', 'velvet', 'whisper',
-      'xenon', 'yesterday', 'zenith', 'aurora', 'breeze', 'compass', 'dawn',
-      'echo', 'flame', 'glacier', 'horizon', 'infinity', 'jade', 'karma', 'lunar',
-      'mirror', 'nature', 'opal', 'peace', 'quest', 'radiant', 'serenity', 'tide',
-      'unity', 'vivid', 'wonder', 'xenial', 'yearn', 'zephyr',
-    ];
-
-    final random = Random.secure();
-    final selected = <String>[];
-    
-    for (int i = 0; i < wordCount; i++) {
-      selected.add(words[random.nextInt(words.length)]);
-    }
-
-    var result = selected.join(separator);
-    
-    if (capitalize) {
-      result = result.split(separator).map((w) => w[0].toUpperCase() + w.substring(1)).join(separator);
-    }
-    
-    if (includeNumber) {
-      result += '$separator${random.nextInt(10000).toString().padLeft(4, '0')}';
-    }
-    
-    return result;
   }
 }

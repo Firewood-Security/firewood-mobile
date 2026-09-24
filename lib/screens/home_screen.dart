@@ -21,6 +21,7 @@ import 'credential_view_screen.dart';
 import 'item_detail_screen.dart';
 import 'settings_screen.dart';
 import '../widgets/guide_modal.dart';
+import '../widgets/security_advisor_sheet.dart';
 import '../widgets/app_floating_navbar.dart';
 import '../services/analytics_service.dart';
 import '../services/accent_color_service.dart';
@@ -743,9 +744,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 ),
                 const SizedBox(height: 16),
 
-                // ROW 2: MINIMAL SECURITY ADVISOR CARD
-                Container(
-                  padding: const EdgeInsets.all(14),
+                // ROW 2: MINIMAL SECURITY ADVISOR CARD (tap for per-item issues)
+                Material(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(16),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () => SecurityAdvisorSheet.show(
+                      context,
+                      key: key,
+                      items: items,
+                      onOpenItem: _viewItem,
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceZinc,
                     borderRadius: BorderRadius.circular(16),
@@ -796,7 +808,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         ),
                         Row(
                           children: [
-                            AppIcon(AppIcons.magic, size: 14, color: activeAccent),
+                            AppIcon(AppIcons.info, size: 14, color: activeAccent),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -804,10 +816,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 style: const TextStyle(fontSize: 11, color: AppColors.offWhite, height: 1.3),
                               ),
                             ),
+                            const AppIcon(
+                              AppIcons.chevronRight,
+                              size: 16,
+                              color: AppColors.textMuted,
+                            ),
                           ],
                         ),
                       ],
                     ],
+                  ),
+                ),
                   ),
                 ),
                 const SizedBox(height: 20),

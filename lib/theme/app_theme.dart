@@ -1,7 +1,10 @@
 // theme/app_theme.dart
-// Deep Flame Orange & Dark Zinc design system with 3D Tactile Soft Gradients
+// Minimal matte design system: flat fills, thin 1px borders, no gradients,
+// no glows, no shadows. Accent highlights are flat color only.
 
 import 'package:flutter/material.dart';
+
+import '../services/accent_color_service.dart';
 
 class AppColors {
   // Dark Zinc Base
@@ -16,13 +19,28 @@ class AppColors {
   static const textSecondary = Color(0xFFE4E4E7);  // Light Gray
   static const textMuted = Color(0xFFA1A1AA);      // Slate Gray
 
-  // --- Deep Orange Accent Palette ---
-  static const orangeAccent = Color(0xFFFF5722);   // Deep Flame Orange (#FF5722)
-  static const orangeBright = Color(0xFFFF6F40);   // Top 3D Gradient Highlight
-  static const orangeDark = Color(0xFFE64A19);     // Bottom 3D Gradient Shadow
-  static const orangeContainer = Color(0xFF33140A);// Deep Orange Surface Container
-  static const orangeBorder = Color(0xFF662914);    // Deep Orange Border
-  static const orangeOnContainer = Color(0xFFFFDBCE); // Light Orange Text
+  // --- Dynamic Accent Palette (Synced with AccentColorService) ---
+  static Color get orangeAccent => AccentColorService.currentColor.value;
+  static Color get orangeBright {
+    final hsl = HSLColor.fromColor(orangeAccent);
+    return hsl.withLightness((hsl.lightness + 0.1).clamp(0.0, 1.0)).toColor();
+  }
+  static Color get orangeDark {
+    final hsl = HSLColor.fromColor(orangeAccent);
+    return hsl.withLightness((hsl.lightness - 0.1).clamp(0.0, 1.0)).toColor();
+  }
+  static Color get orangeContainer {
+    final hsl = HSLColor.fromColor(orangeAccent);
+    return hsl.withLightness(0.14).withSaturation(0.65).toColor();
+  }
+  static Color get orangeBorder {
+    final hsl = HSLColor.fromColor(orangeAccent);
+    return hsl.withLightness(0.26).withSaturation(0.55).toColor();
+  }
+  static Color get orangeOnContainer {
+    final hsl = HSLColor.fromColor(orangeAccent);
+    return hsl.withLightness(0.85).toColor();
+  }
 
   // Functional Accents
   static const roseAccent = Color(0xFFEF4444);     // Danger
@@ -41,11 +59,11 @@ class AppColors {
   static const periwinkleOnContainer = Color(0xFFE0E7FF);
 
   // Backward compatibility aliases
-  static const pastelOrange = orangeAccent;
-  static const pastelOrangeLight = orangeBright;
-  static const pastelOrangeContainer = orangeContainer;
-  static const pastelOrangeBorder = orangeBorder;
-  static const pastelOrangeOnContainer = orangeOnContainer;
+  static Color get pastelOrange => orangeAccent;
+  static Color get pastelOrangeLight => orangeBright;
+  static Color get pastelOrangeContainer => orangeContainer;
+  static Color get pastelOrangeBorder => orangeBorder;
+  static Color get pastelOrangeOnContainer => orangeOnContainer;
 
   static const pastelRose = roseAccent;
   static const pastelRoseContainer = roseContainer;
@@ -66,7 +84,8 @@ class AppColors {
 class AppTheme {
   static ThemeData get darkTheme => getDarkTheme(AppColors.orangeAccent);
 
-  static ThemeData getDarkTheme([Color accentColor = AppColors.orangeAccent]) {
+  static ThemeData getDarkTheme([Color? accent]) {
+    final accentColor = accent ?? AppColors.orangeAccent;
     // Dynamically compute complementary container, border, and contrast colors from accentColor
     final HSLColor hsl = HSLColor.fromColor(accentColor);
     final Color primaryContainer = hsl.withLightness(0.14).withSaturation(0.65).toColor();
@@ -146,7 +165,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.orangeAccent, width: 1.5),
+          borderSide: BorderSide(color: accentColor, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
@@ -154,16 +173,15 @@ class AppTheme {
         ),
       ),
 
-      // --- 3D Soft Gradient Button Themes ---
+      // --- Matte Flat Button Themes (no elevation, no glow) ---
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: AppColors.orangeAccent,
+          backgroundColor: accentColor,
           foregroundColor: Colors.white,
-          elevation: 2,
-          shadowColor: Colors.black45,
+          elevation: 0,
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 22),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(12),
           ),
           textStyle: const TextStyle(
             fontSize: 14,
@@ -177,9 +195,10 @@ class AppTheme {
           backgroundColor: AppColors.surfaceZinc,
           foregroundColor: AppColors.offWhite,
           side: const BorderSide(color: AppColors.borderZinc, width: 1),
+          elevation: 0,
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(12),
           ),
           textStyle: const TextStyle(
             fontSize: 14,
@@ -189,13 +208,13 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.orangeContainer,
-          foregroundColor: AppColors.orangeOnContainer,
-          elevation: 1,
-          side: const BorderSide(color: AppColors.orangeBorder, width: 1),
+          backgroundColor: primaryContainer,
+          foregroundColor: primaryOnContainer,
+          elevation: 0,
+          side: BorderSide(color: primaryBorder, width: 1),
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(12),
           ),
           textStyle: const TextStyle(
             fontSize: 14,
@@ -205,7 +224,7 @@ class AppTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.orangeAccent,
+          foregroundColor: accentColor,
           padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
@@ -217,12 +236,12 @@ class AppTheme {
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: AppColors.orangeAccent,
+        backgroundColor: accentColor,
         foregroundColor: Colors.white,
-        elevation: 3,
-        highlightElevation: 6,
+        elevation: 0,
+        highlightElevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(16),
         ),
       ),
       dialogTheme: DialogThemeData(

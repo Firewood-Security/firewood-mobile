@@ -1,7 +1,8 @@
 // services/accent_color_service.dart
-// Service to manage 5 curated accent color themes across Firewood app
+// Service to manage curated accent color themes across Firewood app with robust persistence
 
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AccentColorOption {
@@ -18,6 +19,8 @@ class AccentColorOption {
 
 class AccentColorService {
   static const String _prefKey = 'firewood_accent_color_hex';
+  static const String _prefIntKey = 'firewood_accent_color_value';
+  static const _secureStorage = FlutterSecureStorage();
 
   static const AccentColorOption defaultAccent = AccentColorOption(
     name: 'Deep Orange',
@@ -35,21 +38,63 @@ class AccentColorService {
 
   static final ValueNotifier<Color> currentColor = ValueNotifier<Color>(defaultAccent.color);
 
+  /// Initializes accent color from local storage (SharedPreferences with SecureStorage fallback)
   static Future<void> init() async {
-    final prefs = await SharedPreferences.getInstance();
-    final hex = prefs.getString(_prefKey);
-    if (hex != null) {
-      final match = presets.firstWhere(
-        (p) => p.hex.toUpperCase() == hex.toUpperCase(),
-        orElse: () => defaultAccent,
-      );
-      currentColor.value = match.color;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.reload();
+      String? hex = prefs.getString(_prefKey);
+      int? colorVal = prefs.getInt(_prefIntKey);
+
+      // Fallback to secure storage if shared_preferences was empty or cleared
+      if (hex == null && colorVal == null) {
+        try {
+          hex = await _secureStorage.read(key: _prefKey);
+        } catch (_) {}
+      }
+
+      if (colorVal != null) {
+        final match = presets.firstWhere(
+          (p) => p.color.toARGB32() == colorVal,
+          orElse: () => _matchByHex(hex) ?? defaultAccent,
+        );
+        currentColor.value = match.color;
+      } else if (hex != null && hex.isNotEmpty) {
+        final match = _matchByHex(hex) ?? defaultAccent;
+        currentColor.value = match.color;
+      }
+    } catch (e) {
+      debugPrint('AccentColorService.init error: $e');
     }
   }
 
+  static AccentColorOption? _matchByHex(String? hex) {
+    if (hex == null || hex.isEmpty) return null;
+    final clean = hex.replaceAll('#', '').trim().toUpperCase();
+    try {
+      return presets.firstWhere(
+        (p) => p.hex.replaceAll('#', '').trim().toUpperCase() == clean,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Sets active accent color and persists across app restarts
   static Future<void> setAccentColor(AccentColorOption option) async {
     currentColor.value = option.color;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefKey, option.hex);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_prefKey, option.hex);
+      await prefs.setInt(_prefIntKey, option.color.toARGB32());
+    } catch (e) {
+      debugPrint('Error writing to SharedPreferences: $e');
+    }
+
+    try {
+      await _secureStorage.write(key: _prefKey, value: option.hex);
+    } catch (e) {
+      debugPrint('Error writing to SecureStorage: $e');
+    }
   }
 }

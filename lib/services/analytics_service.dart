@@ -47,7 +47,7 @@ class VaultAnalyticsService {
       );
     }
 
-    final logins = items.where((i) => i.type == ItemType.login.label).toList();
+    final logins = items.where((i) => ItemTypeExt.fromString(i.type) == ItemType.login).toList();
     final passwordMap = <String, int>{};
     int strongCount = 0;
     int weakCount = 0;

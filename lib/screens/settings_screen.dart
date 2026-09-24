@@ -1101,7 +1101,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           backgroundColor: AppColors.surfaceZinc,
           title: Row(
             children: [
-              AppIcon(AppIcons.sparkles, color: AppColors.orangeAccent, size: 24),
+              AppIcon(AppIcons.download, color: AppColors.orangeAccent, size: 24),
               const SizedBox(width: 8),
               const Text('Update Available', style: TextStyle(color: AppColors.offWhite)),
             ],

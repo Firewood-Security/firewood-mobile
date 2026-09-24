@@ -1,7 +1,5 @@
-// theme/app_feedback.dart
-// Modern 3D Toast notifications and Modal Dialogs for Firewood Flutter app
-
 import 'package:flutter/material.dart';
+import 'app_icons.dart';
 import 'app_theme.dart';
 
 enum ToastType { success, error, info, warning }
@@ -17,29 +15,29 @@ class AppToast {
     scaffold.hideCurrentSnackBar();
 
     Color accentColor;
-    IconData iconData;
+    dynamic iconData;
     Color iconBg;
 
     switch (type) {
       case ToastType.success:
-        accentColor = const Color(0xFF22C55E);
-        iconData = Icons.check_circle_outline;
-        iconBg = const Color(0xFF132A1C);
+        accentColor = const Color(0xFF10B981);
+        iconData = AppIcons.checkCircle;
+        iconBg = const Color(0xFF10B981).withValues(alpha: 0.15);
         break;
       case ToastType.error:
-        accentColor = const Color(0xFFEF4444);
-        iconData = Icons.error_outline;
-        iconBg = const Color(0xFF2E1517);
+        accentColor = const Color(0xFFF43F5E);
+        iconData = AppIcons.alertCircle;
+        iconBg = const Color(0xFFF43F5E).withValues(alpha: 0.15);
         break;
       case ToastType.warning:
         accentColor = const Color(0xFFF59E0B);
-        iconData = Icons.warning_amber_outlined;
-        iconBg = const Color(0xFF2D2312);
+        iconData = AppIcons.alertCircle;
+        iconBg = const Color(0xFFF59E0B).withValues(alpha: 0.15);
         break;
       case ToastType.info:
         accentColor = Theme.of(context).colorScheme.primary;
-        iconData = Icons.info_outline;
-        iconBg = Theme.of(context).colorScheme.primaryContainer;
+        iconData = AppIcons.info;
+        iconBg = Theme.of(context).colorScheme.primary.withValues(alpha: 0.15);
         break;
     }
 
@@ -48,42 +46,42 @@ class AppToast {
         elevation: 0,
         backgroundColor: Colors.transparent,
         behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        margin: const EdgeInsets.fromLTRB(20, 0, 20, 84),
         duration: duration,
         content: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
-            color: const Color(0xFF121215),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.borderZinc, width: 1),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black54,
-                blurRadius: 16,
-                offset: Offset(0, 6),
-              ),
-            ],
+            color: const Color(0xFF18181C),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppColors.borderZinc,
+              width: 1,
+            ),
           ),
           child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 32,
-                height: 32,
+                width: 28,
+                height: 28,
                 decoration: BoxDecoration(
                   color: iconBg,
                   shape: BoxShape.circle,
-                  border: Border.all(color: accentColor.withValues(alpha: 0.4), width: 1),
+                  border: Border.all(color: AppColors.borderZinc, width: 1),
                 ),
-                child: Icon(iconData, color: accentColor, size: 18),
+                child: Center(child: AppIcon(iconData, color: accentColor, size: 16)),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   message,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: AppColors.offWhite,
-                    fontSize: 13.5,
+                    fontSize: 13,
                     fontWeight: FontWeight.w600,
+                    letterSpacing: -0.1,
                   ),
                 ),
               ),
@@ -103,7 +101,7 @@ class AppDialog {
     String confirmLabel = 'Confirm',
     String cancelLabel = 'Cancel',
     bool isDanger = false,
-    IconData icon = Icons.help_outline,
+    dynamic icon = AppIcons.info,
   }) {
     final primaryColor = isDanger ? const Color(0xFFEF4444) : Theme.of(context).colorScheme.primary;
 
@@ -132,7 +130,7 @@ class AppDialog {
                         shape: BoxShape.circle,
                         border: Border.all(color: primaryColor.withValues(alpha: 0.3), width: 1),
                       ),
-                      child: Icon(icon, color: primaryColor, size: 22),
+                      child: Center(child: AppIcon(icon, color: primaryColor, size: 22)),
                     ),
                     const SizedBox(width: 12),
                     Expanded(

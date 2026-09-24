@@ -1,15 +1,18 @@
 // screens/vault_setup_screen.dart
 // First launch: create master password with strength indicator (Non-scrollable, Minimalist)
 
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../services/vault_service.dart';
 import '../services/backup_service.dart';
 import '../providers/auth_provider.dart';
+import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
-import '../theme/app_3d_button.dart';
+import '../theme/app_button.dart';
 
 class VaultSetupScreen extends ConsumerStatefulWidget {
   const VaultSetupScreen({super.key});
@@ -62,9 +65,21 @@ class _VaultSetupScreenState extends ConsumerState<VaultSetupScreen>
     setState(() => _error = null);
     
     try {
+      if (Platform.isAndroid) {
+        final storageStatus = await Permission.storage.status;
+        if (!storageStatus.isGranted) {
+          await Permission.storage.request();
+        }
+        final manageStatus = await Permission.manageExternalStorage.status;
+        if (!manageStatus.isGranted && !manageStatus.isRestricted) {
+          await Permission.manageExternalStorage.request();
+        }
+      }
+
       final result = await FilePicker.platform.pickFiles(
         type: FileType.any,
         allowMultiple: false,
+        dialogTitle: 'Select .firewood Backup File',
       );
 
       if (result == null || result.files.isEmpty || !mounted) return;
@@ -109,7 +124,7 @@ class _VaultSetupScreenState extends ConsumerState<VaultSetupScreen>
                 ),
                 title: Row(
                   children: [
-                    const Icon(Icons.file_open_outlined, color: AppColors.orangeAccent, size: 22),
+                    AppIcon(AppIcons.upload, color: AppColors.orangeAccent, size: 22),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
@@ -143,10 +158,10 @@ class _VaultSetupScreenState extends ConsumerState<VaultSetupScreen>
                         decoration: InputDecoration(
                           isDense: true,
                           labelText: 'Backup Password',
-                          prefixIcon: const Icon(Icons.lock_outline, size: 20),
+                          prefixIcon: AppIcon(AppIcons.lock, size: 20),
                           suffixIcon: IconButton(
-                            icon: Icon(
-                              obscureModalPassword ? Icons.visibility_off : Icons.visibility,
+                            icon: AppIcon(
+                              obscureModalPassword ? AppIcons.eyeOff : AppIcons.eye,
                               size: 18,
                             ),
                             onPressed: () => setModalState(() => obscureModalPassword = !obscureModalPassword),
@@ -357,10 +372,14 @@ class _VaultSetupScreenState extends ConsumerState<VaultSetupScreen>
                               isDense: true,
                               contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                               labelText: 'Master Password *',
-                              prefixIcon: const Icon(Icons.lock_outline, size: 20),
+                              prefixIconConstraints: const BoxConstraints(minWidth: 42, minHeight: 42),
+                              prefixIcon: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                child: AppIcon(AppIcons.lock, size: 18, color: AppColors.textMuted),
+                              ),
                               suffixIcon: IconButton(
-                                icon: Icon(
-                                  _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                                icon: AppIcon(
+                                  _obscurePassword ? AppIcons.eyeOff : AppIcons.eye,
                                   size: 18,
                                 ),
                                 onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
@@ -398,10 +417,14 @@ class _VaultSetupScreenState extends ConsumerState<VaultSetupScreen>
                               isDense: true,
                               contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                               labelText: 'Confirm Password *',
-                              prefixIcon: const Icon(Icons.lock_clock_outlined, size: 20),
+                              prefixIconConstraints: const BoxConstraints(minWidth: 42, minHeight: 42),
+                              prefixIcon: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                child: AppIcon(AppIcons.lockClock, size: 18, color: AppColors.textMuted),
+                              ),
                               suffixIcon: IconButton(
-                                icon: Icon(
-                                  _obscureConfirm ? Icons.visibility_off : Icons.visibility,
+                                icon: AppIcon(
+                                  _obscureConfirm ? AppIcons.eyeOff : AppIcons.eye,
                                   size: 18,
                                 ),
                                 onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
@@ -430,7 +453,7 @@ class _VaultSetupScreenState extends ConsumerState<VaultSetupScreen>
                               ),
                               child: Row(
                                 children: [
-                                  Icon(Icons.error_outline, color: cs.onErrorContainer, size: 16),
+                                  AppIcon(AppIcons.alertCircle, color: cs.onErrorContainer, size: 16),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
@@ -451,10 +474,10 @@ class _VaultSetupScreenState extends ConsumerState<VaultSetupScreen>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         // Create Vault Button
-                        App3DButton(
+                        AppButton(
                           label: _isLoading ? 'Creating Vault...' : 'Create Vault',
-                          icon: Icons.shield_outlined,
-                          variant: App3DButtonVariant.primary,
+                          icon: AppIcons.shield,
+                          variant: AppButtonVariant.primary,
                           isLoading: _isLoading,
                           fullWidth: true,
                           height: 52,
@@ -481,10 +504,10 @@ class _VaultSetupScreenState extends ConsumerState<VaultSetupScreen>
                         const SizedBox(height: 12),
 
                         // Import Backup Button
-                        App3DButton(
+                        AppButton(
                           label: _isImporting ? 'Importing Backup...' : 'Import Backup (.firewood)',
-                          icon: Icons.file_open_outlined,
-                          variant: App3DButtonVariant.secondary,
+                          icon: AppIcons.upload,
+                          variant: AppButtonVariant.secondary,
                           isLoading: _isImporting,
                           fullWidth: true,
                           height: 48,
