@@ -376,7 +376,7 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
                 obscureText: true,
                 decoration: const InputDecoration(
                   labelText: 'Master Password',
-                  prefixIcon: AppIcon(AppInputIcons.lock),
+                  prefixIcon: AppIcon(AppInputIcons.lock, size: 16),
                 ),
                 onSubmitted: (_) => _authenticatePassword(),
               ),

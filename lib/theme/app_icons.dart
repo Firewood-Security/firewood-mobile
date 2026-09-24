@@ -176,11 +176,12 @@ class AppIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     final effectiveColor = color ?? IconTheme.of(context).color ?? Colors.white;
 
+    final Widget glyph;
     if (icon is String) {
       // 3D asset icon: full-color artwork, tint never applies.
       // Displayed at nominal size (tight-cropped art has no padding).
       final double displaySize = size;
-      return SizedBox(
+      glyph = SizedBox(
         width: displaySize,
         height: displaySize,
         child: Image.asset(
@@ -192,7 +193,7 @@ class AppIcon extends StatelessWidget {
         ),
       );
     } else if (icon is List<List<dynamic>>) {
-      return SizedBox(
+      glyph = SizedBox(
         width: size,
         height: size,
         child: HugeIcon(
@@ -203,7 +204,7 @@ class AppIcon extends StatelessWidget {
         ),
       );
     } else if (icon is IconData) {
-      return SizedBox(
+      glyph = SizedBox(
         width: size,
         height: size,
         child: Icon(
@@ -214,7 +215,15 @@ class AppIcon extends StatelessWidget {
       );
     } else if (icon is Widget) {
       return icon as Widget;
+    } else {
+      return const SizedBox.shrink();
     }
-    return const SizedBox.shrink();
+
+    // InputDecorator wraps prefix/suffix icons in ConstrainedBox(min 48x48);
+    // a bare SizedBox would be clamped up to 48 and the icon would paint on a
+    // 48px canvas. Center loosens the constraints for the child (declared
+    // size wins) and centers it inside the forced slot; the factors keep it
+    // shrink-wrapped elsewhere so row/button layouts are unchanged.
+    return Center(widthFactor: 1.0, heightFactor: 1.0, child: glyph);
   }
 }
