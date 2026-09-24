@@ -53,11 +53,11 @@ class AppFloatingNavBar extends StatelessWidget {
                     height: itemHeight,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: AppColors.orangeContainer,
+                        color: activeAccent,
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: activeAccent,
-                          width: 1.5,
+                          color: AppColors.orangeDark,
+                          width: 1,
                         ),
                       ),
                     ),
@@ -73,13 +73,13 @@ class AppFloatingNavBar extends StatelessWidget {
                         onTap: () => onTap(0),
                       ),
                       _NavItem(
-                        icon: HugeIcons.strokeRoundedLock,
+                        icon: HugeIcons.strokeRoundedSafeBox,
                         label: 'Vault',
                         isSelected: currentIndex == 1,
                         onTap: () => onTap(1),
                       ),
                       _NavItem(
-                        icon: HugeIcons.strokeRoundedDice,
+                        icon: HugeIcons.strokeRoundedPasswordValidation,
                         label: 'Generate',
                         isSelected: currentIndex == 2,
                         onTap: () => onTap(2),
@@ -134,14 +134,15 @@ class _NavItem extends StatelessWidget {
                 AnimatedScale(
                   duration: const Duration(milliseconds: 250),
                   curve: Curves.easeOutBack,
-                  scale: isSelected ? 1.1 : 1.0,
-                  // Line icons tint cleanly: active = pure accent, inactive = muted.
+                  scale: isSelected ? 1.06 : 1.0,
+                  // The active tab sits on a solid accent pill, so the glyph is
+                  // white with a touch more stroke weight; inactive tabs stay
+                  // muted, making the active screen unmistakable.
                   child: AppIcon(
                     icon,
-                    size: 28,
-                    color: isSelected
-                        ? Theme.of(context).colorScheme.primary
-                        : AppColors.textMuted,
+                    size: 27,
+                    strokeWidth: isSelected ? 1.9 : 1.6,
+                    color: isSelected ? Colors.white : AppColors.textMuted,
                   ),
                 ),
                 if (hasBadge)
