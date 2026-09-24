@@ -516,7 +516,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           color: AppColors.pastelDeepOrangeBorder,
                           width: 1,
                         ),
-                        boxShadow: const [
+                        boxShadow: [
                           BoxShadow(
                             color: AppColors.pastelDeepOrangeLip,
                             offset: Offset(0, 3),
