@@ -27,3 +27,6 @@
 
 # Application classes & native security channels
 -keep class com.example.firewood.** { *; }
+
+# Play Core optional deferred components
+-dontwarn com.google.android.play.core.**
