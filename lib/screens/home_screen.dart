@@ -745,7 +745,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         children: [
                           Expanded(
                             child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              padding: const EdgeInsets.symmetric(vertical: 6),
                               decoration: BoxDecoration(
                                 color: AppColors.cardZinc,
                                 borderRadius: BorderRadius.circular(12),
@@ -754,10 +754,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               child: _AnalyticsMetricChip(label: 'Strong', value: '${report.strongPasswords}', color: const Color(0xFF22C55E)),
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           Expanded(
                             child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              padding: const EdgeInsets.symmetric(vertical: 6),
                               decoration: BoxDecoration(
                                 color: AppColors.cardZinc,
                                 borderRadius: BorderRadius.circular(12),
@@ -766,10 +766,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               child: _AnalyticsMetricChip(label: 'Weak', value: '${report.weakPasswords}', color: report.weakPasswords > 0 ? const Color(0xFFEF4444) : AppColors.textMuted),
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           Expanded(
                             child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              padding: const EdgeInsets.symmetric(vertical: 6),
                               decoration: BoxDecoration(
                                 color: AppColors.cardZinc,
                                 borderRadius: BorderRadius.circular(12),
@@ -778,10 +778,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               child: _AnalyticsMetricChip(label: 'Reused', value: '${report.reusedPasswords}', color: report.reusedPasswords > 0 ? const Color(0xFFF59E0B) : AppColors.textMuted),
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           Expanded(
                             child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              padding: const EdgeInsets.symmetric(vertical: 6),
                               decoration: BoxDecoration(
                                 color: AppColors.cardZinc,
                                 borderRadius: BorderRadius.circular(12),

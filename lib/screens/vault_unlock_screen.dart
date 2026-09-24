@@ -427,21 +427,11 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
                   Center(
                     child: Column(
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppColors.orangeContainer,
-                            border: Border.all(color: AppColors.orangeBorder, width: 1),
-                          ),
-                          child: ClipOval(
-                            child: Image.asset(
-                              'assets/FWS.png',
-                              width: 56,
-                              height: 56,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
+                        Image.asset(
+                          'assets/FWS.png',
+                          width: 72,
+                          height: 72,
+                          fit: BoxFit.contain,
                         ),
                         const SizedBox(height: 16),
                         Row(

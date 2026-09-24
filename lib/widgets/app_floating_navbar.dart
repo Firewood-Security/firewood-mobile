@@ -125,64 +125,47 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final activeAccent = Theme.of(context).colorScheme.primary;
-
     return Expanded(
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: SizedBox.expand(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Stack(
-                clipBehavior: Clip.none,
-                alignment: Alignment.center,
-                children: [
-                  AnimatedScale(
-                    duration: const Duration(milliseconds: 250),
-                    curve: Curves.easeOutBack,
-                    scale: isSelected ? 1.08 : 1.0,
+          child: Tooltip(
+            message: label,
+            child: Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.center,
+              children: [
+                AnimatedScale(
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeOutBack,
+                  scale: isSelected ? 1.1 : 1.0,
+                  // 3D artwork ignores tint; selection is the sliding pill
+                  // plus full/reduced opacity.
+                  child: Opacity(
+                    opacity: isSelected ? 1.0 : 0.5,
                     child: AppIcon(
                       isSelected ? activeIcon : icon,
-                      size: 28,
-                      color: isSelected ? Colors.white : AppColors.textMuted,
+                      size: 30,
                     ),
                   ),
-                  if (hasBadge)
-                    Positioned(
-                      right: -5,
-                      top: -2,
-                      child: Container(
-                        width: 7,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEF4444),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFF141418), width: 1.2),
-                        ),
+                ),
+                if (hasBadge)
+                  Positioned(
+                    right: -5,
+                    top: -2,
+                    child: Container(
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEF4444),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFF141418), width: 1.2),
                       ),
                     ),
-                ],
-              ),
-              const SizedBox(height: 3),
-              AnimatedDefaultTextStyle(
-                duration: const Duration(milliseconds: 200),
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                  color: isSelected ? Colors.white : AppColors.textMuted.withValues(alpha: 0.75),
-                  letterSpacing: isSelected ? -0.1 : 0,
-                ),
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
+                  ),
+              ],
+            ),
           ),
         ),
       ),
