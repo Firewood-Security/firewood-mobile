@@ -1556,6 +1556,7 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
               children: [
                 _buildIconToggle(
                   icon: HugeIcons.strokeRoundedArrangeByLettersAZ,
+                  label: 'A-Z',
                   selected: _includeUpper,
                   tooltip: 'Uppercase (A-Z)',
                   onTap: () {
@@ -1565,6 +1566,7 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
                 ),
                 _buildIconToggle(
                   icon: HugeIcons.strokeRoundedArrangeByLettersZA,
+                  label: 'a-z',
                   selected: _includeLower,
                   tooltip: 'Lowercase (a-z)',
                   onTap: () {
@@ -1574,6 +1576,7 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
                 ),
                 _buildIconToggle(
                   icon: HugeIcons.strokeRoundedArrangeByNumbers19,
+                  label: '0-9',
                   selected: _includeDigits,
                   tooltip: 'Numbers (0-9)',
                   onTap: () {
@@ -1583,6 +1586,7 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
                 ),
                 _buildIconToggle(
                   icon: HugeIcons.strokeRoundedAsterisk,
+                  label: '!#\$',
                   selected: _includeSymbols,
                   tooltip: 'Symbols',
                   onTap: () {
@@ -1592,6 +1596,7 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
                 ),
                 _buildIconToggle(
                   icon: HugeIcons.strokeRoundedBlocked,
+                  label: 'SAFE',
                   selected: _excludeAmbiguous,
                   tooltip: 'Exclude ambiguous characters',
                   onTap: () {
@@ -1678,6 +1683,7 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
               children: [
                 _buildIconToggle(
                   icon: HugeIcons.strokeRoundedTextFont,
+                  label: 'TITLE',
                   selected: _capitalizePassphrase,
                   tooltip: 'Capitalize each word',
                   onTap: () {
@@ -1688,6 +1694,7 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
                 ),
                 _buildIconToggle(
                   icon: HugeIcons.strokeRoundedArrangeByNumbers19,
+                  label: '+123',
                   selected: _includePassphraseNumber,
                   tooltip: 'Append 4-digit number',
                   onTap: () {
@@ -1756,15 +1763,17 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
     );
   }
 
-  /// Compact icon-only generator toggle: selected = accent fill + white
-  /// glyph, unselected = muted outline. The label lives in the tooltip so the
-  /// screen stays text-light.
+  /// Compact generator toggle: glyph + always-visible micro-caption (so the
+  /// option is self-explanatory without long-pressing), plus a tooltip with
+  /// the full description. Selected = accent fill + white, else muted outline.
   Widget _buildIconToggle({
     required dynamic icon,
+    required String label,
     required bool selected,
     required String tooltip,
     required VoidCallback onTap,
   }) {
+    final fg = selected ? Colors.white : AppColors.textMuted;
     return Tooltip(
       message: tooltip,
       child: GestureDetector(
@@ -1774,8 +1783,8 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          width: 46,
-          height: 40,
+          width: 58,
+          height: 50,
           decoration: BoxDecoration(
             color: selected ? AppColors.orangeAccent : AppColors.surfaceZinc,
             borderRadius: BorderRadius.circular(10),
@@ -1784,12 +1793,21 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
               width: 1,
             ),
           ),
-          child: Center(
-            child: AppIcon(
-              icon,
-              size: 19,
-              color: selected ? Colors.white : AppColors.textMuted,
-            ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AppIcon(icon, size: 18, color: fg),
+              const SizedBox(height: 3),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.4,
+                  color: fg,
+                ),
+              ),
+            ],
           ),
         ),
       ),
