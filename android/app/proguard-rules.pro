@@ -26,7 +26,7 @@
 -dontwarn androidx.security.crypto.**
 
 # Application classes & native security channels
--keep class com.example.firewood.** { *; }
+-keep class net.firewood.app.** { *; }
 
 # Play Core optional deferred components
 -dontwarn com.google.android.play.core.**

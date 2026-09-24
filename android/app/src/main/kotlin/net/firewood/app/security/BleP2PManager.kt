@@ -1,4 +1,4 @@
-package com.example.firewood.security
+package net.firewood.app.security
 
 import android.annotation.SuppressLint
 import android.bluetooth.*

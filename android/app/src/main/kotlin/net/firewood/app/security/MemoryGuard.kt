@@ -1,4 +1,4 @@
-package com.example.firewood.security
+package net.firewood.app.security
 
 import java.security.SecureRandom
 import java.util.Arrays

@@ -1,9 +1,9 @@
-package com.example.firewood
+package net.firewood.app
 
 import android.os.Bundle
 import android.view.WindowManager
-import com.example.firewood.security.AntiLeakActivityManager
-import com.example.firewood.security.SecureMethodChannel
+import net.firewood.app.security.AntiLeakActivityManager
+import net.firewood.app.security.SecureMethodChannel
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 
