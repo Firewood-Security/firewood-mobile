@@ -344,9 +344,9 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
                       decoration: InputDecoration(
                         isDense: true,
                         labelText: 'Backup Password',
-                        prefixIcon: AppIcon(AppIcons.lock, size: 20),
+                        prefixIcon: AppIcon(AppInputIcons.lock, size: 20),
                         suffixIcon: IconButton(
-                          icon: AppIcon(obscure ? AppIcons.eyeOff : AppIcons.eye, size: 18),
+                          icon: AppIcon(obscure ? AppInputIcons.eyeOff : AppInputIcons.eye, size: 18),
                           onPressed: () => setModalState(() => obscure = !obscure),
                         ),
                       ),
@@ -604,11 +604,11 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
                             prefixIconConstraints: const BoxConstraints(minWidth: 42, minHeight: 42),
                             prefixIcon: Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 12),
-                              child: AppIcon(AppIcons.key, size: 18, color: AppColors.textMuted),
+                              child: AppIcon(AppInputIcons.key, size: 18, color: AppColors.textMuted),
                             ),
                             suffixIcon: IconButton(
                               icon: AppIcon(
-                                _obscurePassword ? AppIcons.eyeOff : AppIcons.eye,
+                                _obscurePassword ? AppInputIcons.eyeOff : AppInputIcons.eye,
                                 size: 18,
                                 color: AppColors.textMuted,
                               ),

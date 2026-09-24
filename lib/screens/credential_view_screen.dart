@@ -375,7 +375,7 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
                 obscureText: true,
                 decoration: const InputDecoration(
                   labelText: 'Master Password',
-                  prefixIcon: AppIcon(AppIcons.lock),
+                  prefixIcon: AppIcon(AppInputIcons.lock),
                 ),
                 onSubmitted: (_) => _authenticatePassword(),
               ),
@@ -625,7 +625,7 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
                         if (isSensitive)
                           IconButton(
                             icon: AppIcon(
-                              isRevealed ? AppIcons.eyeOff : AppIcons.eye,
+                              isRevealed ? AppInputIcons.eyeOff : AppInputIcons.eye,
                               size: 18,
                               color: AppColors.textMuted,
                             ),
@@ -640,7 +640,7 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
                             },
                           ),
                         IconButton(
-                          icon: AppIcon(AppIcons.copy, size: 18, color: AppColors.orangeAccent),
+                          icon: AppIcon(AppInputIcons.copy, size: 18, color: AppColors.orangeAccent),
                           onPressed: () => _copyToClipboard(key, val),
                           tooltip: 'Copy $key',
                         ),

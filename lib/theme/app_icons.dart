@@ -115,6 +115,44 @@ class AppIcons {
   static const terminal = HugeIcons.strokeRoundedCode;
 }
 
+/// Line-icon set reserved for text-input chrome (TextField prefix/suffix
+/// icons, visibility toggles, in-field action buttons). Inputs always render
+/// HugeIcons regardless of the 3D display set used elsewhere.
+class AppInputIcons {
+  AppInputIcons._();
+
+  static const title = HugeIcons.strokeRoundedText;
+  static const user = HugeIcons.strokeRoundedUser;
+  static const lock = HugeIcons.strokeRoundedLockPassword;
+  static const lockClock = HugeIcons.strokeRoundedClock01;
+  static const link = HugeIcons.strokeRoundedLink01;
+  static const shieldKey = HugeIcons.strokeRoundedShieldKey;
+  static const note = HugeIcons.strokeRoundedNote;
+  static const categoryCard = HugeIcons.strokeRoundedCreditCard;
+  static const calendar = HugeIcons.strokeRoundedCalendar03;
+  static const shield = HugeIcons.strokeRoundedShield01;
+  static const hash = HugeIcons.strokeRoundedPinCode;
+  static const location = HugeIcons.strokeRoundedLocation01;
+  static const categoryIdentity = HugeIcons.strokeRoundedPassport;
+  static const car = HugeIcons.strokeRoundedCar01;
+  static const home = HugeIcons.strokeRoundedHome01;
+  static const folder = HugeIcons.strokeRoundedFolder01;
+  static const key = HugeIcons.strokeRoundedKey01;
+  static const globe = HugeIcons.strokeRoundedGlobe02;
+  static const search = HugeIcons.strokeRoundedSearch01;
+  static const close = HugeIcons.strokeRoundedCancel01;
+  static const copy = HugeIcons.strokeRoundedCopy01;
+  static const refresh = HugeIcons.strokeRoundedRefresh;
+  static const view = HugeIcons.strokeRoundedEye;
+  static const viewOff = HugeIcons.strokeRoundedViewOff;
+  static const eye = HugeIcons.strokeRoundedEye;
+  static const eyeOff = HugeIcons.strokeRoundedViewOff;
+  static const delete = HugeIcons.strokeRoundedDelete02;
+  static const upload = HugeIcons.strokeRoundedUpload01;
+  static const alertCircle = HugeIcons.strokeRoundedAlertCircle;
+  static const file = HugeIcons.strokeRoundedFile01;
+}
+
 /// Unified icon rendering widget for Firewood.
 /// Accepts an asset path (String, rendered full-color, `color` ignored),
 /// HugeIcons JSON data, IconData, or a ready Widget.

@@ -133,7 +133,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   title: const Text('Auto-Lock Timeout', style: TextStyle(color: AppColors.offWhite, fontSize: 14)),
                   subtitle: Text(_formatDuration(lockTimeout), style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
                   leading: AppIcon(AppIcons.timer, color: AppColors.orangeAccent, size: 24),
-                  trailing: AppIcon(AppIcons.chevronRight, color: AppColors.textMuted, size: 20),
+                  trailing: AppIcon(AppIcons.chevronRight, color: AppColors.textMuted, size: 22),
                   onTap: () => _showTimeoutPicker(context, ref),
                 ),
               ListTile(
@@ -182,7 +182,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           title: const Text('Export API Keys as .env', style: TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.bold, fontSize: 14)),
                           subtitle: Text('Format and export ${devSecrets.length} developer secrets to a .env file', style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
                           leading: AppIcon(AppIcons.typeDeveloperSecret, color: AppColors.orangeAccent, size: 24),
-                          trailing: AppIcon(AppIcons.chevronRight, color: AppColors.textMuted, size: 20),
+                          trailing: AppIcon(AppIcons.chevronRight, color: AppColors.textMuted, size: 22),
                           onTap: () => _showEnvExportDialog(context, devSecrets),
                         ),
                       ],
@@ -245,7 +245,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   title: const Text('Backup Frequency', style: TextStyle(color: AppColors.offWhite, fontSize: 14)),
                   subtitle: Text(_formatIntervalLabel(autoBackupInterval), style: TextStyle(fontSize: 11, color: AppColors.orangeAccent)),
                   leading: AppIcon(AppIcons.timer, color: AppColors.orangeAccent, size: 24),
-                  trailing: AppIcon(AppIcons.chevronRight, color: AppColors.textMuted, size: 20),
+                  trailing: AppIcon(AppIcons.chevronRight, color: AppColors.textMuted, size: 22),
                   onTap: () => _showBackupIntervalPicker(context),
                 ),
               ListTile(
@@ -311,7 +311,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ),
                       ],
                     ),
-                    trailing: AppIcon(AppIcons.chevronRight, color: AppColors.textMuted, size: 20),
+                    trailing: AppIcon(AppIcons.chevronRight, color: AppColors.textMuted, size: 22),
                     onTap: () => _checkForUpdates(context),
                   );
                 },
@@ -320,7 +320,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 title: const Text('About Firewood & Developers', style: TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.bold, fontSize: 14)),
                 subtitle: const Text('App specs, zero-knowledge architecture & developer info', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
                 leading: AppIcon(AppIcons.info, color: AppColors.orangeAccent, size: 24),
-                trailing: AppIcon(AppIcons.chevronRight, color: AppColors.textMuted, size: 20),
+                trailing: AppIcon(AppIcons.chevronRight, color: AppColors.textMuted, size: 22),
                 onTap: () {
                   Navigator.push(
                     context,

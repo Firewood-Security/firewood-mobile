@@ -153,7 +153,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             style: const TextStyle(color: AppColors.offWhite),
             decoration: const InputDecoration(
               labelText: 'Backup Master Password',
-              prefixIcon: AppIcon(AppIcons.lock, size: 20, color: AppColors.textMuted),
+              prefixIcon: AppIcon(AppInputIcons.lock, size: 20, color: AppColors.textMuted),
             ),
             validator: (v) => v == null || v.isEmpty ? 'Password required' : null,
           ),
@@ -237,7 +237,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               const SizedBox(height: 18),
               Row(
                 children: [
-                  AppIcon(AppIcons.vault, size: 26),
+                  AppIcon(AppIcons.vault, size: 30),
                   const SizedBox(width: 12),
                   const Expanded(
                     child: Column(
@@ -281,7 +281,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       child: Row(
                         children: [
-                          AppIcon(AppIcons.add, size: 28),
+                          AppIcon(AppIcons.add, size: 32),
                           const SizedBox(width: 14),
                           const Expanded(
                             child: Column(
@@ -594,7 +594,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           children: [
                             Row(
                               children: [
-                                AppIcon(AppIcons.shield, size: 28),
+                                AppIcon(AppIcons.shield, size: 34),
                                 const Spacer(),
                                 Text(
                                   '${report.totalItems}',
@@ -642,7 +642,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               children: [
                                 AppIcon(
                                   AppIcons.shieldCheck,
-                                  size: 28,
+                                  size: 34,
                                 ),
                                 const Spacer(),
                                 Text(
@@ -707,8 +707,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     children: [
                       Row(
                         children: [
-                          AppIcon(AppIcons.shieldKey, color: activeAccent, size: 16),
-                          const SizedBox(width: 8),
                           const Text(
                             'SECURITY ADVISOR',
                             style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.1, color: AppColors.offWhite),
@@ -927,11 +925,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       hintText: 'Search vault items...',
                       prefixIcon: const Padding(
                         padding: EdgeInsets.all(12),
-                        child: AppIcon(AppIcons.search, color: AppColors.textMuted, size: 20),
+                        child: AppIcon(AppInputIcons.search, color: AppColors.textMuted, size: 20),
                       ),
                       suffixIcon: _searchQuery.isNotEmpty
                           ? IconButton(
-                              icon: const AppIcon(AppIcons.close, color: AppColors.textMuted, size: 18),
+                              icon: const AppIcon(AppInputIcons.close, color: AppColors.textMuted, size: 18),
                               onPressed: () {
                                 _searchController.clear();
                                 setState(() => _searchQuery = '');
@@ -1659,7 +1657,7 @@ class _CategorySummaryCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  AppIcon(icon, size: 26),
+                  AppIcon(icon, size: 32),
                   Text(
                     '$count',
                     style: TextStyle(
@@ -1720,7 +1718,7 @@ class _ItemTile extends StatelessWidget {
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        leading: AppIcon(_getTypeIcon(type), size: 30),
+        leading: AppIcon(_getTypeIcon(type), size: 36),
         title: Text(
           item.title,
           maxLines: 1,

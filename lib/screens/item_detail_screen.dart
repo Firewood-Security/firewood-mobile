@@ -761,7 +761,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                                 : _selectedType == ItemType.identity
                                     ? 'e.g. Passport, Driver License'
                                     : 'e.g. Recovery Phrase, Server Keys',
-                        prefixIcon: AppIcon(AppIcons.title, color: AppColors.orangeAccent),
+                        prefixIcon: AppIcon(AppInputIcons.title, color: AppColors.orangeAccent),
                       ),
                       validator: (v) => v == null || v.trim().isEmpty ? 'Title required' : null,
                       textInputAction: TextInputAction.next,
@@ -832,7 +832,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           controller: _usernameController,
           decoration: const InputDecoration(
             labelText: 'Username / Email',
-            prefixIcon: AppIcon(AppIcons.user, size: 20),
+            prefixIcon: AppIcon(AppInputIcons.user, size: 20),
           ),
           textInputAction: TextInputAction.next,
         ),
@@ -843,13 +843,13 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           obscureText: _obscurePassword,
           decoration: InputDecoration(
             labelText: 'Password',
-            prefixIcon: const AppIcon(AppIcons.lock, size: 20),
+            prefixIcon: const AppIcon(AppInputIcons.lock, size: 20),
             suffixIcon: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (_passwordController.text.isNotEmpty)
                   IconButton(
-                    icon: const AppIcon(AppIcons.copy, color: AppColors.textMuted, size: 18),
+                    icon: const AppIcon(AppInputIcons.copy, color: AppColors.textMuted, size: 18),
                     tooltip: 'Copy Password',
                     onPressed: () {
                       ref.read(lockServiceProvider).copySecret(_passwordController.text);
@@ -862,12 +862,12 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                     },
                   ),
                 IconButton(
-                  icon: AppIcon(AppIcons.refresh, color: AppColors.orangeAccent, size: 20),
+                  icon: AppIcon(AppInputIcons.refresh, color: AppColors.orangeAccent, size: 20),
                   tooltip: 'Generate Password',
                   onPressed: _generatePassword,
                 ),
                 IconButton(
-                  icon: AppIcon(_obscurePassword ? AppIcons.viewOff : AppIcons.view, size: 20),
+                  icon: AppIcon(_obscurePassword ? AppInputIcons.viewOff : AppInputIcons.view, size: 20),
                   onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                 ),
               ],
@@ -888,7 +888,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           controller: _urlController,
           decoration: const InputDecoration(
             labelText: 'Website URL',
-            prefixIcon: AppIcon(AppIcons.link, size: 20),
+            prefixIcon: AppIcon(AppInputIcons.link, size: 20),
             hintText: 'https://example.com',
           ),
           keyboardType: TextInputType.url,
@@ -899,7 +899,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           controller: _totpController,
           decoration: const InputDecoration(
             labelText: '2FA / TOTP Secret Key',
-            prefixIcon: AppIcon(AppIcons.shieldKey, size: 20),
+            prefixIcon: AppIcon(AppInputIcons.shieldKey, size: 20),
           ),
           textInputAction: TextInputAction.next,
         ),
@@ -908,7 +908,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           controller: _noteController,
           decoration: const InputDecoration(
             labelText: 'Notes',
-            prefixIcon: AppIcon(AppIcons.note, size: 20),
+            prefixIcon: AppIcon(AppInputIcons.note, size: 20),
           ),
           maxLines: 2,
         ),
@@ -924,7 +924,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           controller: _cardholderController,
           decoration: const InputDecoration(
             labelText: 'Cardholder Name',
-            prefixIcon: AppIcon(AppIcons.user),
+            prefixIcon: AppIcon(AppInputIcons.user),
           ),
           textInputAction: TextInputAction.next,
         ),
@@ -933,7 +933,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           controller: _cardNumberController,
           decoration: const InputDecoration(
             labelText: 'Card Number',
-            prefixIcon: AppIcon(AppIcons.categoryCard),
+            prefixIcon: AppIcon(AppInputIcons.categoryCard),
             hintText: '0000 0000 0000 0000',
           ),
           keyboardType: TextInputType.number,
@@ -951,7 +951,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                 controller: _expiryController,
                 decoration: const InputDecoration(
                   labelText: 'Expiry (MM/YY)',
-                  prefixIcon: AppIcon(AppIcons.calendar),
+                  prefixIcon: AppIcon(AppInputIcons.calendar),
                   hintText: 'MM/YY',
                 ),
                 keyboardType: TextInputType.number,
@@ -970,9 +970,9 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                 obscureText: _obscureCvv,
                 decoration: InputDecoration(
                   labelText: 'CVV',
-                  prefixIcon: const AppIcon(AppIcons.shield),
+                  prefixIcon: const AppIcon(AppInputIcons.shield),
                   suffixIcon: IconButton(
-                    icon: AppIcon(_obscureCvv ? AppIcons.viewOff : AppIcons.view),
+                    icon: AppIcon(_obscureCvv ? AppInputIcons.viewOff : AppInputIcons.view),
                     onPressed: () => setState(() => _obscureCvv = !_obscureCvv),
                   ),
                 ),
@@ -996,9 +996,9 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                 obscureText: _obscurePin,
                 decoration: InputDecoration(
                   labelText: 'Card PIN',
-                  prefixIcon: const AppIcon(AppIcons.hash),
+                  prefixIcon: const AppIcon(AppInputIcons.hash),
                   suffixIcon: IconButton(
-                    icon: AppIcon(_obscurePin ? AppIcons.viewOff : AppIcons.view),
+                    icon: AppIcon(_obscurePin ? AppInputIcons.viewOff : AppInputIcons.view),
                     onPressed: () => setState(() => _obscurePin = !_obscurePin),
                   ),
                 ),
@@ -1015,7 +1015,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                 controller: _zipController,
                 decoration: const InputDecoration(
                   labelText: 'ZIP / Postal Code',
-                  prefixIcon: AppIcon(AppIcons.location),
+                  prefixIcon: AppIcon(AppInputIcons.location),
                 ),
               ),
             ),
@@ -1026,7 +1026,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           controller: _noteController,
           decoration: const InputDecoration(
             labelText: 'Notes',
-            prefixIcon: AppIcon(AppIcons.note),
+            prefixIcon: AppIcon(AppInputIcons.note),
           ),
           maxLines: 2,
         ),
@@ -1042,7 +1042,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           controller: _fullNameController,
           decoration: const InputDecoration(
             labelText: 'Full Legal Name',
-            prefixIcon: AppIcon(AppIcons.user),
+            prefixIcon: AppIcon(AppInputIcons.user),
           ),
           textInputAction: TextInputAction.next,
         ),
@@ -1051,7 +1051,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           controller: _idNumberController,
           decoration: const InputDecoration(
             labelText: 'National ID / SSN Number',
-            prefixIcon: AppIcon(AppIcons.hash),
+            prefixIcon: AppIcon(AppInputIcons.hash),
           ),
           textInputAction: TextInputAction.next,
         ),
@@ -1063,7 +1063,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                 controller: _passportController,
                 decoration: const InputDecoration(
                   labelText: 'Passport #',
-                  prefixIcon: AppIcon(AppIcons.categoryIdentity),
+                  prefixIcon: AppIcon(AppInputIcons.categoryIdentity),
                 ),
                 textInputAction: TextInputAction.next,
               ),
@@ -1074,7 +1074,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                 controller: _licenseController,
                 decoration: const InputDecoration(
                   labelText: 'Driver License #',
-                  prefixIcon: AppIcon(AppIcons.car),
+                  prefixIcon: AppIcon(AppInputIcons.car),
                 ),
                 textInputAction: TextInputAction.next,
               ),
@@ -1089,7 +1089,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                 controller: _dobController,
                 decoration: const InputDecoration(
                   labelText: 'Date of Birth',
-                  prefixIcon: AppIcon(AppIcons.calendar),
+                  prefixIcon: AppIcon(AppInputIcons.calendar),
                   hintText: 'YYYY-MM-DD',
                 ),
                 textInputAction: TextInputAction.next,
@@ -1101,7 +1101,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                 controller: _phoneController,
                 decoration: const InputDecoration(
                   labelText: 'Phone',
-                  prefixIcon: AppIcon(AppIcons.user),
+                  prefixIcon: AppIcon(AppInputIcons.user),
                 ),
                 keyboardType: TextInputType.phone,
                 textInputAction: TextInputAction.next,
@@ -1114,7 +1114,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           controller: _addressController,
           decoration: const InputDecoration(
             labelText: 'Address',
-            prefixIcon: AppIcon(AppIcons.home),
+            prefixIcon: AppIcon(AppInputIcons.home),
           ),
           maxLines: 2,
         ),
@@ -1203,7 +1203,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           controller: _devSecretTypeController,
           decoration: const InputDecoration(
             labelText: 'Secret Sub-Type (e.g. API Key, SSH Key, DB, .env)',
-            prefixIcon: AppIcon(AppIcons.folder),
+            prefixIcon: AppIcon(AppInputIcons.folder),
           ),
           textInputAction: TextInputAction.next,
         ),
@@ -1214,9 +1214,9 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           obscureText: _obscurePassword,
           decoration: InputDecoration(
             labelText: 'Secret Key / API Key / Private Key',
-            prefixIcon: const AppIcon(AppIcons.key),
+            prefixIcon: const AppIcon(AppInputIcons.key),
             suffixIcon: IconButton(
-              icon: AppIcon(_obscurePassword ? AppIcons.viewOff : AppIcons.view),
+              icon: AppIcon(_obscurePassword ? AppInputIcons.viewOff : AppInputIcons.view),
               onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
             ),
           ),
@@ -1228,7 +1228,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           controller: _devPublicKeyController,
           decoration: const InputDecoration(
             labelText: 'Public Key / Endpoint / Host',
-            prefixIcon: AppIcon(AppIcons.globe),
+            prefixIcon: AppIcon(AppInputIcons.globe),
           ),
           style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
           textInputAction: TextInputAction.next,
@@ -1238,7 +1238,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           controller: _devConfigController,
           decoration: const InputDecoration(
             labelText: 'Configuration / Environment / .env Content',
-            prefixIcon: AppIcon(AppIcons.title),
+            prefixIcon: AppIcon(AppInputIcons.title),
           ),
           maxLines: 5,
           style: const TextStyle(fontFamily: 'monospace', fontSize: 13),

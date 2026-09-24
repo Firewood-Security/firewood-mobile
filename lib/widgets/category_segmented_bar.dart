@@ -79,7 +79,7 @@ class CategorySegmentedBar extends StatelessWidget {
                     children: [
                       AppIcon(
                         _getTypeIcon(type),
-                        size: 19,
+                        size: 22,
                         color: isSelected ? Colors.white : AppColors.textMuted.withValues(alpha: 0.7),
                       ),
                       const SizedBox(height: 4),
