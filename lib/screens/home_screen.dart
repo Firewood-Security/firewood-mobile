@@ -1567,6 +1567,48 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
     );
   }
 
+  Widget _buildGlyphRow(List<(String, bool, VoidCallback)> chips) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final chip in chips)
+          GestureDetector(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              chip.$3();
+            },
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: chip.$2
+                    ? AppColors.pastelPrimaryFill
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: chip.$2
+                      ? AppColors.pastelPrimaryBorder
+                      : AppColors.borderZinc,
+                  width: 1,
+                ),
+              ),
+              child: Text(
+                chip.$1,
+                style: TextStyle(
+                  color: chip.$2
+                      ? AppColors.pastelPrimaryText
+                      : AppColors.textMuted,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
   Widget _buildSliderRow({
     required String title,
     required String value,
