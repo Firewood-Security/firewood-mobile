@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app.dart';
 import 'services/accent_color_service.dart';
 import 'services/lock_service.dart';
+import 'services/native_security_bridge.dart';
 import 'services/update_service.dart';
 import 'theme/app_icons.dart';
 
@@ -57,6 +58,15 @@ void main() async {
     UpdateService.initUpdateChecker();
   } catch (e) {
     debugPrint('Failed to initialize UpdateChecker: $e');
+  }
+
+  // Enforce screenshot/recents protection from boot (REQ-SCREEN-01).
+  // Fail-safe: any error leaves the OS default, surfaced no further —
+  // the Settings toggle remains the user-visible control.
+  try {
+    await NativeSecurityBridge.applyStoredScreenshotPolicy();
+  } catch (e) {
+    debugPrint('Failed to apply screenshot policy: $e');
   }
 
   // Load persisted lock settings before first frame so Gate-0/REQ-SESS-01

@@ -16,7 +16,7 @@
 // This file is the Dart-side thin wrapper; all crypto happens in Kotlin.
 
 import 'package:flutter/services.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
 
 class NativeSecurityBridge {
   static const _channel = MethodChannel('com.firewood.vault_security');
@@ -102,6 +102,22 @@ class NativeSecurityBridge {
   }
 
   // --- Screen Capture Control ---
+
+  /// Applies the stored screenshot policy at startup (REQ-SCREEN-01).
+  /// Default is PROTECTED (`allow_screenshots` absent/false → FLAG_SECURE on).
+  /// The Settings toggle only changes the stored value; without this call the
+  /// flag would never be set on fresh installs and recents would leak.
+  static Future<void> applyStoredScreenshotPolicy() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final allowed = prefs.getBool('allow_screenshots') ?? false;
+      if (allowed) {
+        await disableSecureFlag();
+      } else {
+        await enableSecureFlag();
+      }
+    } catch (_) {}
+  }
 
   /// Applies FLAG_SECURE to prevent screenshots and screen recording.
   static Future<bool> enableSecureFlag() async {
