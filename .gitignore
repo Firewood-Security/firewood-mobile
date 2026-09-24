@@ -33,10 +33,6 @@ target/
 Cargo.lock
 **/Cargo.lock
 
-# Tauri
-tauri-app/src-tauri/target/
-tauri-app/target/
-
 # Kotlin / Gradle
 .gradle/
 build/
@@ -154,3 +150,6 @@ pnpm-debug.log*decoupled_features/
 
 p2p_backup/
 decoupled_features/
+
+# Go pipeline build output
+tool/pipeline/dist/
