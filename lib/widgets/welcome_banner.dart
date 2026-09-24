@@ -5,6 +5,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
 
 class WelcomeBanner extends StatefulWidget {
@@ -33,27 +34,27 @@ class _WelcomeBannerState extends State<WelcomeBanner> {
 
   static const _pages = [
     _PageData(
-      icon: Icons.security,
+      icon: AppIcons.shield,
       title: 'Zero-Knowledge Encryption',
       body: 'Your vault data is encrypted with Argon2id + XChaCha20-Poly1305. '
           'Your master password NEVER leaves your device. Firewood cannot access your credentials.',
     ),
     _PageData(
-      icon: Icons.fingerprint,
+      icon: AppIcons.fingerprint,
       title: 'Biometric Security',
       body: 'Unlock your vault with fingerprint or face recognition. '
-          'Biometric keys are stored in hardware-backed Android Keystore – '
-          'not in plaintext on disk.',
+          'Biometric unlock is gated by the Android Keystore — '
+          'no master password is kept in app storage.',
     ),
     _PageData(
-      icon: Icons.local_fire_department,
+      icon: AppIcons.fire,
       title: 'Burner Password',
       body: 'Set a duress/parent password that permanently destroys ALL vault data '
           'when entered on the unlock screen. Use this if you are ever coerced '
           'into opening your vault.',
     ),
     _PageData(
-      icon: Icons.privacy_tip_outlined,
+      icon: AppIcons.shield,
       title: 'Privacy Agreement',
       body: 'Firewood stores all data locally on your device. Nothing is sent to '
           'any server. You are solely responsible for your master password. '
@@ -63,6 +64,7 @@ class _WelcomeBannerState extends State<WelcomeBanner> {
 
   @override
   Widget build(BuildContext context) {
+    final activeAccent = Theme.of(context).colorScheme.primary;
     final page = _pages[_page];
     final isLast = _page == _pages.length - 1;
 
@@ -72,7 +74,7 @@ class _WelcomeBannerState extends State<WelcomeBanner> {
       decoration: BoxDecoration(
         color: AppColors.surfaceZinc,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.orangeAccent.withValues(alpha: 0.4), width: 1.2),
+        border: Border.all(color: activeAccent.withValues(alpha: 0.4), width: 1.2),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.6),
@@ -95,7 +97,7 @@ class _WelcomeBannerState extends State<WelcomeBanner> {
                 width: i == _page ? 20 : 6,
                 height: 6,
                 decoration: BoxDecoration(
-                  color: i == _page ? AppColors.orangeAccent : AppColors.borderZinc,
+                  color: i == _page ? activeAccent : AppColors.borderZinc,
                   borderRadius: BorderRadius.circular(3),
                 ),
               );
@@ -107,10 +109,10 @@ class _WelcomeBannerState extends State<WelcomeBanner> {
           Container(
             width: 56, height: 56,
             decoration: BoxDecoration(
-              color: AppColors.orangeContainer,
+              color: activeAccent.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: Icon(page.icon, color: AppColors.orangeAccent, size: 26),
+            child: Center(child: AppIcon(page.icon, color: activeAccent, size: 26)),
           ),
           const SizedBox(height: 14),
 
@@ -159,7 +161,7 @@ class _WelcomeBannerState extends State<WelcomeBanner> {
                   }
                 },
                 style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.orangeAccent,
+                  backgroundColor: activeAccent,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -180,7 +182,7 @@ class _WelcomeBannerState extends State<WelcomeBanner> {
 }
 
 class _PageData {
-  final IconData icon;
+  final dynamic icon;
   final String title;
   final String body;
 

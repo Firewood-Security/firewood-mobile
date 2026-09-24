@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/vault_service.dart';
 import '../services/burner_service.dart';
 import '../security/crypto_service.dart';
+import '../services/native_security_bridge.dart';
 
 // StateProvider holds the SecretKey in memory only.
 // Setting to null = locked vault. Never persist to disk!
@@ -59,6 +60,11 @@ class BiometricAuthNotifier extends StateNotifier<bool> {
     if (!enabled) {
       try {
         await _secureStorage.delete(key: _biometricPasswordKey);
+      } catch (_) {}
+      // Canonical path cleanup (ADR-003): disabling also destroys the
+      // Keystore wrapping key so wrapped blobs become useless.
+      try {
+        await NativeSecurityBridge.deleteWrappingKey();
       } catch (_) {}
     }
   }

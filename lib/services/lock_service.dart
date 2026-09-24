@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/auth_provider.dart';
 
 const List<Duration> lockTimeoutOptions = [
@@ -81,10 +82,22 @@ class LockService {
     _onAutoLock = callback;
   }
 
-  // Clear clipboard after delay
+  // Clear clipboard after delay (legacy entry point; prefer [copySecret]).
   void scheduleClipboardClear() {
     _clipboardTimer?.cancel();
     _clipboardTimer = Timer(_clipboardClearDelay, () {
+      Clipboard.setData(const ClipboardData(text: ''));
+    });
+  }
+
+  /// Canonical secret-copy path (REQ-CLIP-01): every copy of sensitive or
+  /// user-copied text MUST go through this method so clipboard TTL is uniform.
+  /// [ttl] defaults to 30 s; pass [Duration.zero] only for non-sensitive text
+  /// with an explicit comment at the call site.
+  Future<void> copySecret(String text, {Duration? ttl}) async {
+    await Clipboard.setData(ClipboardData(text: text));
+    _clipboardTimer?.cancel();
+    _clipboardTimer = Timer(ttl ?? _clipboardClearDelay, () {
       Clipboard.setData(const ClipboardData(text: ''));
     });
   }
@@ -110,6 +123,43 @@ class LockService {
 
   Duration get lockTimeout => _lockTimeout;
   bool get isEnabled => _isEnabled;
+
+  // --- Persisted settings (REQ-SESS-01) ---
+  // Only values from [lockTimeoutOptions] are honored on load; anything else
+  // falls back to the default so corrupt/foreign prefs can never set
+  // an absurd timeout (e.g., Duration.zero disabling lock silently).
+
+  static const _kTimeoutKey = 'lock_timeout_seconds';
+  static const _kEnabledKey = 'lock_enabled';
+
+  static Future<({Duration timeout, bool enabled})> loadPersisted() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final secs = prefs.getInt(_kTimeoutKey);
+      final timeout = (secs != null &&
+              lockTimeoutOptions.any((d) => d.inSeconds == secs))
+          ? Duration(seconds: secs)
+          : _defaultLockTimeout;
+      final enabled = prefs.getBool(_kEnabledKey) ?? true;
+      return (timeout: timeout, enabled: enabled);
+    } catch (_) {
+      return (timeout: _defaultLockTimeout, enabled: true);
+    }
+  }
+
+  static Future<void> persistTimeout(Duration timeout) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(_kTimeoutKey, timeout.inSeconds);
+    } catch (_) {}
+  }
+
+  static Future<void> persistEnabled(bool enabled) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_kEnabledKey, enabled);
+    } catch (_) {}
+  }
 
   void dispose() {
     cancelAutoLockTimer();

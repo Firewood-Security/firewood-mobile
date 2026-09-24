@@ -62,6 +62,11 @@ class BurnerHash {
   // Argon2id hash of the burner password (base64 encoded)
   late String passwordHash;
 
+  // Per-entry random 16-byte salt (ADR-006). Null = legacy row hashed with the
+  // historic static salt; verification falls back to it until the row is
+  // replaced. Never add new salt-less rows.
+  List<int>? salt;
+
   // Human-readable label (e.g., "Duress Code 1")
   late String label;
 

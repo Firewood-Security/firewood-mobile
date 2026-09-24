@@ -1,17 +1,20 @@
 // screens/vault_unlock_screen.dart
 // Firewood Vault Unlock Screen: Master password entry with seamless duress/burner detection.
 
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../providers/auth_provider.dart';
 import '../services/vault_service.dart';
 import '../services/burner_service.dart';
 import '../services/backup_service.dart';
 import '../services/native_security_bridge.dart';
+import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
 import 'vault_setup_screen.dart';
 
@@ -169,12 +172,31 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
       final key = await _vaultService.unlock(password);
       ref.read(authProvider.notifier).state = key;
 
-      // Save for biometric unlock if enabled
+      // Ensure Keystore wrapping is current (ADR-003, canonical biometric
+      // path). A device that cannot wrap gets biometric disabled with notice
+      // instead of a silent raw-password downgrade.
       if (ref.read(biometricAuthEnabledProvider)) {
+        bool wrapped = false;
         try {
-          await NativeSecurityBridge.wrapMasterPassword(password);
+          wrapped = await NativeSecurityBridge.wrapMasterPassword(password);
+          if (!wrapped) {
+            await NativeSecurityBridge.createWrappingKey();
+            wrapped = await NativeSecurityBridge.wrapMasterPassword(password);
+          }
         } catch (_) {
-          await _secureStorage.write(key: _biometricPasswordKey, value: password);
+          wrapped = false;
+        }
+        if (wrapped) {
+          // Migration complete: drop any legacy raw-password entry.
+          try {
+            await _secureStorage.delete(key: _biometricPasswordKey);
+          } catch (_) {}
+        } else if (mounted) {
+          await ref.read(biometricAuthEnabledProvider.notifier).setEnabled(false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Biometric unlock unavailable on this device and was disabled.')),
+          );
         }
       }
 
@@ -243,7 +265,22 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
   Future<void> _importBackup() async {
     setState(() => _error = null);
     try {
-      final result = await FilePicker.platform.pickFiles(type: FileType.any, allowMultiple: false);
+      if (Platform.isAndroid) {
+        final storageStatus = await Permission.storage.status;
+        if (!storageStatus.isGranted) {
+          await Permission.storage.request();
+        }
+        final manageStatus = await Permission.manageExternalStorage.status;
+        if (!manageStatus.isGranted && !manageStatus.isRestricted) {
+          await Permission.manageExternalStorage.request();
+        }
+      }
+
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.any,
+        allowMultiple: false,
+        dialogTitle: 'Select .firewood Backup File',
+      );
       if (result == null || result.files.isEmpty || !mounted) return;
       final file = result.files.single;
       final filePath = file.path;
@@ -276,7 +313,7 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
                 side: const BorderSide(color: AppColors.borderZinc),
               ),
               title: Row(children: [
-                const Icon(Icons.file_open_outlined, color: AppColors.orangeAccent, size: 22),
+                AppIcon(AppIcons.upload, color: AppColors.orangeAccent, size: 22),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -307,9 +344,9 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
                       decoration: InputDecoration(
                         isDense: true,
                         labelText: 'Backup Password',
-                        prefixIcon: const Icon(Icons.lock_outline, size: 20),
+                        prefixIcon: AppIcon(AppIcons.lock, size: 20),
                         suffixIcon: IconButton(
-                          icon: Icon(obscure ? Icons.visibility_off : Icons.visibility, size: 18),
+                          icon: AppIcon(obscure ? AppIcons.eyeOff : AppIcons.eye, size: 18),
                           onPressed: () => setModalState(() => obscure = !obscure),
                         ),
                       ),
@@ -433,7 +470,7 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(color: AppColors.orangeAccent.withValues(alpha: 0.35)),
                               ),
-                              child: const Text(
+                              child: Text(
                                 'v2.0',
                                 style: TextStyle(
                                   fontSize: 11,
@@ -455,7 +492,7 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.shield_outlined, size: 12, color: AppColors.orangeAccent),
+                              AppIcon(AppIcons.shield, size: 12, color: AppColors.orangeAccent),
                               const SizedBox(width: 5),
                               Text(
                                 'ZERO-KNOWLEDGE VAULT',
@@ -486,7 +523,7 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.error_outline, color: AppColors.roseAccent, size: 18),
+                          AppIcon(AppIcons.alertCircle, color: AppColors.roseAccent, size: 18),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
@@ -521,8 +558,8 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(
-                                  Icons.fingerprint,
+                                AppIcon(
+                                  AppIcons.fingerprint,
                                   color: _biometricTriggered ? AppColors.orangeAccent : AppColors.periwinkleAccent,
                                   size: 24,
                                 ),
@@ -578,10 +615,14 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
                             isDense: true,
                             hintText: 'Master password',
                             hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
-                            prefixIcon: const Icon(Icons.key_outlined, size: 18, color: AppColors.textMuted),
+                            prefixIconConstraints: const BoxConstraints(minWidth: 42, minHeight: 42),
+                            prefixIcon: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              child: AppIcon(AppIcons.key, size: 18, color: AppColors.textMuted),
+                            ),
                             suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                              icon: AppIcon(
+                                _obscurePassword ? AppIcons.eyeOff : AppIcons.eye,
                                 size: 18,
                                 color: AppColors.textMuted,
                               ),
@@ -596,7 +637,7 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: AppColors.orangeAccent, width: 1.2),
+                              borderSide: BorderSide(color: AppColors.orangeAccent, width: 1.2),
                             ),
                           ),
                         ),
@@ -630,10 +671,10 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
                                       ),
                                     ],
                                   )
-                                : const Row(
+                                : Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Text(
+                                      const Text(
                                         'Unlock Vault',
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
@@ -641,8 +682,8 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
                                           color: Colors.white,
                                         ),
                                       ),
-                                      SizedBox(width: 8),
-                                      Icon(Icons.arrow_forward, size: 18, color: Colors.white),
+                                      const SizedBox(width: 8),
+                                      AppIcon(AppIcons.arrowRight, size: 18, color: Colors.white),
                                     ],
                                   ),
                           ),
@@ -659,12 +700,12 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
                     child: OutlinedButton.icon(
                       onPressed: _isImporting ? null : _importBackup,
                       icon: _isImporting
-                          ? const SizedBox(
+                          ? SizedBox(
                               width: 16,
                               height: 16,
                               child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.orangeAccent),
                             )
-                          : const Icon(Icons.file_open_outlined, size: 18, color: AppColors.orangeAccent),
+                          : AppIcon(AppIcons.upload, size: 18, color: AppColors.orangeAccent),
                       label: Text(
                         _isImporting ? 'Importing...' : 'Import Backup (.firewood)',
                         style: const TextStyle(fontSize: 13, color: AppColors.offWhite, fontWeight: FontWeight.w500),
@@ -679,7 +720,7 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
 
                   const SizedBox(height: 16),
                   Text(
-                    'Zero-knowledge local encryption • Hardware backed',
+                    'Zero-knowledge local encryption • Offline only',
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: AppColors.textMuted.withValues(alpha: 0.6),
                       fontSize: 11,

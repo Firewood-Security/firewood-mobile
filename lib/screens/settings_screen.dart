@@ -1,6 +1,7 @@
 // screens/settings_screen.dart
 // Settings for auto-lock, auto-backup schedule, device alias, security info, and backup import/export
 
+import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,16 +11,19 @@ import 'package:local_auth/local_auth.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../services/accent_color_service.dart';
 import '../services/update_service.dart';
+import '../services/accent_color_service.dart';
+import '../widgets/accent_color_picker_dialog.dart';
 
 import '../providers/auth_provider.dart';
 import '../services/backup_service.dart';
+import '../services/item_service.dart';
 import '../services/lock_service.dart';
 import '../services/vault_service.dart';
 import '../services/burner_service.dart';
 import '../database/schemas.dart';
 import '../services/native_security_bridge.dart';
+import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
 import 'about_screen.dart';
 import '../services/app_version_service.dart';
@@ -43,12 +47,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   void initState() {
     super.initState();
+    AccentColorService.currentColor.addListener(_onAccentColorChanged);
     SharedPreferences.getInstance().then((prefs) {
       if (mounted) setState(() => _screenshotsAllowed = prefs.getBool('allow_screenshots') ?? false);
     });
   }
 
-
+  void _onAccentColorChanged() {
+    if (mounted) setState(() {});
+  }
 
   Future<void> _saveAutoBackup(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
@@ -64,6 +71,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   void dispose() {
+    AccentColorService.currentColor.removeListener(_onAccentColorChanged);
     super.dispose();
   }
 
@@ -76,78 +84,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     final autoBackupEnabled = ref.watch(autoBackupEnabledProvider);
     final autoBackupInterval = ref.watch(autoBackupIntervalDaysProvider);
+    final authKey = ref.watch(authProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundZinc,
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-        children: [
-
+    return ValueListenableBuilder<Color>(
+      valueListenable: AccentColorService.currentColor,
+      builder: (context, accentColor, _) {
+        return Scaffold(
+          backgroundColor: AppColors.backgroundZinc,
+          body: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 140),
+            children: [
 
           // Appearance Section
           const _SectionHeader(title: 'APPEARANCE & ACCENT COLOR'),
-          _SettingsCard(
+          const _SettingsCard(
             children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Accent Theme Color',
-                      style: TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.bold, fontSize: 14),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Select one of 5 curated accent colors (Default: Deep Orange)',
-                      style: TextStyle(fontSize: 11, color: AppColors.textMuted),
-                    ),
-                    const SizedBox(height: 14),
-                    ValueListenableBuilder<Color>(
-                      valueListenable: AccentColorService.currentColor,
-                      builder: (context, activeColor, _) {
-                        return Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: AccentColorService.presets.map((preset) {
-                            final isSelected = activeColor.toARGB32() == preset.color.toARGB32();
-                            return GestureDetector(
-                              onTap: () => AccentColorService.setAccentColor(preset),
-                              child: Tooltip(
-                                message: preset.name,
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 200),
-                                  width: 42,
-                                  height: 42,
-                                  decoration: BoxDecoration(
-                                    color: preset.color,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: isSelected ? Colors.white : Colors.transparent,
-                                      width: isSelected ? 3 : 1,
-                                    ),
-                                    boxShadow: isSelected
-                                        ? [
-                                            BoxShadow(
-                                              color: preset.color.withValues(alpha: 0.5),
-                                              blurRadius: 10,
-                                              spreadRadius: 2,
-                                            ),
-                                          ]
-                                        : null,
-                                  ),
-                                  child: isSelected
-                                      ? const Icon(Icons.check, color: Colors.white, size: 20)
-                                      : null,
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
+              AccentColorPickerTile(),
             ],
           ),
           const SizedBox(height: 20),
@@ -160,7 +112,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 title: const Text('Biometric Vault Unlock', style: TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.bold, fontSize: 14)),
                 subtitle: const Text('Unlock vault with fingerprint or face recognition', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
                 value: biometricEnabled,
-                secondary: const Icon(Icons.fingerprint, color: AppColors.orangeAccent, size: 24),
+                secondary: AppIcon(AppIcons.fingerprint, color: AppColors.orangeAccent, size: 24),
                 activeColor: AppColors.orangeAccent,
                 onChanged: (val) => _toggleBiometricAuth(context, ref, val),
               ),
@@ -168,10 +120,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 title: const Text('Auto-Lock Vault', style: TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.bold, fontSize: 14)),
                 subtitle: const Text('Lock vault when idle or app backgrounded', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
                 value: autoLockEnabled,
-                secondary: const Icon(Icons.lock_clock_outlined, color: AppColors.orangeAccent, size: 24),
+                secondary: AppIcon(AppIcons.lockClock, color: AppColors.orangeAccent, size: 24),
                 activeColor: AppColors.orangeAccent,
                 onChanged: (val) {
                   ref.read(autoLockEnabledProvider.notifier).state = val;
+                  LockService.persistEnabled(val);
                   if (!val) lockService.cancelAutoLockTimer();
                 },
               ),
@@ -179,14 +132,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ListTile(
                   title: const Text('Auto-Lock Timeout', style: TextStyle(color: AppColors.offWhite, fontSize: 14)),
                   subtitle: Text(_formatDuration(lockTimeout), style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                  leading: const Icon(Icons.timer_outlined, color: AppColors.orangeAccent, size: 24),
-                  trailing: const Icon(Icons.chevron_right, color: AppColors.textMuted, size: 20),
+                  leading: AppIcon(AppIcons.timer, color: AppColors.orangeAccent, size: 24),
+                  trailing: AppIcon(AppIcons.chevronRight, color: AppColors.textMuted, size: 20),
                   onTap: () => _showTimeoutPicker(context, ref),
                 ),
               ListTile(
                 title: const Text('Lock Vault Now', style: TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.bold, fontSize: 14)),
                 subtitle: const Text('Immediately clear secret key from memory', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                leading: const Icon(Icons.lock_outline, color: AppColors.orangeAccent, size: 24),
+                leading: AppIcon(AppIcons.lock, color: AppColors.orangeAccent, size: 24),
                 onTap: () => _lockNow(context, ref),
               ),
               SwitchListTile(
@@ -194,7 +147,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 subtitle: const Text('Disable to prevent screen capture in app switcher', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
                 value: _screenshotsAllowed,
                 activeColor: AppColors.orangeAccent,
-                secondary: Icon(_screenshotsAllowed ? Icons.screenshot : Icons.no_photography, color: AppColors.orangeAccent, size: 24),
+                secondary: AppIcon(_screenshotsAllowed ? AppIcons.eye : AppIcons.eyeOff, color: AppColors.orangeAccent, size: 24),
                 onChanged: (val) async {
                   final prefs = await SharedPreferences.getInstance();
                   await prefs.setBool('allow_screenshots', val);
@@ -210,6 +163,36 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const SizedBox(height: 20),
 
+          // Developer Secrets .env Exporter (Visible only when API keys / Dev secrets > 2)
+          if (authKey != null)
+            FutureBuilder<List<DecryptedItem>>(
+              future: ItemService().getAllItems(authKey),
+              builder: (context, snapshot) {
+                final allItems = snapshot.data ?? [];
+                final devSecrets = allItems.where((i) => i.type == 'developerSecret').toList();
+                if (devSecrets.length <= 2) return const SizedBox.shrink();
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const _SectionHeader(title: 'DEVELOPER TOOLS & API EXPORT'),
+                    _SettingsCard(
+                      children: [
+                        ListTile(
+                          title: const Text('Export API Keys as .env', style: TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.bold, fontSize: 14)),
+                          subtitle: Text('Format and export ${devSecrets.length} developer secrets to a .env file', style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                          leading: AppIcon(AppIcons.typeDeveloperSecret, color: AppColors.orangeAccent, size: 24),
+                          trailing: AppIcon(AppIcons.chevronRight, color: AppColors.textMuted, size: 20),
+                          onTap: () => _showEnvExportDialog(context, devSecrets),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                );
+              },
+            ),
+
           // Burner Password Management
           const _SectionHeader(title: 'BURNER / DURESS PASSWORD'),
           _SettingsCard(
@@ -223,16 +206,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       if (burners.isEmpty)
                         const Padding(padding: EdgeInsets.all(16), child: Text('No burner passwords configured. Add one for emergency vault destruction.', style: TextStyle(color: AppColors.textMuted, fontSize: 12))),
                       ...burners.map((b) => ListTile(
-                        leading: const Icon(Icons.local_fire_department, color: AppColors.roseAccent, size: 24),
+                        leading: AppIcon(AppIcons.fire, color: AppColors.roseAccent, size: 24),
                         title: Text(b.label, style: const TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.bold, fontSize: 13)),
                         subtitle: Text('Created ${DateTime.now().difference(b.createdAt).inDays}d ago', style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
                         trailing: IconButton(
-                          icon: const Icon(Icons.delete_outline, color: AppColors.roseAccent, size: 18),
+                          icon: AppIcon(AppIcons.delete, color: AppColors.roseAccent, size: 18),
                           onPressed: () async { await BurnerService().removeBurner(b.id); if (mounted) setState(() {}); },
                         ),
                       )),
                       ListTile(
-                        leading: const Icon(Icons.add_circle_outline, color: AppColors.roseAccent, size: 24),
+                        leading: AppIcon(AppIcons.add, color: AppColors.roseAccent, size: 24),
                         title: const Text('Add Burner Password', style: TextStyle(color: AppColors.roseAccent, fontWeight: FontWeight.bold, fontSize: 14)),
                         subtitle: const Text('Entering this password on unlock destroys ALL vaults', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
                         onTap: () => _addBurnerPasswordDialog(context),
@@ -253,28 +236,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 title: const Text('Scheduled Auto-Backup', style: TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.bold, fontSize: 14)),
                 subtitle: const Text('Save encrypted backups to /Firewood/downloads', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
                 value: autoBackupEnabled,
-                secondary: const Icon(Icons.backup_outlined, color: AppColors.orangeAccent, size: 24),
+                secondary: AppIcon(AppIcons.cloudUpload, color: AppColors.orangeAccent, size: 24),
                 activeColor: AppColors.orangeAccent,
                 onChanged: (val) => _saveAutoBackup(val),
               ),
               if (autoBackupEnabled)
                 ListTile(
                   title: const Text('Backup Frequency', style: TextStyle(color: AppColors.offWhite, fontSize: 14)),
-                  subtitle: Text(_formatIntervalLabel(autoBackupInterval), style: const TextStyle(fontSize: 11, color: AppColors.orangeAccent)),
-                  leading: const Icon(Icons.schedule_outlined, color: AppColors.orangeAccent, size: 24),
-                  trailing: const Icon(Icons.chevron_right, color: AppColors.textMuted, size: 20),
+                  subtitle: Text(_formatIntervalLabel(autoBackupInterval), style: TextStyle(fontSize: 11, color: AppColors.orangeAccent)),
+                  leading: AppIcon(AppIcons.timer, color: AppColors.orangeAccent, size: 24),
+                  trailing: AppIcon(AppIcons.chevronRight, color: AppColors.textMuted, size: 20),
                   onTap: () => _showBackupIntervalPicker(context),
                 ),
               ListTile(
                 title: const Text('Export Encrypted Vault Backup', style: TextStyle(color: AppColors.offWhite, fontSize: 14)),
                 subtitle: const Text('Save .firewood encrypted file to Downloads', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                leading: const Icon(Icons.upload_file_outlined, color: AppColors.orangeAccent, size: 24),
+                leading: AppIcon(AppIcons.download, color: AppColors.orangeAccent, size: 24),
                 onTap: () => _exportVault(context, ref),
               ),
               ListTile(
                 title: const Text('Import Vault Backup File', style: TextStyle(color: AppColors.offWhite, fontSize: 14)),
                 subtitle: const Text('Restore database from .firewood file', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                leading: const Icon(Icons.download_outlined, color: AppColors.orangeAccent, size: 24),
+                leading: AppIcon(AppIcons.upload, color: AppColors.orangeAccent, size: 24),
                 onTap: () => _importVault(context, ref),
               ),
             ],
@@ -312,7 +295,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     leading: Stack(
                       clipBehavior: Clip.none,
                       children: [
-                        const Icon(Icons.system_update_outlined, color: AppColors.orangeAccent, size: 24),
+                        AppIcon(AppIcons.refresh, color: AppColors.orangeAccent, size: 24),
                         if (hasUpdate)
                           Positioned(
                             right: -2,
@@ -328,7 +311,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ),
                       ],
                     ),
-                    trailing: const Icon(Icons.chevron_right, color: AppColors.textMuted, size: 20),
+                    trailing: AppIcon(AppIcons.chevronRight, color: AppColors.textMuted, size: 20),
                     onTap: () => _checkForUpdates(context),
                   );
                 },
@@ -336,8 +319,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ListTile(
                 title: const Text('About Firewood & Developers', style: TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.bold, fontSize: 14)),
                 subtitle: const Text('App specs, zero-knowledge architecture & developer info', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                leading: const Icon(Icons.info_outline, color: AppColors.orangeAccent, size: 24),
-                trailing: const Icon(Icons.chevron_right, color: AppColors.textMuted, size: 20),
+                leading: AppIcon(AppIcons.info, color: AppColors.orangeAccent, size: 24),
+                trailing: AppIcon(AppIcons.chevronRight, color: AppColors.textMuted, size: 20),
                 onTap: () {
                   Navigator.push(
                     context,
@@ -356,7 +339,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ListTile(
                 title: const Text('Delete Vault Data', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 14)),
                 subtitle: const Text('Permanently wipe local database and reset vault', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                leading: const Icon(Icons.delete_forever_outlined, color: Colors.redAccent, size: 24),
+                leading: AppIcon(AppIcons.trash, color: Colors.redAccent, size: 24),
                 onTap: () => _confirmDeleteVault(context, ref),
               ),
             ],
@@ -386,6 +369,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
         ],
       ),
+    );
+      },
     );
   }
 
@@ -435,6 +420,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onChanged: (val) {
                   if (val != null) {
                     ref.read(lockTimeoutProvider.notifier).state = val;
+                    LockService.persistTimeout(val);
                     Navigator.pop(context);
                   }
                 },
@@ -494,10 +480,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _requestStoragePermission() async {
-    var status = await Permission.storage.status;
-    if (!status.isGranted) {
-      await Permission.storage.request();
-    }
+    try {
+      if (Platform.isAndroid) {
+        final storageStatus = await Permission.storage.status;
+        if (!storageStatus.isGranted) {
+          await Permission.storage.request();
+        }
+        final manageStatus = await Permission.manageExternalStorage.status;
+        if (!manageStatus.isGranted && !manageStatus.isRestricted) {
+          await Permission.manageExternalStorage.request();
+        }
+      }
+    } catch (_) {}
   }
 
   void _exportVault(BuildContext context, WidgetRef ref) async {
@@ -553,11 +547,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           context: context,
           builder: (context) => AlertDialog(
             backgroundColor: AppColors.surfaceZinc,
-            title: const Row(
+            title: Row(
               children: [
-                Icon(Icons.download_done, color: Colors.greenAccent, size: 24),
-                SizedBox(width: 10),
-                Text('Backup Exported', style: TextStyle(color: AppColors.offWhite, fontSize: 16)),
+                AppIcon(AppIcons.checkCircle, color: Colors.greenAccent, size: 24),
+                const SizedBox(width: 10),
+                const Text('Backup Exported', style: TextStyle(color: AppColors.offWhite, fontSize: 16)),
               ],
             ),
             content: Column(
@@ -575,7 +569,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                   child: SelectableText(
                     filePath,
-                    style: const TextStyle(fontFamily: 'Monospace', fontSize: 11, color: AppColors.orangeAccent),
+                    style: TextStyle(fontFamily: 'Monospace', fontSize: 11, color: AppColors.orangeAccent),
                   ),
                 ),
               ],
@@ -583,13 +577,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             actions: [
               TextButton.icon(
                 onPressed: () {
-                  Clipboard.setData(ClipboardData(text: filePath));
+                  // File path is not classified SECRET, but routing through the
+                  // canonical helper keeps clipboard TTL uniform (REQ-CLIP-01).
+                  ref.read(lockServiceProvider).copySecret(filePath);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Path copied to clipboard')),
                   );
                 },
-                icon: const Icon(Icons.copy, size: 16, color: AppColors.orangeAccent),
-                label: const Text('Copy Path', style: TextStyle(color: AppColors.orangeAccent)),
+                icon: AppIcon(AppIcons.copy, size: 16, color: AppColors.orangeAccent),
+                label: Text('Copy Path', style: TextStyle(color: AppColors.orangeAccent)),
               ),
               ElevatedButton(
                 onPressed: () => Navigator.pop(context),
@@ -612,40 +608,318 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  void _checkForUpdates(BuildContext context) {
-    showDialog(
+  // --- Developer Secrets .env Exporter Dialog ---
+
+  void _showEnvExportDialog(BuildContext context, List<DecryptedItem> devSecrets) {
+    final selectedItemIds = devSecrets.map((d) => d.itemId).toSet();
+
+    showModalBottomSheet(
       context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surfaceZinc,
-        title: const Text('Checking for Updates', style: TextStyle(color: AppColors.offWhite)),
-        content: const Row(children: [CircularProgressIndicator(color: AppColors.orangeAccent), SizedBox(width: 16), Text('Looking for new versions...', style: TextStyle(color: AppColors.textMuted))]),
+      isScrollControlled: true,
+      backgroundColor: AppColors.surfaceZinc,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            String generateEnvText() {
+              final sb = StringBuffer();
+              sb.writeln('# ----------------------------------------');
+              sb.writeln('# Firewood Vault — Exported API Keys & Secrets');
+              sb.writeln('# Generated: ${DateTime.now().toIso8601String()}');
+              sb.writeln('# ----------------------------------------\n');
+
+              for (final secret in devSecrets) {
+                if (!selectedItemIds.contains(secret.itemId)) continue;
+                final cleanTitle = secret.title
+                    .trim()
+                    .toUpperCase()
+                    .replaceAll(RegExp(r'[^A-Z0-9_]'), '_');
+
+                sb.writeln('# Item: ${secret.title}');
+                final fields = Map<String, dynamic>.from(secret.fields);
+                fields.removeWhere((k, _) {
+                  final lk = k.toLowerCase().replaceAll('_', '');
+                  return lk == 'createdat' || lk == 'updatedat' || lk == 'timestamp';
+                });
+
+                if (fields.isEmpty) {
+                  sb.writeln('${cleanTitle}=""\n');
+                  continue;
+                }
+
+                for (final entry in fields.entries) {
+                  final k = entry.key.trim();
+                  final v = entry.value.toString().trim();
+                  final cleanKey = k.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9_]'), '_');
+                  
+                  // If key already contains title prefix, avoid stutter (e.g. STRIPE_STRIPE_KEY)
+                  final envKey = cleanKey.startsWith(cleanTitle)
+                      ? cleanKey
+                      : '${cleanTitle}_$cleanKey';
+
+                  // Escape quotes
+                  final escapedVal = v.replaceAll('"', '\\"');
+                  sb.writeln('$envKey="$escapedVal"');
+                }
+                sb.writeln();
+              }
+              return sb.toString().trim();
+            }
+
+            final envContent = generateEnvText();
+
+            return DraggableScrollableSheet(
+              initialChildSize: 0.85,
+              minChildSize: 0.5,
+              maxChildSize: 0.95,
+              expand: false,
+              builder: (context, scrollController) {
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                  child: ListView(
+                    controller: scrollController,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: AppColors.borderZinc,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          AppIcon(AppIcons.typeDeveloperSecret, color: AppColors.orangeAccent, size: 24),
+                          const SizedBox(width: 10),
+                          const Expanded(
+                            child: Text(
+                              'Export API Keys (.env)',
+                              style: TextStyle(
+                                color: AppColors.offWhite,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            '${selectedItemIds.length}/${devSecrets.length} Selected',
+                            style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Select the developer secrets and API credentials to package into standard .env format.',
+                        style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: AppColors.roseContainer,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.roseBorder),
+                        ),
+                        child: const Text(
+                          'Warning: the exported file contains live secrets in PLAINTEXT (classification: SECRET-in-plaintext, D-09). Anyone with the file has the keys. Store it securely and delete it when done.',
+                          style: TextStyle(color: AppColors.roseOnContainer, fontSize: 11, height: 1.4),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Selection List
+                      Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.cardZinc,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: AppColors.borderZinc),
+                        ),
+                        child: Column(
+                          children: devSecrets.map((item) {
+                            final isSelected = selectedItemIds.contains(item.itemId);
+                            return CheckboxListTile(
+                              value: isSelected,
+                              title: Text(item.title, style: const TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.w600, fontSize: 13)),
+                              subtitle: Text('${item.fields.length} attributes', style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                              secondary: AppIcon(AppIcons.key, color: isSelected ? AppColors.orangeAccent : AppColors.textMuted, size: 18),
+                              activeColor: AppColors.orangeAccent,
+                              checkColor: Colors.white,
+                              onChanged: (val) {
+                                setModalState(() {
+                                  if (val == true) {
+                                    selectedItemIds.add(item.itemId);
+                                  } else {
+                                    selectedItemIds.remove(item.itemId);
+                                  }
+                                });
+                              },
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Preview
+                      const Text(
+                        '.ENV PREVIEW',
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        height: 160,
+                        decoration: BoxDecoration(
+                          color: Colors.black,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.borderZinc),
+                        ),
+                        child: SingleChildScrollView(
+                          child: SelectableText(
+                            envContent.isEmpty ? '# No items selected' : envContent,
+                            style: const TextStyle(
+                              fontFamily: 'Monospace',
+                              fontSize: 11,
+                              color: Colors.greenAccent,
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Action Buttons
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: envContent.isEmpty
+                                  ? null
+                                  : () {
+                                      ref.read(lockServiceProvider).copySecret(envContent);
+                                      HapticFeedback.selectionClick();
+                                      Navigator.pop(ctx);
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Row(
+                                            children: [
+                                              AppIcon(AppIcons.checkCircle, color: Colors.greenAccent, size: 18),
+                                              const SizedBox(width: 8),
+                                              const Text('.env content copied to clipboard (clears in 30s)'),
+                                            ],
+                                          ),
+                                          backgroundColor: AppColors.surfaceZinc,
+                                        ),
+                                      );
+                                    },
+                              icon: AppIcon(AppIcons.copy, size: 18, color: AppColors.orangeAccent),
+                              label: const Text('Copy .env', style: TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.bold)),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                side: const BorderSide(color: AppColors.borderZinc),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: FilledButton.icon(
+                              onPressed: envContent.isEmpty
+                                  ? null
+                                  : () async {
+                                      await _requestStoragePermission();
+                                      try {
+                                        final dir = Directory('/storage/emulated/0/Download/Firewood');
+                                        if (!await dir.exists()) {
+                                          await dir.create(recursive: true);
+                                        }
+                                        final now = DateTime.now().millisecondsSinceEpoch;
+                                        final file = File('${dir.path}/firewood_secrets_$now.env');
+                                        await file.writeAsString(envContent);
+                                        HapticFeedback.heavyImpact();
+                                        if (ctx.mounted) Navigator.pop(ctx);
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text('Saved to ${file.path}'),
+                                              backgroundColor: Colors.green,
+                                            ),
+                                          );
+                                        }
+                                      } catch (e) {
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text('Save failed: $e'), backgroundColor: Colors.redAccent),
+                                          );
+                                        }
+                                      }
+                                    },
+                              icon: AppIcon(AppIcons.download, size: 18),
+                              label: const Text('Save File', style: TextStyle(fontWeight: FontWeight.bold)),
+                              style: FilledButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 
-  void _importVault(BuildContext context, WidgetRef ref) async {
-    await _requestStoragePermission();
-    if (!context.mounted) return;
+  Future<void> _toggleBiometricAuth(BuildContext context, WidgetRef ref, bool enable) async {
+    if (!enable) {
+      await ref.read(biometricAuthEnabledProvider.notifier).setEnabled(false);
+      return;
+    }
 
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.any,
-    );
+    try {
+      final localAuth = LocalAuthentication();
+      final canCheck = await localAuth.canCheckBiometrics;
+      final isDeviceSupported = await localAuth.isDeviceSupported();
 
-    if (result == null || result.files.single.path == null || !context.mounted) return;
-    final filePath = result.files.single.path!;
+      if (!canCheck && !isDeviceSupported) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Biometrics not available on this device')),
+          );
+        }
+        return;
+      }
 
-    if (!filePath.toLowerCase().endsWith('.firewood')) {
+      final authenticated = await localAuth.authenticate(
+        localizedReason: 'Authenticate to enable biometric vault unlock',
+        options: const AuthenticationOptions(stickyAuth: true, biometricOnly: true),
+      );
+
+      if (!authenticated) return;
+    } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Invalid file format. Only .firewood backup files are allowed.'),
-            backgroundColor: Colors.redAccent,
-          ),
+          SnackBar(content: Text('Biometric authentication failed: $e')),
         );
       }
       return;
     }
+
+    if (!context.mounted) return;
 
     final passwordController = TextEditingController();
     final formKey = GlobalKey<FormState>();
@@ -654,7 +928,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.surfaceZinc,
-        title: const Text('Import Backup File', style: TextStyle(color: AppColors.offWhite, fontSize: 16)),
+        title: const Text('Confirm Master Password', style: TextStyle(color: AppColors.offWhite, fontSize: 16)),
         content: Form(
           key: formKey,
           child: TextFormField(
@@ -662,7 +936,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             obscureText: true,
             style: const TextStyle(color: AppColors.offWhite),
             decoration: const InputDecoration(
-              labelText: 'Backup Master Password',
+              labelText: 'Master Password',
+              hintText: 'Enter password to link with biometrics',
             ),
             validator: (v) => v == null || v.isEmpty ? 'Password required' : null,
           ),
@@ -679,7 +954,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.orangeAccent, foregroundColor: Colors.white),
-            child: const Text('Import & Restore'),
+            child: const Text('Confirm'),
           ),
         ],
       ),
@@ -688,17 +963,114 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (password == null || !context.mounted) return;
 
     try {
+      await VaultService().unlock(password);
+      // Canonical biometric path (ADR-003): Keystore wrapping only. Any
+      // failure surfaces to the user — no silent raw-password fallback.
+      await NativeSecurityBridge.createWrappingKey();
+      final wrapped = await NativeSecurityBridge.wrapMasterPassword(password);
+      if (!wrapped) {
+        throw Exception('Keystore wrapping failed on this device');
+      }
+      // Migration complete: remove any legacy raw-password entry.
+      try {
+        await const FlutterSecureStorage().delete(key: 'biometric_master_password');
+      } catch (_) {}
+      await ref.read(biometricAuthEnabledProvider.notifier).setEnabled(true);
+      if (context.mounted) {
+        HapticFeedback.mediumImpact();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Biometric vault login enabled successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not enable biometric unlock (wrong password or unsupported device).'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
+  }
+
+  void _importVault(BuildContext context, WidgetRef ref) async {
+    await _requestStoragePermission();
+    if (!context.mounted) return;
+
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['firewood', 'json'],
+    );
+
+    if (result == null || result.files.single.path == null || !context.mounted) return;
+    final filePath = result.files.single.path!;
+
+    final passwordController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    final password = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surfaceZinc,
+        title: const Text('Import Vault Backup', style: TextStyle(color: AppColors.offWhite, fontSize: 16)),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Enter the master password used to encrypt this backup file:', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: passwordController,
+                obscureText: true,
+                style: const TextStyle(color: AppColors.offWhite),
+                decoration: const InputDecoration(
+                  labelText: 'Backup Password',
+                  hintText: 'Enter password',
+                ),
+                validator: (v) => v == null || v.isEmpty ? 'Password required' : null,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                Navigator.pop(context, passwordController.text);
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.orangeAccent, foregroundColor: Colors.white),
+            child: const Text('Import'),
+          ),
+        ],
+      ),
+    );
+
+    if (password == null || !context.mounted) return;
+
+    try {
+      final currentKey = ref.read(authProvider);
       final backupService = BackupService();
-      final vaultName = await backupService.importVault(filePath, password, overwrite: true);
-      // Auto unlock vault with the imported password
-      final key = await VaultService().unlock(password);
-      ref.read(authProvider.notifier).state = key;
+      final vaultName = await backupService.importVault(
+        filePath,
+        password,
+        overwrite: false,
+        activeVaultKey: currentKey,
+      );
 
       if (context.mounted) {
-        HapticFeedback.heavyImpact();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Successfully restored and unlocked vault: $vaultName'),
+            content: Text('Successfully imported vault: $vaultName'),
             backgroundColor: Colors.green,
           ),
         );
@@ -715,109 +1087,57 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  Future<void> _toggleBiometricAuth(BuildContext context, WidgetRef ref, bool enable) async {
-    const storage = FlutterSecureStorage();
-    if (!enable) {
-      try {
-        await NativeSecurityBridge.deleteWrappingKey();
-      } catch (_) {}
-      await storage.delete(key: 'biometric_master_password');
-      await ref.read(biometricAuthEnabledProvider.notifier).setEnabled(false);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Biometric vault login disabled')),
-        );
-      }
-      return;
-    }
-
-    final localAuth = LocalAuthentication();
-    final canCheck = await localAuth.canCheckBiometrics;
-    final isDeviceSupported = await localAuth.isDeviceSupported();
-
-    if (!canCheck || !isDeviceSupported) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Biometric authentication is not supported or configured on this device.'),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
-      }
-      return;
-    }
-
+  void _checkForUpdates(BuildContext context) async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Checking for updates...')),
+    );
+    final updateInfo = await UpdateService().checkAppUpdate();
     if (!context.mounted) return;
 
-    // Require Master Password verification before enabling biometrics
-    final passwordController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-
-    final password = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surfaceZinc,
-        title: const Text('Verify Master Password', style: TextStyle(color: AppColors.offWhite, fontSize: 16)),
-        content: Form(
-          key: formKey,
-          child: TextFormField(
-            controller: passwordController,
-            obscureText: true,
-            style: const TextStyle(color: AppColors.offWhite),
-            decoration: const InputDecoration(
-              labelText: 'Master Password',
-              hintText: 'Confirm master password to enable biometrics',
+    if (updateInfo.hasUpdate) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppColors.surfaceZinc,
+          title: Row(
+            children: [
+              AppIcon(AppIcons.sparkles, color: AppColors.orangeAccent, size: 24),
+              const SizedBox(width: 8),
+              const Text('Update Available', style: TextStyle(color: AppColors.offWhite)),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Version ${updateInfo.version} is now available.', style: const TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Text(updateInfo.releaseNotes, style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Later', style: TextStyle(color: AppColors.textMuted)),
             ),
-            validator: (v) => v == null || v.isEmpty ? 'Password required' : null,
-          ),
+            if (updateInfo.downloadUrl.isNotEmpty)
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.orangeAccent, foregroundColor: Colors.white),
+                child: const Text('Download'),
+              ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (formKey.currentState!.validate()) {
-                Navigator.pop(context, passwordController.text);
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.orangeAccent, foregroundColor: Colors.white),
-            child: const Text('Enable Biometrics'),
-          ),
-        ],
-      ),
-    );
-
-    if (password == null || !context.mounted) return;
-
-    try {
-      await VaultService().unlock(password); // verify password
-      try {
-        await NativeSecurityBridge.createWrappingKey();
-        await NativeSecurityBridge.wrapMasterPassword(password);
-      } catch (_) {
-        await storage.write(key: 'biometric_master_password', value: password);
-      }
-      await ref.read(biometricAuthEnabledProvider.notifier).setEnabled(true);
-      if (context.mounted) {
-        HapticFeedback.mediumImpact();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Hardware-backed biometric vault login enabled successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (_) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Incorrect master password. Biometric enable failed.'),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
-      }
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Firewood is up to date (${AppVersionService.fullVersionString})'),
+          backgroundColor: Colors.green,
+        ),
+      );
     }
   }
 
@@ -844,7 +1164,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     if (confirm != true || !context.mounted) return;
 
-    // Verify identity via Biometrics OR Master Password
     final isBiometricEnabled = ref.read(biometricAuthEnabledProvider);
     bool verified = false;
 
@@ -861,7 +1180,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
 
     if (!verified && context.mounted) {
-      // Fallback to Master Password verification
       final passwordController = TextEditingController();
       final formKey = GlobalKey<FormState>();
 
@@ -936,20 +1254,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceZinc,
-        title: Row(children: [const Icon(Icons.local_fire_department, color: AppColors.roseAccent), const SizedBox(width: 8), const Text('Add Burner Password', style: TextStyle(color: AppColors.offWhite))]),
+        title: Row(children: [AppIcon(AppIcons.fire, color: AppColors.roseAccent, size: 20), const SizedBox(width: 8), const Text('Add Burner Password', style: TextStyle(color: AppColors.offWhite))]),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Text('Entering this password on the unlock screen will Permanently destroy ALL vault data.', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+          const Text('Entering this password on the unlock screen will permanently destroy ALL vault data. Export a backup first if you need recovery.', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
           const SizedBox(height: 12),
           TextField(controller: labelCtrl, style: const TextStyle(color: AppColors.offWhite), decoration: const InputDecoration(labelText: 'Label (optional)')),
           const SizedBox(height: 8),
-          TextField(controller: pwCtrl, obscureText: true, autofocus: true, style: const TextStyle(color: AppColors.offWhite), decoration: const InputDecoration(labelText: 'Burner Password (min 6 chars)')),
+          TextField(controller: pwCtrl, obscureText: true, autofocus: true, style: const TextStyle(color: AppColors.offWhite), decoration: const InputDecoration(labelText: 'Burner Password (min 8 chars)')),
         ]),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted))),
           FilledButton(
             onPressed: () async {
-              if (pwCtrl.text.length < 6) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Burner password must be at least 6 characters')));
+              if (pwCtrl.text.length < 8) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Burner password must be at least 8 characters')));
                 return;
               }
               try {

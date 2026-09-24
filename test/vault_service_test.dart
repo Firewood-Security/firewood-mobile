@@ -1,11 +1,10 @@
-import 'dart:ffi';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:isar/isar.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:firewood/database/isar_service.dart';
 import 'package:firewood/services/vault_service.dart';
+import 'isar_test_helper.dart';
 
 class MockPathProviderPlatform extends PathProviderPlatform
     with MockPlatformInterfaceMixin {
@@ -27,9 +26,7 @@ void main() {
     late VaultService vaultService;
 
     setUpAll(() async {
-      final isarLibPath =
-          '/home/tp24/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/linux/libisar.so';
-      await Isar.initializeIsarCore(libraries: {Abi.linuxX64: isarLibPath});
+      await initIsarForTests();
     });
 
     setUp(() async {

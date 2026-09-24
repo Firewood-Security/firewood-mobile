@@ -1,22 +1,31 @@
 // screens/home_screen.dart
 // Main vault view with floating bottom navigation, logo-only navbar, analytics, password listing, generator, security info, and settings
 
-import 'dart:math';
+import 'dart:io';
 import 'package:cryptography/cryptography.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../models/item_type.dart';
 import '../providers/auth_provider.dart';
 import '../services/item_service.dart';
-import '../services/update_service.dart';
+import '../services/lock_service.dart';
+import '../services/backup_service.dart';
+import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
+import '../theme/app_feedback.dart';
 import 'credential_view_screen.dart';
 import 'item_detail_screen.dart';
 import 'settings_screen.dart';
-import '../widgets/welcome_banner.dart';
+import '../widgets/guide_modal.dart';
+import '../widgets/app_floating_navbar.dart';
 import '../services/analytics_service.dart';
+import '../services/accent_color_service.dart';
+import '../services/generator_service.dart';
+import '../widgets/password_strength_meter.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -35,29 +44,37 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   ItemType? _filterType;
   bool _sortDescending = true;
   bool _isGridView = false;
-  bool _showWelcomeBanner = false;
 
   late AnimationController _fabController;
 
   @override
   void initState() {
     super.initState();
+    AccentColorService.currentColor.addListener(_onAccentColorChanged);
     _fabController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
     _fabController.forward();
-    _checkWelcomeBanner();
+    _checkGuideModal();
   }
 
-  Future<void> _checkWelcomeBanner() async {
-    if (await WelcomeBanner.shouldShow()) {
-      if (mounted) setState(() => _showWelcomeBanner = true);
+  void _onAccentColorChanged() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _checkGuideModal() async {
+    final shouldShow = await GuideModal.shouldShow();
+    if (shouldShow && mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) GuideModal.show(context);
+      });
     }
   }
 
   @override
   void dispose() {
+    AccentColorService.currentColor.removeListener(_onAccentColorChanged);
     _fabController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -86,6 +103,301 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     setState(() {}); // Refresh list
   }
 
+  Future<void> _importBackup(SecretKey currentKey) async {
+    HapticFeedback.lightImpact();
+
+    // Request file & storage permissions
+    try {
+      if (Platform.isAndroid) {
+        final storageStatus = await Permission.storage.status;
+        if (!storageStatus.isGranted) {
+          await Permission.storage.request();
+        }
+        final manageStatus = await Permission.manageExternalStorage.status;
+        if (!manageStatus.isGranted && !manageStatus.isRestricted) {
+          await Permission.manageExternalStorage.request();
+        }
+      }
+    } catch (_) {}
+
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.any,
+      allowMultiple: false,
+      dialogTitle: 'Select .firewood Backup File',
+    );
+
+    if (result == null || result.files.single.path == null || !mounted) return;
+    final filePath = result.files.single.path!;
+
+    if (!filePath.toLowerCase().endsWith('.firewood')) {
+      if (mounted) {
+        AppToast.show(context, message: 'Please select a valid .firewood backup file', type: ToastType.error);
+      }
+      return;
+    }
+
+    final passwordController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    final password = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceZinc,
+        title: const Text('Import Backup File', style: TextStyle(color: AppColors.offWhite, fontSize: 16, fontWeight: FontWeight.bold)),
+        content: Form(
+          key: formKey,
+          child: TextFormField(
+            controller: passwordController,
+            obscureText: true,
+            style: const TextStyle(color: AppColors.offWhite),
+            decoration: const InputDecoration(
+              labelText: 'Backup Master Password',
+              prefixIcon: AppIcon(AppIcons.lock, size: 20, color: AppColors.textMuted),
+            ),
+            validator: (v) => v == null || v.isEmpty ? 'Password required' : null,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                Navigator.pop(ctx, passwordController.text);
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.primary, foregroundColor: Colors.white),
+            child: const Text('Import & Restore'),
+          ),
+        ],
+      ),
+    );
+
+    if (password == null || !mounted) return;
+
+    try {
+      final backupService = BackupService();
+      final result = await backupService.importVault(
+        filePath,
+        password,
+        overwrite: false,
+        activeVaultKey: currentKey,
+      );
+
+      if (mounted) {
+        AppToast.show(
+          context,
+          message: 'Successfully imported backup: $result',
+          type: ToastType.success,
+        );
+        setState(() {}); // Refresh list
+      }
+    } catch (e) {
+      if (mounted) {
+        AppToast.show(
+          context,
+          message: 'Failed to import backup: ${e.toString()}',
+          type: ToastType.error,
+        );
+      }
+    }
+  }
+
+  void _showPlusActionSheet(SecretKey key) {
+    HapticFeedback.lightImpact();
+    final activeAccent = Theme.of(context).colorScheme.primary;
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF16161A),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border.all(color: AppColors.borderZinc.withValues(alpha: 0.8), width: 1.2),
+            boxShadow: const [
+              BoxShadow(color: Colors.black87, blurRadius: 24, offset: Offset(0, -6)),
+            ],
+          ),
+          padding: EdgeInsets.fromLTRB(20, 12, 20, MediaQuery.of(ctx).padding.bottom + 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Drag handle
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.borderZinc,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: activeAccent.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: activeAccent.withValues(alpha: 0.3)),
+                    ),
+                    child: AppIcon(AppIcons.vault, color: activeAccent, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Vault Actions',
+                          style: TextStyle(
+                            color: AppColors.offWhite,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        Text(
+                          'Choose an action to perform',
+                          style: TextStyle(color: AppColors.textMuted, fontSize: 11),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // Button 1: Add Credentials
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      activeAccent.withValues(alpha: 0.18),
+                      activeAccent.withValues(alpha: 0.06),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: activeAccent.withValues(alpha: 0.4), width: 1.2),
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _addItem(key);
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: activeAccent.withValues(alpha: 0.25),
+                              shape: BoxShape.circle,
+                            ),
+                            child: AppIcon(AppIcons.add, color: activeAccent, size: 20),
+                          ),
+                          const SizedBox(width: 14),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Add Credentials',
+                                  style: TextStyle(
+                                    color: AppColors.offWhite,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Create a new login, card, note, or ID',
+                                  style: TextStyle(color: AppColors.textMuted, fontSize: 11),
+                                ),
+                              ],
+                            ),
+                          ),
+                          AppIcon(AppIcons.chevronRight, size: 16, color: activeAccent),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Button 2: Import Backup
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceZinc,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.borderZinc.withValues(alpha: 0.7), width: 1),
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _importBackup(key);
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF27272A),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const AppIcon(AppIcons.download, color: AppColors.offWhite, size: 20),
+                          ),
+                          const SizedBox(width: 14),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Import Backup',
+                                  style: TextStyle(
+                                    color: AppColors.offWhite,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Restore credentials from encrypted .firewood file',
+                                  style: TextStyle(color: AppColors.textMuted, fontSize: 11),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const AppIcon(AppIcons.chevronRight, size: 16, color: AppColors.textMuted),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _viewItem(SecretKey key, DecryptedItem item) async {
     HapticFeedback.lightImpact();
     await Navigator.of(context).push(
@@ -106,7 +418,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       builder: (context) => AlertDialog(
         title: const Row(
           children: [
-            Icon(Icons.delete_outline, color: Colors.redAccent),
+            AppIcon(AppIcons.delete, color: Colors.redAccent, size: 22),
             SizedBox(width: 8),
             Text('Delete Item?'),
           ],
@@ -150,138 +462,133 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   Widget build(BuildContext context) {
     final key = ref.watch(authProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundZinc,
-      appBar: AppBar(
-        backgroundColor: AppColors.surfaceZinc,
-        elevation: 0,
-        centerTitle: false,
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: AppColors.orangeAccent.withValues(alpha: 0.4),
-                  width: 1.5,
-                ),
-              ),
-              child: ClipOval(
-                child: Image.asset(
-                  'assets/FWS.png',
+    return ValueListenableBuilder<Color>(
+      valueListenable: AccentColorService.currentColor,
+      builder: (context, accentColor, _) {
+        return Scaffold(
+          backgroundColor: AppColors.backgroundZinc,
+          appBar: AppBar(
+            backgroundColor: AppColors.surfaceZinc,
+            elevation: 0,
+            centerTitle: false,
+            title: Row(
+              children: [
+                Container(
                   width: 32,
                   height: 32,
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            const Text(
-              'Firewood',
-              style: TextStyle(
-                color: AppColors.offWhite,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.lock_outline_rounded, color: AppColors.orangeAccent, size: 22),
-            tooltip: 'Lock Vault',
-            onPressed: () {
-              HapticFeedback.mediumImpact();
-              ref.read(authProvider.notifier).state = null;
-            },
-          ),
-          const SizedBox(width: 6),
-        ],
-      ),
-      body: key == null
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.orangeAccent),
-            )
-          : Stack(
-              children: [
-                IndexedStack(
-                  index: _currentTabIndex,
-                  children: [
-                    _buildHomeDashboardTab(key),
-                    _buildPasswordsListingTab(key),
-                    _buildGeneratorTab(),
-                    const SettingsScreen(),
-                  ],
-                ),
-                if (_showWelcomeBanner)
-                  Positioned(
-                    left: 0, right: 0, top: 0,
-                    child: WelcomeBanner(
-                      onDismiss: () => setState(() => _showWelcomeBanner = false),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppColors.orangeAccent,
+                      width: 1.2,
                     ),
                   ),
-                Positioned(
-                  left: 16,
-                  right: 16,
-                  bottom: 16,
-                  child: _FloatingBottomNavBar(
-                    currentIndex: _currentTabIndex,
-                    onTap: (index) {
-                      HapticFeedback.selectionClick();
-                      setState(() => _currentTabIndex = index);
-                    },
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/FWS.png',
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                const Text(
+                  'Firewood',
+                  style: TextStyle(
+                    color: AppColors.offWhite,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
             ),
-      floatingActionButton: (key != null && _currentTabIndex <= 1)
-          ? Padding(
-              padding: const EdgeInsets.only(bottom: 68),
-              child: ScaleTransition(
-                scale: _fabController,
-                child: Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Theme.of(context).colorScheme.primary.withValues(alpha: 0.95),
-                        HSLColor.fromColor(Theme.of(context).colorScheme.primary)
-                            .withLightness((HSLColor.fromColor(Theme.of(context).colorScheme.primary).lightness - 0.15).clamp(0.0, 1.0))
-                            .toColor(),
+            actions: [
+              IconButton(
+                icon: AppIcon(AppIcons.lock, color: AppColors.orangeAccent, size: 20),
+                tooltip: 'Lock Vault',
+                onPressed: () {
+                  HapticFeedback.mediumImpact();
+                  ref.read(authProvider.notifier).state = null;
+                },
+              ),
+              const SizedBox(width: 6),
+            ],
+          ),
+          body: key == null
+              ? Center(
+                  child: CircularProgressIndicator(color: AppColors.orangeAccent),
+                )
+              : Stack(
+                  children: [
+                    IndexedStack(
+                      index: _currentTabIndex,
+                      children: [
+                        _buildHomeDashboardTab(key),
+                        _buildPasswordsListingTab(key),
+                        _buildGeneratorTab(),
+                        const SettingsScreen(),
                       ],
                     ),
-                    border: Border.all(color: Theme.of(context).colorScheme.primary, width: 1),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black54,
-                        offset: Offset(0, 4),
-                        blurRadius: 10,
+                    Positioned(
+                      left: 16,
+                      right: 16,
+                      bottom: MediaQuery.of(context).padding.bottom + 16,
+                      child: AppFloatingNavBar(
+                        currentIndex: _currentTabIndex,
+                        onTap: (index) {
+                          HapticFeedback.selectionClick();
+                          setState(() => _currentTabIndex = index);
+                        },
                       ),
-                    ],
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      customBorder: const CircleBorder(),
-                      onTap: () => _addItem(key),
-                      child: const Center(
-                        child: Icon(Icons.add, color: Colors.white, size: 28),
+                    ),
+                  ],
+                ),
+          floatingActionButton: (key != null && _currentTabIndex <= 1)
+              ? Padding(
+                  padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom + 120),
+                  child: ScaleTransition(
+                    scale: _fabController,
+                    child: Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Theme.of(context).colorScheme.primary.withValues(alpha: 0.95),
+                            HSLColor.fromColor(Theme.of(context).colorScheme.primary)
+                                .withLightness((HSLColor.fromColor(Theme.of(context).colorScheme.primary).lightness - 0.15).clamp(0.0, 1.0))
+                                .toColor(),
+                          ],
+                        ),
+                        border: Border.all(color: Theme.of(context).colorScheme.primary, width: 1),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Colors.black54,
+                            offset: Offset(0, 4),
+                            blurRadius: 10,
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: () => _showPlusActionSheet(key),
+                          child: const Center(
+                            child: AppIcon(AppIcons.add, color: Colors.white, size: 26, strokeWidth: 2.2),
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ),
-            )
-          : null,
+                )
+              : null,
+        );
+      },
     );
   }
-
-
 
   // --- TAB 0: HOME DASHBOARD (Metrics & Summary) ---
   Widget _buildHomeDashboardTab(SecretKey key) {
@@ -293,18 +600,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         }
 
         final items = snapshot.data ?? [];
-        final logins = items.where((i) => i.type == ItemType.login.label).toList();
-        final cards = items.where((i) => i.type == ItemType.card.label).length;
-        final identities = items.where((i) => i.type == ItemType.identity.label).length;
-        final notes = items.where((i) => i.type == ItemType.note.label).length;
-        final devSecrets = items.where((i) => i.type == ItemType.developerSecret.label).length;
+        final logins = items.where((i) => ItemTypeExt.fromString(i.type) == ItemType.login).toList();
+        final cards = items.where((i) => ItemTypeExt.fromString(i.type) == ItemType.card).length;
+        final identities = items.where((i) => ItemTypeExt.fromString(i.type) == ItemType.identity).length;
+        final notes = items.where((i) => ItemTypeExt.fromString(i.type) == ItemType.note).length;
+        final devSecrets = items.where((i) => ItemTypeExt.fromString(i.type) == ItemType.developerSecret).length;
         final report = VaultAnalyticsService.computeReport(items);
         final activeAccent = Theme.of(context).colorScheme.primary;
 
         return RefreshIndicator(
           onRefresh: () async => setState(() {}),
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 140),
             physics: const AlwaysScrollableScrollPhysics(),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -315,7 +622,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     // Card 1: Total Credentials
                     Expanded(
                       child: Container(
-                        padding: const EdgeInsets.all(16),
+                        height: 122,
+                        padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
                           color: AppColors.surfaceZinc,
                           borderRadius: BorderRadius.circular(16),
@@ -323,34 +631,41 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Row(
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.all(8),
+                                  padding: const EdgeInsets.all(7),
                                   decoration: BoxDecoration(
                                     color: activeAccent.withValues(alpha: 0.15),
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(color: activeAccent.withValues(alpha: 0.3)),
                                   ),
-                                  child: Icon(Icons.shield_outlined, color: activeAccent, size: 18),
+                                  child: AppIcon(AppIcons.shield, color: activeAccent, size: 18),
                                 ),
                                 const Spacer(),
                                 Text(
                                   '${report.totalItems}',
-                                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.offWhite),
+                                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.offWhite),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 12),
-                            const Text(
-                              'TOTAL CREDENTIALS',
-                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.8, color: AppColors.textMuted),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '${report.totalItems} Active & Protected',
-                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: activeAccent),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'TOTAL CREDENTIALS',
+                                  style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, letterSpacing: 0.8, color: AppColors.textMuted),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${report.totalItems} Active & Protected',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: activeAccent),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -361,7 +676,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     // Card 2: Security Health Score
                     Expanded(
                       child: Container(
-                        padding: const EdgeInsets.all(16),
+                        height: 122,
+                        padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
                           color: AppColors.surfaceZinc,
                           borderRadius: BorderRadius.circular(16),
@@ -369,11 +685,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Row(
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.all(8),
+                                  padding: const EdgeInsets.all(7),
                                   decoration: BoxDecoration(
                                     color: (report.securityScore >= 80 ? const Color(0xFF22C55E) : report.securityScore >= 50 ? const Color(0xFFF59E0B) : const Color(0xFFEF4444)).withValues(alpha: 0.15),
                                     borderRadius: BorderRadius.circular(10),
@@ -381,8 +698,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                       color: (report.securityScore >= 80 ? const Color(0xFF22C55E) : report.securityScore >= 50 ? const Color(0xFFF59E0B) : const Color(0xFFEF4444)).withValues(alpha: 0.3),
                                     ),
                                   ),
-                                  child: Icon(
-                                    Icons.verified_user_outlined,
+                                  child: AppIcon(
+                                    AppIcons.shieldCheck,
                                     color: report.securityScore >= 80 ? const Color(0xFF22C55E) : report.securityScore >= 50 ? const Color(0xFFF59E0B) : const Color(0xFFEF4444),
                                     size: 18,
                                   ),
@@ -391,26 +708,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 Text(
                                   '${report.securityScore}%',
                                   style: TextStyle(
-                                    fontSize: 24,
+                                    fontSize: 22,
                                     fontWeight: FontWeight.bold,
                                     color: report.securityScore >= 80 ? const Color(0xFF22C55E) : report.securityScore >= 50 ? const Color(0xFFF59E0B) : const Color(0xFFEF4444),
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 12),
-                            const Text(
-                              'SECURITY HEALTH',
-                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.8, color: AppColors.textMuted),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              report.securityScore >= 80 ? 'Optimal Protection' : report.securityScore >= 50 ? 'Attention Recommended' : 'Action Required',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: report.securityScore >= 80 ? const Color(0xFF22C55E) : report.securityScore >= 50 ? const Color(0xFFF59E0B) : const Color(0xFFEF4444),
-                              ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'SECURITY HEALTH',
+                                  style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, letterSpacing: 0.8, color: AppColors.textMuted),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  report.securityScore >= 80 ? 'Optimal Protection' : report.securityScore >= 50 ? 'Attention Recommended' : 'Action Required',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: report.securityScore >= 80 ? const Color(0xFF22C55E) : report.securityScore >= 50 ? const Color(0xFFF59E0B) : const Color(0xFFEF4444),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -433,7 +756,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.security_rounded, color: activeAccent, size: 16),
+                          AppIcon(AppIcons.shieldKey, color: activeAccent, size: 16),
                           const SizedBox(width: 8),
                           const Text(
                             'SECURITY ADVISOR',
@@ -473,7 +796,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         ),
                         Row(
                           children: [
-                            Icon(Icons.auto_awesome_outlined, size: 14, color: activeAccent),
+                            AppIcon(AppIcons.magic, size: 14, color: activeAccent),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -507,7 +830,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         title: 'Passwords',
                         count: logins.length,
                         subtitle: '${logins.where((i) => (i.fields['totp_secret'] ?? '').toString().trim().isNotEmpty).length} 2FA Active',
-                        icon: Icons.login_outlined,
+                        icon: AppIcons.categoryLogin,
                         accentColor: activeAccent,
                         isSelected: _filterType == ItemType.login,
                         onTap: () => setState(() { _filterType = ItemType.login; _currentTabIndex = 1; }),
@@ -516,7 +839,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         title: 'Cards',
                         count: cards,
                         subtitle: 'Encrypted CVV',
-                        icon: Icons.credit_card_outlined,
+                        icon: AppIcons.categoryCard,
                         accentColor: const Color(0xFF3B82F6),
                         isSelected: _filterType == ItemType.card,
                         onTap: () => setState(() { _filterType = ItemType.card; _currentTabIndex = 1; }),
@@ -525,7 +848,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         title: 'Identity',
                         count: identities,
                         subtitle: 'ID & Passports',
-                        icon: Icons.badge_outlined,
+                        icon: AppIcons.categoryIdentity,
                         accentColor: const Color(0xFF8B5CF6),
                         isSelected: _filterType == ItemType.identity,
                         onTap: () => setState(() { _filterType = ItemType.identity; _currentTabIndex = 1; }),
@@ -534,7 +857,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         title: 'Accounts',
                         count: devSecrets,
                         subtitle: 'Keys & Tokens',
-                        icon: Icons.key_outlined,
+                        icon: AppIcons.key,
                         accentColor: const Color(0xFF10B981),
                         isSelected: _filterType == ItemType.developerSecret,
                         onTap: () => setState(() { _filterType = ItemType.developerSecret; _currentTabIndex = 1; }),
@@ -543,7 +866,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         title: 'Secure Notes',
                         count: notes,
                         subtitle: 'Encrypted Notes',
-                        icon: Icons.note_outlined,
+                        icon: AppIcons.categoryNote,
                         accentColor: const Color(0xFFF43F5E),
                         isSelected: _filterType == ItemType.note,
                         onTap: () => setState(() { _filterType = ItemType.note; _currentTabIndex = 1; }),
@@ -577,7 +900,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     ),
                     child: const Column(
                       children: [
-                        Icon(Icons.shield_outlined, size: 40, color: AppColors.textMuted),
+                        AppIcon(AppIcons.shield, size: 40, color: AppColors.textMuted),
                         SizedBox(height: 8),
                         Text('Vault is Empty', style: TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.bold)),
                         SizedBox(height: 4),
@@ -625,7 +948,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
         // Apply category filter
         if (_filterType != null) {
-          items = items.where((item) => item.type == _filterType!.label).toList();
+          items = items.where((item) => ItemTypeExt.fromString(item.type) == _filterType).toList();
         }
 
         // Sort items
@@ -644,10 +967,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     style: const TextStyle(color: AppColors.offWhite, fontSize: 14),
                     decoration: InputDecoration(
                       hintText: 'Search vault items...',
-                      prefixIcon: const Icon(Icons.search, color: AppColors.textMuted, size: 20),
+                      prefixIcon: const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: AppIcon(AppIcons.search, color: AppColors.textMuted, size: 20),
+                      ),
                       suffixIcon: _searchQuery.isNotEmpty
                           ? IconButton(
-                              icon: const Icon(Icons.clear, color: AppColors.textMuted, size: 18),
+                              icon: const AppIcon(AppIcons.close, color: AppColors.textMuted, size: 18),
                               onPressed: () {
                                 _searchController.clear();
                                 setState(() => _searchQuery = '');
@@ -669,7 +995,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           isExpanded: true,
                           dropdownColor: AppColors.surfaceZinc,
                           borderRadius: BorderRadius.circular(12),
-                          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.orangeAccent, size: 20),
+                          icon: AppIcon(AppIcons.chevronDown, color: AppColors.orangeAccent, size: 18),
                           style: const TextStyle(color: AppColors.offWhite, fontSize: 13),
                           decoration: InputDecoration(
                             isDense: true,
@@ -686,17 +1012,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: AppColors.orangeAccent, width: 1.5),
+                              borderSide: BorderSide(color: AppColors.orangeAccent, width: 1.5),
                             ),
                           ),
                           items: [
                             DropdownMenuItem<ItemType?>(
                               value: null,
-                              child: Row(
+                              child: const Row(
                                 children: [
-                                  const Icon(Icons.category_outlined, size: 16, color: AppColors.textMuted),
-                                  const SizedBox(width: 8),
-                                  const Expanded(
+                                  AppIcon(AppIcons.folder, size: 16, color: AppColors.textMuted),
+                                  SizedBox(width: 8),
+                                  Expanded(
                                     child: Text(
                                       'All Categories',
                                       style: TextStyle(color: AppColors.offWhite, fontSize: 13),
@@ -711,7 +1037,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 value: t,
                                 child: Row(
                                   children: [
-                                    Icon(_getTypeIcon(t), size: 16, color: AppColors.orangeAccent),
+                                    AppIcon(_getTypeIcon(t), size: 16, color: AppColors.orangeAccent),
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
@@ -733,7 +1059,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       // Sort Direction Button
                       OutlinedButton.icon(
                         onPressed: () => setState(() => _sortDescending = !_sortDescending),
-                        icon: Icon(_sortDescending ? Icons.arrow_downward : Icons.arrow_upward, size: 16, color: AppColors.orangeAccent),
+                        icon: AppIcon(_sortDescending ? AppIcons.chevronDown : AppIcons.chevronUp, size: 16, color: AppColors.orangeAccent),
                         label: Text(_sortDescending ? 'Newest' : 'Oldest', style: const TextStyle(fontSize: 12, color: AppColors.offWhite)),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
@@ -746,7 +1072,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       // Grid/List View Toggle Button
                       OutlinedButton.icon(
                         onPressed: () => setState(() => _isGridView = !_isGridView),
-                        icon: Icon(_isGridView ? Icons.view_list : Icons.grid_view, size: 16, color: AppColors.orangeAccent),
+                        icon: AppIcon(_isGridView ? AppIcons.title : AppIcons.palette, size: 16, color: AppColors.orangeAccent),
                         label: Text(_isGridView ? 'List' : 'Grid', style: const TextStyle(fontSize: 12, color: AppColors.offWhite)),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
@@ -768,7 +1094,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     )
                   : _isGridView
                       ? GridView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 140),
                           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 2,
                             crossAxisSpacing: 12,
@@ -796,9 +1122,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                     children: [
                                       Row(
                                         children: [
-                                          Icon(_getTypeIcon(type), color: AppColors.orangeAccent, size: 20),
+                                          AppIcon(_getTypeIcon(type), color: AppColors.orangeAccent, size: 20),
                                           const Spacer(),
-                                          const Icon(Icons.shield_outlined, size: 14, color: AppColors.textMuted),
+                                          const AppIcon(AppIcons.shield, size: 14, color: AppColors.textMuted),
                                         ],
                                       ),
                                       const Spacer(),
@@ -823,7 +1149,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           },
                         )
                       : ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 140),
                           itemCount: items.length,
                           itemBuilder: (context, index) {
                             final item = items[index];
@@ -847,103 +1173,254 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return const _GeneratorToolTab();
   }
 
-
-
-  IconData _getTypeIcon(ItemType type) {
+  dynamic _getTypeIcon(ItemType type) {
     switch (type) {
-      case ItemType.login: return Icons.login_outlined;
-      case ItemType.card: return Icons.credit_card_outlined;
-      case ItemType.identity: return Icons.badge_outlined;
-      case ItemType.note: return Icons.note_outlined;
-      case ItemType.developerSecret: return Icons.terminal_outlined;
+      case ItemType.login: return AppIcons.categoryLogin;
+      case ItemType.card: return AppIcons.categoryCard;
+      case ItemType.identity: return AppIcons.categoryIdentity;
+      case ItemType.note: return AppIcons.categoryNote;
+      case ItemType.developerSecret: return AppIcons.key;
     }
   }
 }
 
 // --- PASSWORD GENERATOR COMPONENT ---
-class _GeneratorToolTab extends StatefulWidget {
+enum _GeneratorMode { password, passphrase, pin }
+
+class _GeneratorToolTab extends ConsumerStatefulWidget {
   const _GeneratorToolTab();
 
   @override
-  State<_GeneratorToolTab> createState() => _GeneratorToolTabState();
+  ConsumerState<_GeneratorToolTab> createState() => _GeneratorToolTabState();
 }
 
-class _GeneratorToolTabState extends State<_GeneratorToolTab> {
-  double _length = 16;
+class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
+  _GeneratorMode _mode = _GeneratorMode.password;
+
+  // Password options
+  double _passwordLength = 16;
   bool _includeUpper = true;
   bool _includeLower = true;
   bool _includeDigits = true;
   bool _includeSymbols = true;
-  String _generatedPassword = '';
+  bool _excludeAmbiguous = false;
+
+  // Passphrase options
+  double _wordCount = 4;
+  String _separator = '-';
+  bool _capitalizePassphrase = true;
+  bool _includePassphraseNumber = true;
+
+  // PIN options
+  double _pinLength = 6;
+
+  String _generatedSecret = '';
 
   @override
   void initState() {
     super.initState();
-    _generatePassword();
+    _regenerate();
   }
 
-  void _generatePassword() {
-    const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const lower = 'abcdefghijklmnopqrstuvwxyz';
-    const digits = '0123456789';
-    const symbols = '!@#\$%^&*()_+-=[]{}|;:,.<>?';
+  void _regenerate() {
+    String result = '';
+    switch (_mode) {
+      case _GeneratorMode.password:
+        result = GeneratorService.generatePassword(
+          length: _passwordLength.round(),
+          includeUppercase: _includeUpper,
+          includeLowercase: _includeLower,
+          includeDigits: _includeDigits,
+          includeSymbols: _includeSymbols,
+          excludeAmbiguous: _excludeAmbiguous,
+        );
+        break;
+      case _GeneratorMode.passphrase:
+        result = GeneratorService.generatePassphrase(
+          wordCount: _wordCount.round(),
+          separator: _separator,
+          capitalize: _capitalizePassphrase,
+          includeNumber: _includePassphraseNumber,
+        );
+        break;
+      case _GeneratorMode.pin:
+        result = GeneratorService.generatePIN(
+          length: _pinLength.round(),
+        );
+        break;
+    }
+    setState(() => _generatedSecret = result);
+  }
 
-    String pool = '';
-    if (_includeUpper) pool += upper;
-    if (_includeLower) pool += lower;
-    if (_includeDigits) pool += digits;
-    if (_includeSymbols) pool += symbols;
-
-    if (pool.isEmpty) pool = lower;
-
-    final rand = Random.secure();
-    final pwd = List.generate(_length.round(), (_) => pool[rand.nextInt(pool.length)]).join();
-    setState(() => _generatedPassword = pwd);
+  double get _secretFontSize {
+    final len = _generatedSecret.length;
+    if (len <= 12) return 20;
+    if (len <= 18) return 16;
+    if (len <= 26) return 14;
+    if (len <= 34) return 12.5;
+    return 11;
   }
 
   @override
   Widget build(BuildContext context) {
+    final activeAccent = Theme.of(context).colorScheme.primary;
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 140),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('PASSWORD GENERATOR', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: AppColors.textMuted)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'SECURITY GENERATOR',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                  color: AppColors.textMuted,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: activeAccent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: activeAccent.withValues(alpha: 0.25)),
+                ),
+                child: Text(
+                  'CSPRNG Secure',
+                  style: TextStyle(
+                    color: activeAccent,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 12),
+
+          // Mode Selector Segmented Pill Bar
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceZinc,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.borderZinc.withValues(alpha: 0.5)),
+            ),
+            child: Row(
+              children: [
+                _buildModeOption(
+                  mode: _GeneratorMode.password,
+                  label: 'Password',
+                  icon: AppIcons.lock,
+                  activeAccent: activeAccent,
+                ),
+                _buildModeOption(
+                  mode: _GeneratorMode.passphrase,
+                  label: 'Passphrase',
+                  icon: AppIcons.title,
+                  activeAccent: activeAccent,
+                ),
+                _buildModeOption(
+                  mode: _GeneratorMode.pin,
+                  label: 'PIN',
+                  icon: AppIcons.hash,
+                  activeAccent: activeAccent,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Generated Output Box
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: AppColors.surfaceZinc,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.borderZinc.withValues(alpha: 0.5)),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: activeAccent.withValues(alpha: 0.4),
+                width: 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: activeAccent.withValues(alpha: 0.08),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                SelectableText(
-                  _generatedPassword,
-                  style: const TextStyle(fontSize: 18, fontFamily: 'Monospace', fontWeight: FontWeight.bold, color: AppColors.orangeAccent),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    IconButton.filledTonal(
-                      onPressed: () {
-                        HapticFeedback.lightImpact();
-                        _generatePassword();
-                      },
-                      icon: const Icon(Icons.refresh, size: 20),
+                Container(
+                  constraints: const BoxConstraints(minHeight: 52),
+                  alignment: Alignment.center,
+                  child: SelectableText(
+                    _generatedSecret,
+                    style: TextStyle(
+                      fontSize: _secretFontSize,
+                      fontFamily: 'Monospace',
+                      fontWeight: FontWeight.bold,
+                      color: activeAccent,
+                      letterSpacing: _mode == _GeneratorMode.pin ? 3.0 : 0.5,
                     ),
-                    const SizedBox(width: 12),
-                    IconButton.filled(
-                      onPressed: () {
-                        Clipboard.setData(ClipboardData(text: _generatedPassword));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Password copied to clipboard')),
-                        );
-                      },
-                      icon: const Icon(Icons.copy, size: 20),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // Real-Time Strength Meter
+                PasswordStrengthMeter(
+                  password: _generatedSecret,
+                  compact: false,
+                  showRecommendation: true,
+                ),
+
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          HapticFeedback.lightImpact();
+                          _regenerate();
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.offWhite,
+                          side: BorderSide(color: AppColors.borderZinc.withValues(alpha: 0.8)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        icon: const AppIcon(AppIcons.refresh, size: 18),
+                        label: const Text('Regenerate', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          ref.read(lockServiceProvider).copySecret(_generatedSecret);
+                          HapticFeedback.selectionClick();
+                          AppToast.show(
+                            context,
+                            message: 'Copied to clipboard',
+                            type: ToastType.success,
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: activeAccent,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 2,
+                        ),
+                        icon: const AppIcon(AppIcons.copy, size: 18, color: Colors.white),
+                        label: const Text('Copy', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      ),
                     ),
                   ],
                 ),
@@ -951,201 +1428,234 @@ class _GeneratorToolTabState extends State<_GeneratorToolTab> {
             ),
           ),
           const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
+          // Dynamic Options based on selected Mode
+          if (_mode == _GeneratorMode.password) ...[
+            _buildSliderRow(
+              title: 'Password Length',
+              value: '${_passwordLength.round()} chars',
+              activeAccent: activeAccent,
+            ),
+            Slider(
+              value: _passwordLength,
+              min: 6,
+              max: 64,
+              activeColor: activeAccent,
+              onChanged: (val) {
+                setState(() => _passwordLength = val);
+                _regenerate();
+              },
+            ),
+            _buildSwitchTile('Uppercase (A-Z)', _includeUpper, activeAccent, (v) {
+              setState(() => _includeUpper = v);
+              _regenerate();
+            }),
+            _buildSwitchTile('Lowercase (a-z)', _includeLower, activeAccent, (v) {
+              setState(() => _includeLower = v);
+              _regenerate();
+            }),
+            _buildSwitchTile('Numbers (0-9)', _includeDigits, activeAccent, (v) {
+              setState(() => _includeDigits = v);
+              _regenerate();
+            }),
+            _buildSwitchTile('Symbols (!@#\$%^&*)', _includeSymbols, activeAccent, (v) {
+              setState(() => _includeSymbols = v);
+              _regenerate();
+            }),
+            _buildSwitchTile('Exclude Ambiguous ({ } [ ] ( ) / \\ ~)', _excludeAmbiguous, activeAccent, (v) {
+              setState(() => _excludeAmbiguous = v);
+              _regenerate();
+            }),
+          ] else if (_mode == _GeneratorMode.passphrase) ...[
+            _buildSliderRow(
+              title: 'Word Count',
+              value: '${_wordCount.round()} words',
+              activeAccent: activeAccent,
+            ),
+            Slider(
+              value: _wordCount,
+              min: 3,
+              max: 8,
+              divisions: 5,
+              activeColor: activeAccent,
+              onChanged: (val) {
+                setState(() => _wordCount = val);
+                _regenerate();
+              },
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Separator Symbol', style: TextStyle(color: AppColors.offWhite, fontSize: 14)),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: ['-', '.', '_', ' '].map((sep) {
+                      final isSelected = _separator == sep;
+                      return GestureDetector(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(() => _separator = sep);
+                          _regenerate();
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.only(left: 6),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: isSelected ? activeAccent : AppColors.surfaceZinc,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: isSelected ? activeAccent : AppColors.borderZinc,
+                            ),
+                          ),
+                          child: Text(
+                            sep == ' ' ? 'Space' : sep,
+                            style: TextStyle(
+                              color: isSelected ? Colors.white : AppColors.offWhite,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            _buildSwitchTile('Capitalize Each Word', _capitalizePassphrase, activeAccent, (v) {
+              setState(() => _capitalizePassphrase = v);
+              _regenerate();
+            }),
+            _buildSwitchTile('Append 4-Digit Number', _includePassphraseNumber, activeAccent, (v) {
+              setState(() => _includePassphraseNumber = v);
+              _regenerate();
+            }),
+          ] else if (_mode == _GeneratorMode.pin) ...[
+            _buildSliderRow(
+              title: 'PIN Digits',
+              value: '${_pinLength.round()} digits',
+              activeAccent: activeAccent,
+            ),
+            Slider(
+              value: _pinLength,
+              min: 4,
+              max: 12,
+              divisions: 8,
+              activeColor: activeAccent,
+              onChanged: (val) {
+                setState(() => _pinLength = val);
+                _regenerate();
+              },
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModeOption({
+    required _GeneratorMode mode,
+    required String label,
+    required dynamic icon,
+    required Color activeAccent,
+  }) {
+    final isSelected = _mode == mode;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          setState(() => _mode = mode);
+          _regenerate();
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected ? activeAccent.withValues(alpha: 0.18) : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isSelected ? activeAccent : Colors.transparent,
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text('Password Length', style: TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.w600)),
-              Text('${_length.round()}', style: const TextStyle(color: AppColors.orangeAccent, fontWeight: FontWeight.bold)),
+              AppIcon(
+                icon,
+                size: 16,
+                color: isSelected ? activeAccent : AppColors.textMuted,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : AppColors.textMuted,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  fontSize: 12,
+                ),
+              ),
             ],
           ),
-          Slider(
-            value: _length,
-            min: 6,
-            max: 32,
-            activeColor: AppColors.orangeAccent,
-            onChanged: (val) {
-              setState(() => _length = val);
-              _generatePassword();
-            },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSliderRow({
+    required String title,
+    required String value,
+    required Color activeAccent,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: AppColors.offWhite,
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+            ),
           ),
-          SwitchListTile(
-            title: const Text('Uppercase (A-Z)', style: TextStyle(color: AppColors.offWhite, fontSize: 14)),
-            value: _includeUpper,
-            activeColor: AppColors.orangeAccent,
-            onChanged: (val) { setState(() => _includeUpper = val); _generatePassword(); },
-          ),
-          SwitchListTile(
-            title: const Text('Lowercase (a-z)', style: TextStyle(color: AppColors.offWhite, fontSize: 14)),
-            value: _includeLower,
-            activeColor: AppColors.orangeAccent,
-            onChanged: (val) { setState(() => _includeLower = val); _generatePassword(); },
-          ),
-          SwitchListTile(
-            title: const Text('Numbers (0-9)', style: TextStyle(color: AppColors.offWhite, fontSize: 14)),
-            value: _includeDigits,
-            activeColor: AppColors.orangeAccent,
-            onChanged: (val) { setState(() => _includeDigits = val); _generatePassword(); },
-          ),
-          SwitchListTile(
-            title: const Text('Symbols (!@#\$%)', style: TextStyle(color: AppColors.offWhite, fontSize: 14)),
-            value: _includeSymbols,
-            activeColor: AppColors.orangeAccent,
-            onChanged: (val) { setState(() => _includeSymbols = val); _generatePassword(); },
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: activeAccent.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: activeAccent.withValues(alpha: 0.3)),
+            ),
+            child: Text(
+              value,
+              style: TextStyle(
+                color: activeAccent,
+                fontWeight: FontWeight.bold,
+                fontSize: 12.5,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
-}
 
-// --- FLOATING BOTTOM NAVIGATION BAR ---
-class _FloatingBottomNavBar extends StatelessWidget {
-  final int currentIndex;
-  final ValueChanged<int> onTap;
-
-  const _FloatingBottomNavBar({
-    required this.currentIndex,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: UpdateService.hasUpdateAvailable,
-      builder: (context, hasUpdate, _) {
-        return Container(
-          height: 64,
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-          decoration: BoxDecoration(
-            color: const Color(0xFF141417),
-            borderRadius: BorderRadius.circular(32),
-            border: Border.all(color: AppColors.borderZinc, width: 1.2),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black87,
-                blurRadius: 24,
-                offset: Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _NavBarItem(icon: Icons.home_outlined, activeIcon: Icons.home_rounded, label: 'Home', isSelected: currentIndex == 0, onTap: () => onTap(0)),
-              _NavBarItem(icon: Icons.lock_outline_rounded, activeIcon: Icons.lock_rounded, label: 'Vault', isSelected: currentIndex == 1, onTap: () => onTap(1)),
-              _NavBarItem(icon: Icons.casino_outlined, activeIcon: Icons.casino_rounded, label: 'Generate', isSelected: currentIndex == 2, onTap: () => onTap(2)),
-              _NavBarItem(icon: Icons.settings_outlined, activeIcon: Icons.settings_rounded, label: 'Settings', isSelected: currentIndex == 3, hasBadge: hasUpdate, onTap: () => onTap(3)),
-            ],
-          ),
-        );
+  Widget _buildSwitchTile(String title, bool value, Color activeAccent, ValueChanged<bool> onChanged) {
+    return SwitchListTile(
+      title: Text(title, style: const TextStyle(color: AppColors.offWhite, fontSize: 13.5)),
+      value: value,
+      activeColor: activeAccent,
+      dense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+      onChanged: (val) {
+        HapticFeedback.selectionClick();
+        onChanged(val);
       },
-    );
-  }
-}
-
-class _NavBarItem extends StatelessWidget {
-  final IconData icon;
-  final IconData activeIcon;
-  final String label;
-  final bool isSelected;
-  final bool hasBadge;
-  final VoidCallback onTap;
-
-  const _NavBarItem({
-    required this.icon,
-    required this.activeIcon,
-    required this.label,
-    required this.isSelected,
-    this.hasBadge = false,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final activeAccent = Theme.of(context).colorScheme.primary;
-
-    return Expanded(
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(24),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOutCubic,
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            decoration: isSelected
-                ? BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        activeAccent.withValues(alpha: 0.28),
-                        activeAccent.withValues(alpha: 0.12),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(
-                      color: activeAccent.withValues(alpha: 0.45),
-                      width: 1,
-                    ),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black26,
-                        offset: Offset(0, 2),
-                        blurRadius: 4,
-                      ),
-                    ],
-                  )
-                : const BoxDecoration(),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    AnimatedScale(
-                      scale: isSelected ? 1.1 : 1.0,
-                      duration: const Duration(milliseconds: 200),
-                      curve: Curves.easeOutCubic,
-                      child: Icon(
-                        isSelected ? activeIcon : icon,
-                        color: isSelected ? AppColors.orangeAccent : AppColors.textMuted,
-                        size: 20,
-                      ),
-                    ),
-                    if (hasBadge)
-                      Positioned(
-                        right: -3,
-                        top: -3,
-                        child: Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: Colors.redAccent,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                AnimatedDefaultTextStyle(
-                  duration: const Duration(milliseconds: 200),
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.normal,
-                    color: isSelected ? AppColors.orangeAccent : AppColors.textMuted,
-                    letterSpacing: -0.1,
-                  ),
-                  child: Text(label),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
@@ -1153,8 +1663,8 @@ class _NavBarItem extends StatelessWidget {
 class _CategorySummaryCard extends StatelessWidget {
   final String title;
   final int count;
-  final IconData icon;
-  final Color accentColor;
+  final dynamic icon;
+  final Color? accentColor;
   final bool isSelected;
   final VoidCallback onTap;
   final String? subtitle;
@@ -1163,7 +1673,7 @@ class _CategorySummaryCard extends StatelessWidget {
     required this.title,
     required this.count,
     required this.icon,
-    this.accentColor = AppColors.orangeAccent,
+    this.accentColor,
     this.isSelected = false,
     required this.onTap,
     this.subtitle,
@@ -1171,20 +1681,23 @@ class _CategorySummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final effectiveAccent = accentColor ?? Theme.of(context).colorScheme.primary;
+
     return Container(
-      width: 106,
+      width: 114,
+      height: 96,
       margin: const EdgeInsets.only(right: 10),
-      child: InkWell(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: isSelected ? accentColor.withValues(alpha: 0.15) : AppColors.surfaceZinc,
+            color: isSelected ? effectiveAccent.withValues(alpha: 0.15) : AppColors.surfaceZinc,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: isSelected ? accentColor : AppColors.borderZinc.withValues(alpha: 0.5),
+              color: isSelected ? effectiveAccent : AppColors.borderZinc.withValues(alpha: 0.5),
               width: isSelected ? 1.5 : 1.0,
             ),
           ),
@@ -1198,30 +1711,31 @@ class _CategorySummaryCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(7),
                     decoration: BoxDecoration(
-                      color: accentColor.withValues(alpha: 0.15),
+                      color: effectiveAccent.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(icon, size: 18, color: accentColor),
+                    child: AppIcon(icon, size: 18, color: effectiveAccent),
                   ),
                   Text(
                     '$count',
                     style: TextStyle(
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w800,
                       fontSize: 16,
-                      color: isSelected ? accentColor : AppColors.offWhite,
+                      color: isSelected ? effectiveAccent : AppColors.offWhite,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               Text(
                 title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
                   color: isSelected ? accentColor : AppColors.offWhite,
+                  letterSpacing: -0.1,
                 ),
               ),
             ],
@@ -1248,6 +1762,7 @@ class _ItemTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final type = ItemTypeExt.fromString(item.type);
+    final activeAccent = Theme.of(context).colorScheme.primary;
     final subtitle = item.fields['username']?.toString() ??
         item.fields['cardholder']?.toString() ??
         '••••••••••••';
@@ -1257,37 +1772,52 @@ class _ItemTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surfaceZinc,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderZinc.withValues(alpha: 0.4)),
+        border: Border.all(color: AppColors.borderZinc.withValues(alpha: 0.5)),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         leading: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: AppColors.orangeContainer,
+            color: activeAccent.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: activeAccent.withValues(alpha: 0.25), width: 1),
           ),
-          child: Icon(_getTypeIcon(type), color: AppColors.orangeAccent, size: 20),
+          child: AppIcon(_getTypeIcon(type), color: activeAccent, size: 20),
         ),
-        title: Text(item.title, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.offWhite)),
-        subtitle: Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
-        trailing: const Icon(Icons.chevron_right, color: AppColors.textMuted, size: 20),
+        title: Text(
+          item.title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 14,
+            color: AppColors.offWhite,
+            letterSpacing: -0.1,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+        ),
+        trailing: const AppIcon(AppIcons.chevronRight, color: AppColors.textMuted, size: 18),
         onTap: onTap,
       ),
     );
   }
 
-  IconData _getTypeIcon(ItemType type) {
+  dynamic _getTypeIcon(ItemType type) {
     switch (type) {
-      case ItemType.login: return Icons.login_outlined;
-      case ItemType.card: return Icons.credit_card_outlined;
-      case ItemType.identity: return Icons.badge_outlined;
-      case ItemType.note: return Icons.note_outlined;
-      case ItemType.developerSecret: return Icons.terminal_outlined;
+      case ItemType.login: return AppIcons.categoryLogin;
+      case ItemType.card: return AppIcons.categoryCard;
+      case ItemType.identity: return AppIcons.categoryIdentity;
+      case ItemType.note: return AppIcons.categoryNote;
+      case ItemType.developerSecret: return AppIcons.key;
     }
   }
 }
-
 
 class _AnalyticsMetricChip extends StatelessWidget {
   final String label;
@@ -1307,14 +1837,21 @@ class _AnalyticsMetricChip extends StatelessWidget {
       children: [
         FittedBox(
           fit: BoxFit.scaleDown,
-          child: Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
+          child: Text(
+            value,
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: color),
+          ),
         ),
         const SizedBox(height: 2),
         FittedBox(
           fit: BoxFit.scaleDown,
           child: Text(
             label,
-            style: const TextStyle(fontSize: 10, color: AppColors.textMuted),
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textMuted,
+            ),
             textAlign: TextAlign.center,
           ),
         ),

@@ -1,0 +1,8 @@
+# Release keystore configuration (ADR-002) — TEMPLATE ONLY, no secrets.
+# Copy to `key.properties` (git-ignored) and fill in, or export the equivalent
+# FIREWOOD_STORE_FILE / FIREWOOD_STORE_PASSWORD / FIREWOOD_KEY_ALIAS /
+# FIREWOOD_KEY_PASSWORD environment variables in CI (secret-managed).
+store_file=/absolute/path/to/firewood-release.keystore
+store_password=
+key_alias=firewood
+key_password=

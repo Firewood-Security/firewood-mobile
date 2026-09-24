@@ -2,7 +2,9 @@
 // Burner (panic) password management for multi-vault Firewood.
 
 import 'dart:convert';
+import 'dart:math';
 import 'package:cryptography/cryptography.dart';
+import 'package:flutter/foundation.dart';
 import 'package:isar/isar.dart';
 import '../database/isar_service.dart';
 import '../database/schemas.dart';
@@ -12,15 +14,31 @@ class BurnerService {
   final IsarService _isarService = IsarService();
   final VaultService _vaultService = VaultService();
 
-  static final List<int> _burnerSalt = List<int>.generate(16, (i) => (i * 7 + 3) % 256);
+  /// Legacy static salt (F-019). Retained ONLY as a verification fallback for
+  /// rows created before ADR-006 (salt == null). Never use for new hashes.
+  @visibleForTesting
+  static final List<int> legacyStaticSalt =
+      List<int>.generate(16, (i) => (i * 7 + 3) % 256);
 
+  static List<int> _newSalt() {
+    final r = Random.secure();
+    return List<int>.generate(16, (_) => r.nextInt(256));
+  }
+
+  Future<String> _hashWithSalt(String password, List<int> salt) async {
+    final argon2 = Argon2id(memory: 65536, iterations: 3, parallelism: 4, hashLength: 32);
+    final hash = await argon2.deriveKeyFromPassword(password: password, nonce: salt);
+    return base64Encode(await hash.extractBytes());
+  }
+
+  /// Minimum aligned with the master-password policy (ADR-006): a duress code
+  /// must not be weaker than the password it destroys.
   Future<bool> addBurnerPassword(String password, {String label = 'Burner Code'}) async {
-    if (password.length < 6) throw BurnerException('Burner password must be at least 6 characters');
+    if (password.length < 8) throw BurnerException('Burner password must be at least 8 characters');
 
     final isar = await _isarService.instance;
-    final argon2 = Argon2id(memory: 65536, iterations: 3, parallelism: 4, hashLength: 32);
-    final hash = await argon2.deriveKeyFromPassword(password: password, nonce: _burnerSalt);
-    final hashBase64 = base64Encode(await hash.extractBytes());
+    final salt = _newSalt();
+    final hashBase64 = await _hashWithSalt(password, salt);
 
     // Check duplicate (in-memory filter)
     final all = await isar.burnerHashs.where().findAll();
@@ -28,7 +46,11 @@ class BurnerService {
       throw BurnerException('This burner password is already registered');
     }
 
-    final burner = BurnerHash()..passwordHash = hashBase64..label = label..createdAt = DateTime.now();
+    final burner = BurnerHash()
+      ..passwordHash = hashBase64
+      ..salt = salt
+      ..label = label
+      ..createdAt = DateTime.now();
     await isar.writeTxn(() async => isar.burnerHashs.put(burner));
     return true;
   }
@@ -38,10 +60,17 @@ class BurnerService {
     final burners = await isar.burnerHashs.where().findAll();
     if (burners.isEmpty) return false;
 
-    final argon2 = Argon2id(memory: 65536, iterations: 3, parallelism: 4, hashLength: 32);
-    final hash = await argon2.deriveKeyFromPassword(password: password, nonce: _burnerSalt);
-    final hashBase64 = base64Encode(await hash.extractBytes());
-    return burners.any((b) => b.passwordHash == hashBase64);
+    for (final b in burners) {
+      // New rows: per-entry salt. Legacy rows (salt == null/empty): static
+      // fallback until replaced (ADR-006 migration window).
+      final saltsToTry = (b.salt != null && b.salt!.isNotEmpty)
+          ? [b.salt!]
+          : [legacyStaticSalt];
+      for (final s in saltsToTry) {
+        if (await _hashWithSalt(password, s) == b.passwordHash) return true;
+      }
+    }
+    return false;
   }
 
   Future<bool> executeBurn() async {

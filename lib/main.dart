@@ -1,11 +1,10 @@
-// main.dart
-// App entry point - initializes services and runs FirewoodApp
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app.dart';
 import 'services/accent_color_service.dart';
+import 'services/lock_service.dart';
 import 'services/update_service.dart';
+import 'theme/app_icons.dart';
 
 
 void main() async {
@@ -27,7 +26,7 @@ void main() async {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
+              AppIcon(AppIcons.alertCircle, color: Colors.redAccent, size: 48),
               const SizedBox(height: 16),
               const Text(
                 'An unexpected error occurred.',
@@ -60,5 +59,15 @@ void main() async {
     debugPrint('Failed to initialize UpdateChecker: $e');
   }
 
-  runApp(const ProviderScope(child: FirewoodApp()));
+  // Load persisted lock settings before first frame so Gate-0/REQ-SESS-01
+  // holds from startup (fail-safe defaults on any error).
+  final lockSettings = await LockService.loadPersisted();
+
+  runApp(ProviderScope(
+    overrides: [
+      lockTimeoutProvider.overrideWith((ref) => lockSettings.timeout),
+      autoLockEnabledProvider.overrideWith((ref) => lockSettings.enabled),
+    ],
+    child: const FirewoodApp(),
+  ));
 }

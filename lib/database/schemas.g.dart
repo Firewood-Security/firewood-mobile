@@ -2974,6 +2974,11 @@ const BurnerHashSchema = CollectionSchema(
       id: 2,
       name: r'passwordHash',
       type: IsarType.string,
+    ),
+    r'salt': PropertySchema(
+      id: 3,
+      name: r'salt',
+      type: IsarType.longList,
     )
   },
   estimateSize: _burnerHashEstimateSize,
@@ -2998,6 +3003,12 @@ int _burnerHashEstimateSize(
   var bytesCount = offsets.last;
   bytesCount += 3 + object.label.length * 3;
   bytesCount += 3 + object.passwordHash.length * 3;
+  {
+    final value = object.salt;
+    if (value != null) {
+      bytesCount += 3 + value.length * 8;
+    }
+  }
   return bytesCount;
 }
 
@@ -3010,6 +3021,7 @@ void _burnerHashSerialize(
   writer.writeDateTime(offsets[0], object.createdAt);
   writer.writeString(offsets[1], object.label);
   writer.writeString(offsets[2], object.passwordHash);
+  writer.writeLongList(offsets[3], object.salt);
 }
 
 BurnerHash _burnerHashDeserialize(
@@ -3023,6 +3035,7 @@ BurnerHash _burnerHashDeserialize(
   object.id = id;
   object.label = reader.readString(offsets[1]);
   object.passwordHash = reader.readString(offsets[2]);
+  object.salt = reader.readLongList(offsets[3]);
   return object;
 }
 
@@ -3039,6 +3052,8 @@ P _burnerHashDeserializeProp<P>(
       return (reader.readString(offset)) as P;
     case 2:
       return (reader.readString(offset)) as P;
+    case 3:
+      return (reader.readLongList(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
@@ -3508,6 +3523,164 @@ extension BurnerHashQueryFilter
       ));
     });
   }
+
+  QueryBuilder<BurnerHash, BurnerHash, QAfterFilterCondition> saltIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'salt',
+      ));
+    });
+  }
+
+  QueryBuilder<BurnerHash, BurnerHash, QAfterFilterCondition> saltIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'salt',
+      ));
+    });
+  }
+
+  QueryBuilder<BurnerHash, BurnerHash, QAfterFilterCondition>
+      saltElementEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'salt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<BurnerHash, BurnerHash, QAfterFilterCondition>
+      saltElementGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'salt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<BurnerHash, BurnerHash, QAfterFilterCondition>
+      saltElementLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'salt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<BurnerHash, BurnerHash, QAfterFilterCondition>
+      saltElementBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'salt',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<BurnerHash, BurnerHash, QAfterFilterCondition> saltLengthEqualTo(
+      int length) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'salt',
+        length,
+        true,
+        length,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<BurnerHash, BurnerHash, QAfterFilterCondition> saltIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'salt',
+        0,
+        true,
+        0,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<BurnerHash, BurnerHash, QAfterFilterCondition> saltIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'salt',
+        0,
+        false,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<BurnerHash, BurnerHash, QAfterFilterCondition>
+      saltLengthLessThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'salt',
+        0,
+        true,
+        length,
+        include,
+      );
+    });
+  }
+
+  QueryBuilder<BurnerHash, BurnerHash, QAfterFilterCondition>
+      saltLengthGreaterThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'salt',
+        length,
+        include,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<BurnerHash, BurnerHash, QAfterFilterCondition> saltLengthBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'salt',
+        lower,
+        includeLower,
+        upper,
+        includeUpper,
+      );
+    });
+  }
 }
 
 extension BurnerHashQueryObject
@@ -3627,6 +3800,12 @@ extension BurnerHashQueryWhereDistinct
       return query.addDistinctBy(r'passwordHash', caseSensitive: caseSensitive);
     });
   }
+
+  QueryBuilder<BurnerHash, BurnerHash, QDistinct> distinctBySalt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'salt');
+    });
+  }
 }
 
 extension BurnerHashQueryProperty
@@ -3652,6 +3831,12 @@ extension BurnerHashQueryProperty
   QueryBuilder<BurnerHash, String, QQueryOperations> passwordHashProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'passwordHash');
+    });
+  }
+
+  QueryBuilder<BurnerHash, List<int>?, QQueryOperations> saltProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'salt');
     });
   }
 }

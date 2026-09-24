@@ -18,7 +18,11 @@ class VaultService {
   final CryptoService _crypto = CryptoService();
   final Uuid _uuid = const Uuid();
 
-  static const String _verifierSentinel = 'FIREWOOD_VAULT_VERIFY';
+  /// Sentinel plaintext sealed under the vault key to verify passwords.
+  /// Single owned constant (previously duplicated as a literal in
+  /// BackupService) — changing it is a Data-model + migration event.
+  static const String verifierSentinel = 'FIREWOOD_VAULT_VERIFY';
+  static const String _verifierSentinel = verifierSentinel;
 
   // --- Vault CRUD ---
 

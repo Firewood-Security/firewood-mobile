@@ -5,7 +5,9 @@
 // (CRITICAL P1 in SECURITY_AUDIT.md) with Android Keystore key-wrapping.
 //
 // All biometric unlock operations now flow through Android Keystore where:
-//  1. An AES-256-GCM wrapping key is created in hardware-backed Keystore
+//  1. An AES-256-GCM wrapping key is created in the Android Keystore
+//     (hardware backing is device-dependent and UNVERIFIED per-device;
+//     see ADR-003 — never surface "hardware-backed" in user-facing copy)
 //  2. The master password is encrypted with this key
 //  3. Only the encrypted blob is stored on disk (EncryptedSharedPreferences)
 //  4. Biometric auth is enforced by Keystore BEFORE decryption is allowed

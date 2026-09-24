@@ -28,7 +28,10 @@ object SecurePreferences {
 
     /**
      * Returns an EncryptedSharedPreferences instance.
-     * The MasterKey is AES-256 in Android Keystore (hardware-backed on supported devices).
+     * The MasterKey is AES-256 in Android Keystore (hardware backing is
+     * device-dependent and UNVERIFIED per-device — see ADR-003).
+     * NOTE: rate-limit counters live here, so clearing app data or
+     * reinstalling resets them (offline brute-force residual, F-012).
      */
     fun getInstance(context: Context): SharedPreferences {
         val masterKey = MasterKey.Builder(context)

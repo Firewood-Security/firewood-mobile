@@ -75,5 +75,79 @@ void main() {
         throwsA(anything),
       );
     });
+
+    // --- Phase 3 security negatives (REQ-CRYPTO-01) ---
+
+    test('parameter pinning: 16 B salt, 24 B nonce, 32 B key, 16 B MAC overhead', () async {
+      final salt = crypto.generateSalt();
+      expect(salt.length, equals(16));
+      final key = await crypto.deriveKey('PinMe', salt);
+      expect((await key.extractBytes()).length, equals(32));
+      const msg = '0123456789ABCDEF'; // 16 bytes UTF-8
+      final enc = await crypto.encryptString(msg, key);
+      expect(enc.nonce.length, equals(24));
+      // ciphertext = plaintext + 16-byte Poly1305 tag
+      expect(enc.ciphertext.length, equals(16 + 16));
+    });
+
+    test('decrypt rejects tampered ciphertext', () async {
+      final key = await crypto.deriveKey('TamperTest', crypto.generateSalt());
+      final enc = await crypto.encryptString('Do not touch', key);
+      final tampered = List<int>.from(enc.ciphertext);
+      tampered[0] ^= 0xFF;
+      expect(
+        () async => await crypto.decrypt(tampered, enc.nonce, key),
+        throwsA(anything),
+      );
+    });
+
+    test('decrypt rejects truncated and short inputs', () async {
+      final key = await crypto.deriveKey('TruncateTest', crypto.generateSalt());
+      final enc = await crypto.encryptString('Somewhat longer secret value', key);
+      final truncated = enc.ciphertext.sublist(0, enc.ciphertext.length - 1);
+      expect(
+        () async => await crypto.decrypt(truncated, enc.nonce, key),
+        throwsA(anything),
+      );
+      expect(
+        () async => await crypto.decrypt([1, 2, 3], enc.nonce, key),
+        throwsA(anything),
+      );
+    });
+
+    test('decrypt rejects wrong nonce', () async {
+      final key = await crypto.deriveKey('NonceTest', crypto.generateSalt());
+      final enc = await crypto.encryptString('Nonce-bound data', key);
+      final other = await crypto.encryptString('Other', key);
+      expect(
+        () async => await crypto.decrypt(enc.ciphertext, other.nonce, key),
+        throwsA(anything),
+      );
+    });
+
+    test('empty plaintext roundtrips', () async {
+      final key = await crypto.deriveKey('EmptyTest', crypto.generateSalt());
+      final enc = await crypto.encryptString('', key);
+      expect(await crypto.decryptString(enc.ciphertext, enc.nonce, key), equals(''));
+    });
+
+    test('deriveSubkey is deterministic and domain-separated', () async {
+      final master = await crypto.deriveKey('MasterKey', crypto.generateSalt());
+      final a1 = await crypto.deriveSubkey(master, 'backup-file');
+      final a2 = await crypto.deriveSubkey(master, 'backup-file');
+      final b = await crypto.deriveSubkey(master, 'other-purpose');
+      final ab = await a1.extractBytes();
+      expect(await a2.extractBytes(), equals(ab));
+      expect(ab.length, equals(32));
+      expect(await b.extractBytes(), isNot(equals(ab)));
+    });
+
+    test('fresh encryption never reuses a nonce', () async {
+      final key = await crypto.deriveKey('NonceReuse', crypto.generateSalt());
+      final e1 = await crypto.encryptString('same', key);
+      final e2 = await crypto.encryptString('same', key);
+      expect(e1.nonce, isNot(equals(e2.nonce)));
+      expect(e1.ciphertext, isNot(equals(e2.ciphertext)));
+    });
   });
 }

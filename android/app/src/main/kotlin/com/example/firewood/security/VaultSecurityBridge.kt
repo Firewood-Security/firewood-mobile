@@ -57,7 +57,8 @@ class VaultSecurityBridge(
      */
     fun enableBiometricUnlock(masterPassword: String): Result<Unit> {
         return runCatching {
-            // 1. Create hardware-backed wrapping key
+            // 1. Create Keystore wrapping key (hardware backing is
+            // device-dependent and UNVERIFIED per-device — see ADR-003)
             keystoreManager.createWrappingKey(
                 userAuthenticationRequired = true,
                 invalidatedByBiometricEnrollment = true

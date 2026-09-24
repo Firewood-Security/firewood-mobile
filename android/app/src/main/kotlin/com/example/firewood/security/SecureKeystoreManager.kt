@@ -14,16 +14,18 @@ import javax.crypto.spec.GCMParameterSpec
  * Core purpose: Replace FlutterSecureStorage-based raw master password storage
  * (CRITICAL finding P1 in SECURITY_AUDIT.md) with a key-wrapping pattern:
  *
- *  1. Generate a strong AES-256-GCM key inside Android Keystore (hardware-backed
- *     when available, bound to biometric/user authentication).
+ *  1. Generate a strong AES-256-GCM key inside Android Keystore
+ *     (hardware backing is device-dependent and UNVERIFIED per-device;
+ *     see ADR-003 — never surface "hardware-backed" in user-facing copy).
  *  2. Encrypt the master password with this Keystore key.
  *  3. Store only the encrypted blob on disk (via EncryptedSharedPreferences).
  *  4. On biometric success, Keystore authorizes decryption without the password
  *     ever touching FlutterSecureStorage in plaintext.
  *
  * Invariants:
- *  - Raw master password NEVER stored in SharedPreferences, FlutterSecureStorage,
- *    or any unencrypted file.
+ *  - Raw master password NEVER stored in SharedPreferences,
+ *    unencrypted files, or app storage (except the deprecated Dart-side
+ *    legacy entry, migration-only per ADR-003).
  *  - Keystore keys require UserAuthentication (biometric/credential) with
  *    invalidated-on-new-enrollment semantics.
  *  - AES-GCM provides authenticated encryption – tampered blobs fail on decrypt.

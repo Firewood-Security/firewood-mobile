@@ -28,6 +28,13 @@ class AppUpdateInfo {
 class UpdateService {
   static final ValueNotifier<bool> hasUpdateAvailable = ValueNotifier<bool>(false);
 
+  /// Owned update-channel constant (D-12, version registry). The host is a
+  /// source-code constant by decision, NOT config: changing it is a
+  /// Release-class change with review. Responses are TLS-only JSON with no
+  /// signature verification, so no authenticated-update claims are supported
+  /// (Q-09 open, BLOCKER for such claims).
+  static const String updateHost = 'https://firewood.aburcloud.com';
+
   static Future<void> initUpdateChecker() async {
     try {
       final info = await UpdateService().checkAppUpdate();
@@ -37,13 +44,13 @@ class UpdateService {
 
   static String get _updateEndpoint {
     if (Platform.isLinux) {
-      return 'https://firewood.aburcloud.com/v1/linux/update';
+      return '$updateHost/v1/linux/update';
     } else if (Platform.isWindows) {
-      return 'https://firewood.aburcloud.com/v1/windows/update';
+      return '$updateHost/v1/windows/update';
     } else if (Platform.isMacOS) {
-      return 'https://firewood.aburcloud.com/v1/macos/update';
+      return '$updateHost/v1/macos/update';
     } else {
-      return 'https://firewood.aburcloud.com/v1/android/update';
+      return '$updateHost/v1/android/update';
     }
   }
 

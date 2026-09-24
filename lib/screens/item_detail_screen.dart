@@ -9,10 +9,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/item_type.dart';
 import '../services/item_service.dart';
+import '../services/lock_service.dart';
 import '../services/generator_service.dart';
+import '../widgets/password_strength_meter.dart';
+import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_3d_button.dart';
 import '../theme/app_feedback.dart';
+import '../widgets/category_segmented_bar.dart';
 
 class ItemDetailScreen extends ConsumerStatefulWidget {
   final SecretKey secretKey;
@@ -70,6 +74,12 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
   final _devPublicKeyController = TextEditingController();
   final _devConfigController = TextEditingController();
 
+  // Focus nodes to immediately re-mask when moving to a new field
+  final _passwordFocusNode = FocusNode();
+  final _cvvFocusNode = FocusNode();
+  final _pinFocusNode = FocusNode();
+  final _devSecretKeyFocusNode = FocusNode();
+
   // Custom Extra Fields
   final List<_CustomField> _customFields = [];
 
@@ -94,12 +104,46 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
       curve: Curves.easeOut,
     );
     _fadeController.forward();
+
+    // Mask immediately when unfocused / moving to another field
+    _passwordFocusNode.addListener(() {
+      if (!_passwordFocusNode.hasFocus && mounted) {
+        setState(() => _obscurePassword = true);
+      }
+    });
+    _cvvFocusNode.addListener(() {
+      if (!_cvvFocusNode.hasFocus && mounted) {
+        setState(() => _obscureCvv = true);
+      }
+    });
+    _pinFocusNode.addListener(() {
+      if (!_pinFocusNode.hasFocus && mounted) {
+        setState(() => _obscurePin = true);
+      }
+    });
+    _devSecretKeyFocusNode.addListener(() {
+      if (!_devSecretKeyFocusNode.hasFocus && mounted) {
+        setState(() => _obscurePassword = true);
+      }
+    });
+
+    _passwordController.addListener(_onPasswordChanged);
+
     _loadExistingItemData();
+  }
+
+  void _onPasswordChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    _passwordController.removeListener(_onPasswordChanged);
     _fadeController.dispose();
+    _passwordFocusNode.dispose();
+    _cvvFocusNode.dispose();
+    _pinFocusNode.dispose();
+    _devSecretKeyFocusNode.dispose();
     _titleController.dispose();
     _usernameController.dispose();
     _passwordController.dispose();
@@ -176,15 +220,18 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           break;
       }
 
-      // Populate any remaining non-standard fields as custom fields
-      final standardKeys = {
+      // Populate any remaining non-standard fields as custom fields (never include timestamps, dates, or known category keys)
+      final ignoredKeys = {
         'username', 'password', 'url', 'totp_secret', 'notes',
         'cardholder', 'number', 'expiry', 'cvv', 'pin', 'zip',
-        'full_name', 'id_number', 'passport', 'license', 'dob', 'address', 'phone', 'id_image', 'content'
+        'full_name', 'id_number', 'passport', 'license', 'dob', 'address', 'phone', 'id_image', 'content',
+        'secret_type', 'secret_key', 'public_key', 'config_data',
+        'createdAt', 'updatedAt', 'created_at', 'updated_at', 'timestamp', 'date', 'date_created', 'date_modified',
+        'dateCreated', 'dateModified', 'lastModified', 'id', 'uuid', 'isFavorite', 'is_favorite', 'trash'
       };
 
       fields.forEach((key, val) {
-        if (!standardKeys.contains(key)) {
+        if (!ignoredKeys.contains(key) && val != null && val.toString().trim().isNotEmpty) {
           _customFields.add(_CustomField(
             keyController: TextEditingController(text: key),
             valueController: TextEditingController(text: val.toString()),
@@ -219,11 +266,30 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
   }
 
   void _generatePassword() {
-    setState(() {
-      _passwordController.text = GeneratorService.generatePassword(length: 20);
-      _obscurePassword = false;
+    HapticFeedback.lightImpact();
+    showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _PasswordGeneratorSheet(
+        initialPassword: _passwordController.text,
+      ),
+    ).then((generated) {
+      if (generated != null && generated.isNotEmpty) {
+        setState(() {
+          _passwordController.text = generated;
+          _obscurePassword = false;
+        });
+        HapticFeedback.selectionClick();
+        if (mounted) {
+          AppToast.show(
+            context,
+            message: 'Password applied to credential',
+            type: ToastType.success,
+          );
+        }
+      }
     });
-    HapticFeedback.selectionClick();
   }
 
   Map<String, dynamic> _buildPayload() {
@@ -338,7 +404,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
       message: 'Delete "${widget.existingItem!.title}" permanently from your encrypted vault?',
       confirmLabel: 'Delete',
       isDanger: true,
-      icon: Icons.delete_outline,
+      icon: AppIcons.delete,
     );
 
     if (confirm == true) {
@@ -354,6 +420,290 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
     }
   }
 
+  void _showCategoryFieldGuide(BuildContext context) {
+    HapticFeedback.lightImpact();
+    final activeAccent = Theme.of(context).colorScheme.primary;
+
+    final List<_FieldGuideItem> guideItems;
+    final String categoryTitle;
+    final String categoryDesc;
+    final dynamic categoryIcon;
+
+    switch (_selectedType) {
+      case ItemType.login:
+        categoryTitle = 'Login Credentials Guide';
+        categoryDesc = 'Security guidelines for web accounts, logins, and 2FA keys';
+        categoryIcon = AppIcons.lock;
+        guideItems = const [
+          _FieldGuideItem(
+            name: 'Title *',
+            description: 'Name of the service, website, or application (e.g. Google, GitHub, Netflix).',
+            icon: AppIcons.title,
+          ),
+          _FieldGuideItem(
+            name: 'Username / Email',
+            description: 'Account login identifier, handle, or registered email address.',
+            icon: AppIcons.user,
+          ),
+          _FieldGuideItem(
+            name: 'Password',
+            description: 'Confidential account secret. Auto-obscures on field change. Tap the wand icon to generate high-entropy passwords.',
+            icon: AppIcons.key,
+          ),
+          _FieldGuideItem(
+            name: 'Website URL',
+            description: 'Login page URL for fast browser access and credential association.',
+            icon: AppIcons.link,
+          ),
+          _FieldGuideItem(
+            name: '2FA / TOTP Secret Key',
+            description: 'Base32 authenticator secret (e.g. JBSWY3DPEHPK3PXP). Generates real-time 6-digit rolling 2FA codes without third-party apps.',
+            icon: AppIcons.shieldCheck,
+          ),
+          _FieldGuideItem(
+            name: 'Custom Extra Fields',
+            description: 'Store recovery codes, security questions, or secondary account IDs.',
+            icon: AppIcons.addCircle,
+          ),
+        ];
+        break;
+
+      case ItemType.card:
+        categoryTitle = 'Payment Card Guide';
+        categoryDesc = 'Sensitive credit, debit, and banking card protection';
+        categoryIcon = AppIcons.categoryCard;
+        guideItems = const [
+          _FieldGuideItem(
+            name: 'Cardholder Name',
+            description: 'Full name printed on the card.',
+            icon: AppIcons.user,
+          ),
+          _FieldGuideItem(
+            name: 'Card Number',
+            description: '16-digit PAN stored in the encrypted vault.',
+            icon: AppIcons.categoryCard,
+          ),
+          _FieldGuideItem(
+            name: 'Expiry Date',
+            description: 'Card validity month and year (MM/YY).',
+            icon: AppIcons.calendar,
+          ),
+          _FieldGuideItem(
+            name: 'CVV / CVC Security Code',
+            description: '3 or 4 digit security verification code. Obscured by default.',
+            icon: AppIcons.shield,
+          ),
+          _FieldGuideItem(
+            name: 'Card PIN',
+            description: 'ATM or merchant chip PIN code for contactless & debit transactions.',
+            icon: AppIcons.hash,
+          ),
+          _FieldGuideItem(
+            name: 'Billing ZIP / Postal Code',
+            description: 'Address verification code required for online transactions.',
+            icon: AppIcons.location,
+          ),
+        ];
+        break;
+
+      case ItemType.identity:
+        categoryTitle = 'Identity Document Guide';
+        categoryDesc = 'Government-issued IDs, passports, driver licenses, and scanned attachments';
+        categoryIcon = AppIcons.categoryIdentity;
+        guideItems = const [
+          _FieldGuideItem(
+            name: 'Full Legal Name',
+            description: 'Full legal name as it appears on official government records.',
+            icon: AppIcons.user,
+          ),
+          _FieldGuideItem(
+            name: 'Date of Birth & Address',
+            description: 'Official identity demographics for fast copy & paste during verification.',
+            icon: AppIcons.location,
+          ),
+          _FieldGuideItem(
+            name: 'ID Document Attachment',
+            description: 'Encrypted local document photo. Stored securely offline in your vault.',
+            icon: AppIcons.image,
+          ),
+        ];
+        break;
+
+      case ItemType.note:
+        categoryTitle = 'Secure Note Guide';
+        categoryDesc = 'Guidelines for confidential notes, recovery seeds, and memos';
+        categoryIcon = AppIcons.categoryNote;
+        guideItems = const [
+          _FieldGuideItem(
+            name: 'Title *',
+            description: 'Identifiable subject title for this confidential note.',
+            icon: AppIcons.title,
+          ),
+          _FieldGuideItem(
+            name: 'Secure Note Content',
+            description: 'Freeform text, recovery mnemonics (12/24 words), private memos, or server keys.',
+            icon: AppIcons.note,
+          ),
+          _FieldGuideItem(
+            name: 'Custom Extra Fields',
+            description: 'Add key-value metadata pairs for structured secrets.',
+            icon: AppIcons.addCircle,
+          ),
+        ];
+        break;
+
+      case ItemType.developerSecret:
+        categoryTitle = 'Developer Secret Guide';
+        categoryDesc = 'Guidelines for API keys, SSH credentials, and environment configs';
+        categoryIcon = AppIcons.typeDeveloperSecret;
+        guideItems = const [
+          _FieldGuideItem(
+            name: 'Secret Sub-Type',
+            description: 'Tag or identifier (e.g. AWS_ACCESS_KEY, Stripe API, SSH Key, DB URI).',
+            icon: AppIcons.typeDeveloperSecret,
+          ),
+          _FieldGuideItem(
+            name: 'Secret / Private Key',
+            description: 'Confidential API key, secret token, or private PEM cryptographic key.',
+            icon: AppIcons.key,
+          ),
+          _FieldGuideItem(
+            name: 'Public Key / Endpoint',
+            description: 'Public SSH key, server host URL, or webhook receiving endpoint.',
+            icon: AppIcons.globe,
+          ),
+          _FieldGuideItem(
+            name: 'Configuration Data',
+            description: 'Multi-line .env, JSON, or YAML configuration payload.',
+            icon: AppIcons.file,
+          ),
+        ];
+        break;
+    }
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF16161A),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.65,
+          minChildSize: 0.4,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (_, scrollController) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+              child: ListView(
+                controller: scrollController,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.borderZinc,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: activeAccent.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: activeAccent.withValues(alpha: 0.3)),
+                        ),
+                        child: AppIcon(categoryIcon, color: activeAccent, size: 22),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              categoryTitle,
+                              style: const TextStyle(
+                                color: AppColors.offWhite,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            Text(
+                              categoryDesc,
+                              style: const TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 11.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  ...guideItems.map((item) => Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceZinc,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.borderZinc.withValues(alpha: 0.5)),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: AppColors.cardZinc,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: AppIcon(item.icon, size: 16, color: activeAccent),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item.name,
+                                    style: const TextStyle(
+                                      color: AppColors.offWhite,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    item.description,
+                                    style: const TextStyle(
+                                      color: AppColors.textMuted,
+                                      fontSize: 11.5,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      )),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -365,12 +715,17 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
       appBar: AppBar(
         title: Text(isEditing ? 'Edit ${widget.existingItem!.title}' : 'Add Credential'),
         actions: [
+          IconButton(
+            icon: AppIcon(AppIcons.help, color: AppColors.orangeAccent, size: 22),
+            tooltip: 'Category & Fields Guide',
+            onPressed: () => _showCategoryFieldGuide(context),
+          ),
           if (isEditing)
             Padding(
               padding: const EdgeInsets.only(right: 12),
               child: App3DButton(
                 label: 'Delete',
-                icon: Icons.delete_outline,
+                icon: AppIcons.delete,
                 variant: App3DButtonVariant.danger,
                 height: 36,
                 fontSize: 12,
@@ -392,7 +747,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                   padding: const EdgeInsets.all(12),
                   child: Row(
                     children: [
-                      Icon(Icons.error_outline, color: cs.onErrorContainer, size: 20),
+                      AppIcon(AppIcons.alert, color: cs.onErrorContainer, size: 20),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(_error!, style: TextStyle(color: cs.onErrorContainer)),
@@ -403,7 +758,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
 
               Expanded(
                 child: ListView(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 140),
                   children: [
                     // Category Selection Header Tabs
                     _buildCategorySelector(),
@@ -421,7 +776,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                                 : _selectedType == ItemType.identity
                                     ? 'e.g. Passport, Driver License'
                                     : 'e.g. Recovery Phrase, Server Keys',
-                        prefixIcon: const Icon(Icons.title, color: AppColors.orangeAccent),
+                        prefixIcon: AppIcon(AppIcons.title, color: AppColors.orangeAccent),
                       ),
                       validator: (v) => v == null || v.trim().isEmpty ? 'Title required' : null,
                       textInputAction: TextInputAction.next,
@@ -443,7 +798,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                     // Save Action Button
                     App3DButton(
                       label: _isLoading ? 'Saving...' : (isEditing ? 'Save Changes' : 'Save Credential'),
-                      icon: Icons.check_circle_outline,
+                      icon: AppIcons.checkCircle,
                       variant: App3DButtonVariant.primary,
                       isLoading: _isLoading,
                       fullWidth: true,
@@ -461,53 +816,11 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
   }
 
   Widget _buildCategorySelector() {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceZinc,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderZinc),
-      ),
-      child: Row(
-        children: ItemType.values.map((type) {
-          final isSelected = _selectedType == type;
-          return Expanded(
-            child: GestureDetector(
-              onTap: () {
-                HapticFeedback.selectionClick();
-                setState(() => _selectedType = type);
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: isSelected ? AppColors.orangeContainer : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
-                  border: isSelected ? Border.all(color: AppColors.orangeAccent.withValues(alpha: 0.5)) : null,
-                ),
-                child: Column(
-                  children: [
-                    Icon(
-                      _getTypeIcon(type),
-                      size: 22,
-                      color: isSelected ? AppColors.orangeAccent : AppColors.textMuted,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      type.label,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                        color: isSelected ? AppColors.offWhite : AppColors.textMuted,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
+    return CategorySegmentedBar(
+      selectedType: _selectedType,
+      onSelected: (type) {
+        setState(() => _selectedType = type);
+      },
     );
   }
 
@@ -534,27 +847,42 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           controller: _usernameController,
           decoration: const InputDecoration(
             labelText: 'Username / Email',
-            prefixIcon: Icon(Icons.person_outline, size: 20),
+            prefixIcon: AppIcon(AppIcons.user, size: 20),
           ),
           textInputAction: TextInputAction.next,
         ),
         const SizedBox(height: 12),
         TextFormField(
           controller: _passwordController,
+          focusNode: _passwordFocusNode,
           obscureText: _obscurePassword,
           decoration: InputDecoration(
             labelText: 'Password',
-            prefixIcon: const Icon(Icons.lock_outline, size: 20),
+            prefixIcon: const AppIcon(AppIcons.lock, size: 20),
             suffixIcon: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (_passwordController.text.isNotEmpty)
+                  IconButton(
+                    icon: const AppIcon(AppIcons.copy, color: AppColors.textMuted, size: 18),
+                    tooltip: 'Copy Password',
+                    onPressed: () {
+                      ref.read(lockServiceProvider).copySecret(_passwordController.text);
+                      HapticFeedback.selectionClick();
+                      AppToast.show(
+                        context,
+                        message: 'Password copied to clipboard',
+                        type: ToastType.success,
+                      );
+                    },
+                  ),
                 IconButton(
-                  icon: const Icon(Icons.auto_awesome, color: AppColors.orangeAccent, size: 20),
+                  icon: AppIcon(AppIcons.magic, color: AppColors.orangeAccent, size: 20),
                   tooltip: 'Generate Password',
                   onPressed: _generatePassword,
                 ),
                 IconButton(
-                  icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, size: 20),
+                  icon: AppIcon(_obscurePassword ? AppIcons.viewOff : AppIcons.view, size: 20),
                   onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                 ),
               ],
@@ -562,12 +890,20 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           ),
           textInputAction: TextInputAction.next,
         ),
+        if (_passwordController.text.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 4, bottom: 2),
+            child: PasswordStrengthMeter(
+              password: _passwordController.text,
+              compact: true,
+            ),
+          ),
         const SizedBox(height: 12),
         TextFormField(
           controller: _urlController,
           decoration: const InputDecoration(
             labelText: 'Website URL',
-            prefixIcon: Icon(Icons.link_outlined, size: 20),
+            prefixIcon: AppIcon(AppIcons.link, size: 20),
             hintText: 'https://example.com',
           ),
           keyboardType: TextInputType.url,
@@ -578,7 +914,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           controller: _totpController,
           decoration: const InputDecoration(
             labelText: '2FA / TOTP Secret Key',
-            prefixIcon: Icon(Icons.security_outlined, size: 20),
+            prefixIcon: AppIcon(AppIcons.shieldKey, size: 20),
           ),
           textInputAction: TextInputAction.next,
         ),
@@ -587,7 +923,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           controller: _noteController,
           decoration: const InputDecoration(
             labelText: 'Notes',
-            prefixIcon: Icon(Icons.notes_outlined, size: 20),
+            prefixIcon: AppIcon(AppIcons.note, size: 20),
           ),
           maxLines: 2,
         ),
@@ -603,7 +939,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           controller: _cardholderController,
           decoration: const InputDecoration(
             labelText: 'Cardholder Name',
-            prefixIcon: Icon(Icons.person_outline),
+            prefixIcon: AppIcon(AppIcons.user),
           ),
           textInputAction: TextInputAction.next,
         ),
@@ -612,7 +948,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           controller: _cardNumberController,
           decoration: const InputDecoration(
             labelText: 'Card Number',
-            prefixIcon: Icon(Icons.credit_card_outlined),
+            prefixIcon: AppIcon(AppIcons.categoryCard),
             hintText: '0000 0000 0000 0000',
           ),
           keyboardType: TextInputType.number,
@@ -630,7 +966,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                 controller: _expiryController,
                 decoration: const InputDecoration(
                   labelText: 'Expiry (MM/YY)',
-                  prefixIcon: Icon(Icons.calendar_today_outlined),
+                  prefixIcon: AppIcon(AppIcons.calendar),
                   hintText: 'MM/YY',
                 ),
                 keyboardType: TextInputType.number,
@@ -645,12 +981,13 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
             Expanded(
               child: TextFormField(
                 controller: _cvvController,
+                focusNode: _cvvFocusNode,
                 obscureText: _obscureCvv,
                 decoration: InputDecoration(
                   labelText: 'CVV',
-                  prefixIcon: const Icon(Icons.shield_outlined),
+                  prefixIcon: const AppIcon(AppIcons.shield),
                   suffixIcon: IconButton(
-                    icon: Icon(_obscureCvv ? Icons.visibility_off : Icons.visibility),
+                    icon: AppIcon(_obscureCvv ? AppIcons.viewOff : AppIcons.view),
                     onPressed: () => setState(() => _obscureCvv = !_obscureCvv),
                   ),
                 ),
@@ -670,12 +1007,13 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
             Expanded(
               child: TextFormField(
                 controller: _pinController,
+                focusNode: _pinFocusNode,
                 obscureText: _obscurePin,
                 decoration: InputDecoration(
                   labelText: 'Card PIN',
-                  prefixIcon: const Icon(Icons.pin_outlined),
+                  prefixIcon: const AppIcon(AppIcons.hash),
                   suffixIcon: IconButton(
-                    icon: Icon(_obscurePin ? Icons.visibility_off : Icons.visibility),
+                    icon: AppIcon(_obscurePin ? AppIcons.viewOff : AppIcons.view),
                     onPressed: () => setState(() => _obscurePin = !_obscurePin),
                   ),
                 ),
@@ -692,7 +1030,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                 controller: _zipController,
                 decoration: const InputDecoration(
                   labelText: 'ZIP / Postal Code',
-                  prefixIcon: Icon(Icons.location_on_outlined),
+                  prefixIcon: AppIcon(AppIcons.location),
                 ),
               ),
             ),
@@ -703,7 +1041,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           controller: _noteController,
           decoration: const InputDecoration(
             labelText: 'Notes',
-            prefixIcon: Icon(Icons.notes_outlined),
+            prefixIcon: AppIcon(AppIcons.note),
           ),
           maxLines: 2,
         ),
@@ -719,7 +1057,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           controller: _fullNameController,
           decoration: const InputDecoration(
             labelText: 'Full Legal Name',
-            prefixIcon: Icon(Icons.badge_outlined),
+            prefixIcon: AppIcon(AppIcons.user),
           ),
           textInputAction: TextInputAction.next,
         ),
@@ -728,7 +1066,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           controller: _idNumberController,
           decoration: const InputDecoration(
             labelText: 'National ID / SSN Number',
-            prefixIcon: Icon(Icons.numbers_outlined),
+            prefixIcon: AppIcon(AppIcons.hash),
           ),
           textInputAction: TextInputAction.next,
         ),
@@ -740,7 +1078,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                 controller: _passportController,
                 decoration: const InputDecoration(
                   labelText: 'Passport #',
-                  prefixIcon: Icon(Icons.flight_takeoff_outlined),
+                  prefixIcon: AppIcon(AppIcons.categoryIdentity),
                 ),
                 textInputAction: TextInputAction.next,
               ),
@@ -751,7 +1089,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                 controller: _licenseController,
                 decoration: const InputDecoration(
                   labelText: 'Driver License #',
-                  prefixIcon: Icon(Icons.directions_car_outlined),
+                  prefixIcon: AppIcon(AppIcons.car),
                 ),
                 textInputAction: TextInputAction.next,
               ),
@@ -766,7 +1104,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                 controller: _dobController,
                 decoration: const InputDecoration(
                   labelText: 'Date of Birth',
-                  prefixIcon: Icon(Icons.cake_outlined),
+                  prefixIcon: AppIcon(AppIcons.calendar),
                   hintText: 'YYYY-MM-DD',
                 ),
                 textInputAction: TextInputAction.next,
@@ -778,7 +1116,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                 controller: _phoneController,
                 decoration: const InputDecoration(
                   labelText: 'Phone',
-                  prefixIcon: Icon(Icons.phone_outlined),
+                  prefixIcon: AppIcon(AppIcons.user),
                 ),
                 keyboardType: TextInputType.phone,
                 textInputAction: TextInputAction.next,
@@ -791,7 +1129,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           controller: _addressController,
           decoration: const InputDecoration(
             labelText: 'Address',
-            prefixIcon: Icon(Icons.home_outlined),
+            prefixIcon: AppIcon(AppIcons.home),
           ),
           maxLines: 2,
         ),
@@ -807,7 +1145,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.image_outlined, color: AppColors.orangeAccent, size: 20),
+                    AppIcon(AppIcons.file, color: AppColors.orangeAccent, size: 20),
                     const SizedBox(width: 8),
                     const Text(
                       'ID Document Photo / Attachment',
@@ -816,7 +1154,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                     const Spacer(),
                     if (_idImageBase64 != null)
                       IconButton(
-                        icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                        icon: const AppIcon(AppIcons.delete, color: Colors.redAccent, size: 20),
                         onPressed: () => setState(() => _idImageBase64 = null),
                         tooltip: 'Remove Attachment',
                       ),
@@ -839,7 +1177,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: _pickIdentityImage,
-                    icon: const Icon(Icons.upload_file, color: AppColors.orangeAccent),
+                    icon: AppIcon(AppIcons.upload, color: AppColors.orangeAccent),
                     label: Text(
                       _idImageBase64 != null ? 'Replace ID Photo' : 'Upload ID Photo / Scan',
                       style: const TextStyle(color: AppColors.offWhite),
@@ -880,19 +1218,20 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           controller: _devSecretTypeController,
           decoration: const InputDecoration(
             labelText: 'Secret Sub-Type (e.g. API Key, SSH Key, DB, .env)',
-            prefixIcon: Icon(Icons.category_outlined),
+            prefixIcon: AppIcon(AppIcons.folder),
           ),
           textInputAction: TextInputAction.next,
         ),
         const SizedBox(height: 16),
         TextFormField(
           controller: _devSecretKeyController,
+          focusNode: _devSecretKeyFocusNode,
           obscureText: _obscurePassword,
           decoration: InputDecoration(
             labelText: 'Secret Key / API Key / Private Key',
-            prefixIcon: const Icon(Icons.key_outlined),
+            prefixIcon: const AppIcon(AppIcons.key),
             suffixIcon: IconButton(
-              icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
+              icon: AppIcon(_obscurePassword ? AppIcons.viewOff : AppIcons.view),
               onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
             ),
           ),
@@ -904,7 +1243,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           controller: _devPublicKeyController,
           decoration: const InputDecoration(
             labelText: 'Public Key / Endpoint / Host',
-            prefixIcon: Icon(Icons.dns_outlined),
+            prefixIcon: AppIcon(AppIcons.globe),
           ),
           style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
           textInputAction: TextInputAction.next,
@@ -914,7 +1253,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           controller: _devConfigController,
           decoration: const InputDecoration(
             labelText: 'Configuration / Environment / .env Content',
-            prefixIcon: Icon(Icons.code_outlined),
+            prefixIcon: AppIcon(AppIcons.title),
           ),
           maxLines: 5,
           style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
@@ -943,7 +1282,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                   ));
                 });
               },
-              icon: const Icon(Icons.add, size: 18),
+              icon: const AppIcon(AppIcons.add, size: 18),
               label: const Text('Add Field'),
             ),
           ],
@@ -976,7 +1315,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent, size: 20),
+                  icon: const AppIcon(AppIcons.close, color: Colors.redAccent, size: 20),
                   onPressed: () {
                     setState(() {
                       cf.dispose();
@@ -990,21 +1329,6 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
         }),
       ],
     );
-  }
-
-  IconData _getTypeIcon(ItemType type) {
-    switch (type) {
-      case ItemType.login:
-        return Icons.login_outlined;
-      case ItemType.card:
-        return Icons.credit_card_outlined;
-      case ItemType.identity:
-        return Icons.badge_outlined;
-      case ItemType.note:
-        return Icons.note_outlined;
-      case ItemType.developerSecret:
-        return Icons.terminal_outlined;
-    }
   }
 }
 
@@ -1058,6 +1382,385 @@ class _ExpiryDateFormatter extends TextInputFormatter {
     return TextEditingValue(
       text: formatted,
       selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
+
+class _FieldGuideItem {
+  final String name;
+  final String description;
+  final dynamic icon;
+
+  const _FieldGuideItem({
+    required this.name,
+    required this.description,
+    required this.icon,
+  });
+}
+
+enum _SheetGenMode { password, passphrase, pin }
+
+class _PasswordGeneratorSheet extends StatefulWidget {
+  final String initialPassword;
+  const _PasswordGeneratorSheet({required this.initialPassword});
+
+  @override
+  State<_PasswordGeneratorSheet> createState() => _PasswordGeneratorSheetState();
+}
+
+class _PasswordGeneratorSheetState extends State<_PasswordGeneratorSheet> {
+  _SheetGenMode _mode = _SheetGenMode.password;
+
+  double _passwordLength = 18;
+  bool _includeUpper = true;
+  bool _includeLower = true;
+  bool _includeDigits = true;
+  bool _includeSymbols = true;
+  bool _excludeAmbiguous = false;
+
+  double _wordCount = 4;
+  String _separator = '-';
+  bool _capitalizePassphrase = true;
+  bool _includePassphraseNumber = true;
+
+  double _pinLength = 6;
+
+  String _generated = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _regenerate();
+  }
+
+  void _regenerate() {
+    String result = '';
+    switch (_mode) {
+      case _SheetGenMode.password:
+        result = GeneratorService.generatePassword(
+          length: _passwordLength.round(),
+          includeUppercase: _includeUpper,
+          includeLowercase: _includeLower,
+          includeDigits: _includeDigits,
+          includeSymbols: _includeSymbols,
+          excludeAmbiguous: _excludeAmbiguous,
+        );
+        break;
+      case _SheetGenMode.passphrase:
+        result = GeneratorService.generatePassphrase(
+          wordCount: _wordCount.round(),
+          separator: _separator,
+          capitalize: _capitalizePassphrase,
+          includeNumber: _includePassphraseNumber,
+        );
+        break;
+      case _SheetGenMode.pin:
+        result = GeneratorService.generatePIN(
+          length: _pinLength.round(),
+        );
+        break;
+    }
+    setState(() => _generated = result);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final activeAccent = Theme.of(context).colorScheme.primary;
+
+    return Container(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom + MediaQuery.of(context).padding.bottom + 20,
+      ),
+      decoration: const BoxDecoration(
+        color: Color(0xFF141418),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black87,
+            blurRadius: 30,
+            offset: Offset(0, -6),
+          ),
+        ],
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Drag Handle
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: AppColors.borderZinc,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'GENERATE SECURE PASSWORD',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+                IconButton(
+                  icon: const AppIcon(AppIcons.close, color: AppColors.textMuted, size: 20),
+                  onPressed: () => Navigator.pop(context),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Mode Tabs
+            Container(
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceZinc,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.borderZinc.withValues(alpha: 0.5)),
+              ),
+              child: Row(
+                children: [
+                  _buildTabItem(_SheetGenMode.password, 'Password', activeAccent),
+                  _buildTabItem(_SheetGenMode.passphrase, 'Passphrase', activeAccent),
+                  _buildTabItem(_SheetGenMode.pin, 'PIN', activeAccent),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Output Display Card
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceZinc,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: activeAccent.withValues(alpha: 0.4), width: 1.2),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SelectableText(
+                          _generated,
+                          style: TextStyle(
+                            fontFamily: 'Monospace',
+                            fontSize: _generated.length > 24 ? 13 : 16,
+                            fontWeight: FontWeight.bold,
+                            color: activeAccent,
+                            letterSpacing: _mode == _SheetGenMode.pin ? 3.0 : 0.5,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const AppIcon(AppIcons.refresh, size: 20),
+                        tooltip: 'Regenerate',
+                        onPressed: () {
+                          HapticFeedback.lightImpact();
+                          _regenerate();
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  PasswordStrengthMeter(
+                    password: _generated,
+                    compact: true,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Config Controls
+            if (_mode == _SheetGenMode.password) ...[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Length', style: TextStyle(color: AppColors.offWhite, fontSize: 13)),
+                  Text('${_passwordLength.round()} chars', style: TextStyle(color: activeAccent, fontWeight: FontWeight.bold, fontSize: 13)),
+                ],
+              ),
+              Slider(
+                value: _passwordLength,
+                min: 8,
+                max: 48,
+                activeColor: activeAccent,
+                onChanged: (val) {
+                  setState(() => _passwordLength = val);
+                  _regenerate();
+                },
+              ),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  _buildChip('A-Z', _includeUpper, activeAccent, (v) { setState(() => _includeUpper = v); _regenerate(); }),
+                  _buildChip('a-z', _includeLower, activeAccent, (v) { setState(() => _includeLower = v); _regenerate(); }),
+                  _buildChip('0-9', _includeDigits, activeAccent, (v) { setState(() => _includeDigits = v); _regenerate(); }),
+                  _buildChip('!@#\$%', _includeSymbols, activeAccent, (v) { setState(() => _includeSymbols = v); _regenerate(); }),
+                  _buildChip('No Ambiguous', _excludeAmbiguous, activeAccent, (v) { setState(() => _excludeAmbiguous = v); _regenerate(); }),
+                ],
+              ),
+            ] else if (_mode == _SheetGenMode.passphrase) ...[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Words', style: TextStyle(color: AppColors.offWhite, fontSize: 13)),
+                  Text('${_wordCount.round()} words', style: TextStyle(color: activeAccent, fontWeight: FontWeight.bold, fontSize: 13)),
+                ],
+              ),
+              Slider(
+                value: _wordCount,
+                min: 3,
+                max: 7,
+                divisions: 4,
+                activeColor: activeAccent,
+                onChanged: (val) {
+                  setState(() => _wordCount = val);
+                  _regenerate();
+                },
+              ),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  _buildChip('Capitalize', _capitalizePassphrase, activeAccent, (v) { setState(() => _capitalizePassphrase = v); _regenerate(); }),
+                  _buildChip('+4 Digits', _includePassphraseNumber, activeAccent, (v) { setState(() => _includePassphraseNumber = v); _regenerate(); }),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Separator', style: TextStyle(color: AppColors.offWhite, fontSize: 13)),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: ['-', '.', '_', ' '].map((sep) {
+                      final isSelected = _separator == sep;
+                      return GestureDetector(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(() => _separator = sep);
+                          _regenerate();
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.only(left: 6),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isSelected ? activeAccent : AppColors.surfaceZinc,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: isSelected ? activeAccent : AppColors.borderZinc),
+                          ),
+                          child: Text(sep == ' ' ? 'Space' : sep, style: TextStyle(color: isSelected ? Colors.white : AppColors.offWhite, fontSize: 12, fontWeight: FontWeight.bold)),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ] else if (_mode == _SheetGenMode.pin) ...[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('PIN Digits', style: TextStyle(color: AppColors.offWhite, fontSize: 13)),
+                  Text('${_pinLength.round()} digits', style: TextStyle(color: activeAccent, fontWeight: FontWeight.bold, fontSize: 13)),
+                ],
+              ),
+              Slider(
+                value: _pinLength,
+                min: 4,
+                max: 10,
+                divisions: 6,
+                activeColor: activeAccent,
+                onChanged: (val) {
+                  setState(() => _pinLength = val);
+                  _regenerate();
+                },
+              ),
+            ],
+
+            const SizedBox(height: 20),
+
+            // Action Button
+            ElevatedButton.icon(
+              onPressed: () {
+                HapticFeedback.selectionClick();
+                Navigator.pop(context, _generated);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: activeAccent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                elevation: 2,
+              ),
+              icon: const AppIcon(AppIcons.checkCircle, size: 20, color: Colors.white),
+              label: const Text(
+                'Apply to Password Field',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabItem(_SheetGenMode mode, String label, Color activeAccent) {
+    final isSelected = _mode == mode;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          setState(() => _mode = mode);
+          _regenerate();
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? activeAccent.withValues(alpha: 0.2) : Colors.transparent,
+            borderRadius: BorderRadius.circular(9),
+            border: Border.all(color: isSelected ? activeAccent : Colors.transparent),
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: isSelected ? Colors.white : AppColors.textMuted,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+              fontSize: 12,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChip(String label, bool value, Color activeAccent, ValueChanged<bool> onChanged) {
+    return FilterChip(
+      label: Text(label, style: TextStyle(color: value ? Colors.white : AppColors.offWhite, fontSize: 12)),
+      selected: value,
+      selectedColor: activeAccent.withValues(alpha: 0.3),
+      backgroundColor: AppColors.surfaceZinc,
+      side: BorderSide(color: value ? activeAccent : AppColors.borderZinc),
+      checkmarkColor: activeAccent,
+      onSelected: onChanged,
     );
   }
 }
