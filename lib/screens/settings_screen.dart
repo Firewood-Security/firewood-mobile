@@ -112,7 +112,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 title: const Text('Biometric Vault Unlock', style: TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.bold, fontSize: 14)),
                 subtitle: const Text('Unlock vault with fingerprint or face recognition', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
                 value: biometricEnabled,
-                secondary: AppIcon(AppIcons.fingerprint, color: AppColors.orangeAccent, size: 28),
+                secondary: AppIcon(AppIcons.fingerprint, color: AppColors.orangeAccent, size: 34),
                 activeColor: AppColors.orangeAccent,
                 onChanged: (val) => _toggleBiometricAuth(context, ref, val),
               ),
@@ -120,7 +120,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 title: const Text('Auto-Lock Vault', style: TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.bold, fontSize: 14)),
                 subtitle: const Text('Lock vault when idle or app backgrounded', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
                 value: autoLockEnabled,
-                secondary: AppIcon(AppIcons.lockClock, color: AppColors.orangeAccent, size: 28),
+                secondary: AppIcon(AppIcons.lockClock, color: AppColors.orangeAccent, size: 34),
                 activeColor: AppColors.orangeAccent,
                 onChanged: (val) {
                   ref.read(autoLockEnabledProvider.notifier).state = val;
@@ -132,14 +132,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ListTile(
                   title: const Text('Auto-Lock Timeout', style: TextStyle(color: AppColors.offWhite, fontSize: 14)),
                   subtitle: Text(_formatDuration(lockTimeout), style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                  leading: AppIcon(AppIcons.timer, color: AppColors.orangeAccent, size: 28),
-                  trailing: AppIcon(AppIcons.chevronRight, color: AppColors.textMuted, size: 22),
+                  leading: AppIcon(AppIcons.timer, color: AppColors.orangeAccent, size: 34),
+                  trailing: AppIcon(AppIcons.chevronRight, color: AppColors.textMuted, size: 26),
                   onTap: () => _showTimeoutPicker(context, ref),
                 ),
               ListTile(
                 title: const Text('Lock Vault Now', style: TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.bold, fontSize: 14)),
                 subtitle: const Text('Immediately clear secret key from memory', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                leading: AppIcon(AppIcons.lock, color: AppColors.orangeAccent, size: 28),
+                leading: AppIcon(AppIcons.lock, color: AppColors.orangeAccent, size: 34),
                 onTap: () => _lockNow(context, ref),
               ),
               SwitchListTile(
@@ -147,7 +147,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 subtitle: const Text('Disable to prevent screen capture in app switcher', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
                 value: _screenshotsAllowed,
                 activeColor: AppColors.orangeAccent,
-                secondary: AppIcon(_screenshotsAllowed ? AppIcons.eye : AppIcons.eyeOff, color: AppColors.orangeAccent, size: 28),
+                secondary: AppIcon(_screenshotsAllowed ? AppIcons.eye : AppIcons.eyeOff, color: AppColors.orangeAccent, size: 34),
                 onChanged: (val) async {
                   final prefs = await SharedPreferences.getInstance();
                   await prefs.setBool('allow_screenshots', val);
@@ -181,8 +181,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         ListTile(
                           title: const Text('Export API Keys as .env', style: TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.bold, fontSize: 14)),
                           subtitle: Text('Format and export ${devSecrets.length} developer secrets to a .env file', style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                          leading: AppIcon(AppIcons.typeDeveloperSecret, color: AppColors.orangeAccent, size: 28),
-                          trailing: AppIcon(AppIcons.chevronRight, color: AppColors.textMuted, size: 22),
+                          leading: AppIcon(AppIcons.typeDeveloperSecret, color: AppColors.orangeAccent, size: 34),
+                          trailing: AppIcon(AppIcons.chevronRight, color: AppColors.textMuted, size: 26),
                           onTap: () => _showEnvExportDialog(context, devSecrets),
                         ),
                       ],
@@ -206,16 +206,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       if (burners.isEmpty)
                         const Padding(padding: EdgeInsets.all(16), child: Text('No burner passwords configured. Add one for emergency vault destruction.', style: TextStyle(color: AppColors.textMuted, fontSize: 12))),
                       ...burners.map((b) => ListTile(
-                        leading: AppIcon(AppIcons.fire, color: AppColors.roseAccent, size: 28),
+                        leading: AppIcon(AppIcons.fire, color: AppColors.roseAccent, size: 34),
                         title: Text(b.label, style: const TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.bold, fontSize: 13)),
                         subtitle: Text('Created ${DateTime.now().difference(b.createdAt).inDays}d ago', style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
                         trailing: IconButton(
-                          icon: AppIcon(AppIcons.delete, color: AppColors.roseAccent, size: 18),
+                          icon: AppIcon(AppIcons.delete, color: AppColors.roseAccent, size: 22),
                           onPressed: () async { await BurnerService().removeBurner(b.id); if (mounted) setState(() {}); },
                         ),
                       )),
                       ListTile(
-                        leading: AppIcon(AppIcons.add, color: AppColors.roseAccent, size: 28),
+                        leading: AppIcon(AppIcons.add, color: AppColors.roseAccent, size: 34),
                         title: const Text('Add Burner Password', style: TextStyle(color: AppColors.roseAccent, fontWeight: FontWeight.bold, fontSize: 14)),
                         subtitle: const Text('Entering this password on unlock destroys ALL vaults', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
                         onTap: () => _addBurnerPasswordDialog(context),
@@ -236,7 +236,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 title: const Text('Scheduled Auto-Backup', style: TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.bold, fontSize: 14)),
                 subtitle: const Text('Save encrypted backups to /Firewood/downloads', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
                 value: autoBackupEnabled,
-                secondary: AppIcon(AppIcons.cloudUpload, color: AppColors.orangeAccent, size: 28),
+                secondary: AppIcon(AppIcons.cloudUpload, color: AppColors.orangeAccent, size: 34),
                 activeColor: AppColors.orangeAccent,
                 onChanged: (val) => _saveAutoBackup(val),
               ),
@@ -244,20 +244,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ListTile(
                   title: const Text('Backup Frequency', style: TextStyle(color: AppColors.offWhite, fontSize: 14)),
                   subtitle: Text(_formatIntervalLabel(autoBackupInterval), style: TextStyle(fontSize: 11, color: AppColors.orangeAccent)),
-                  leading: AppIcon(AppIcons.timer, color: AppColors.orangeAccent, size: 28),
-                  trailing: AppIcon(AppIcons.chevronRight, color: AppColors.textMuted, size: 22),
+                  leading: AppIcon(AppIcons.timer, color: AppColors.orangeAccent, size: 34),
+                  trailing: AppIcon(AppIcons.chevronRight, color: AppColors.textMuted, size: 26),
                   onTap: () => _showBackupIntervalPicker(context),
                 ),
               ListTile(
                 title: const Text('Export Encrypted Vault Backup', style: TextStyle(color: AppColors.offWhite, fontSize: 14)),
                 subtitle: const Text('Save .firewood encrypted file to Downloads', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                leading: AppIcon(AppIcons.download, color: AppColors.orangeAccent, size: 28),
+                leading: AppIcon(AppIcons.download, color: AppColors.orangeAccent, size: 34),
                 onTap: () => _exportVault(context, ref),
               ),
               ListTile(
                 title: const Text('Import Vault Backup File', style: TextStyle(color: AppColors.offWhite, fontSize: 14)),
                 subtitle: const Text('Restore database from .firewood file', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                leading: AppIcon(AppIcons.upload, color: AppColors.orangeAccent, size: 28),
+                leading: AppIcon(AppIcons.upload, color: AppColors.orangeAccent, size: 34),
                 onTap: () => _importVault(context, ref),
               ),
             ],
@@ -295,7 +295,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     leading: Stack(
                       clipBehavior: Clip.none,
                       children: [
-                        AppIcon(AppIcons.refresh, color: AppColors.orangeAccent, size: 28),
+                        AppIcon(AppIcons.refresh, color: AppColors.orangeAccent, size: 34),
                         if (hasUpdate)
                           Positioned(
                             right: -2,
@@ -311,7 +311,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ),
                       ],
                     ),
-                    trailing: AppIcon(AppIcons.chevronRight, color: AppColors.textMuted, size: 22),
+                    trailing: AppIcon(AppIcons.chevronRight, color: AppColors.textMuted, size: 26),
                     onTap: () => _checkForUpdates(context),
                   );
                 },
@@ -319,8 +319,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ListTile(
                 title: const Text('About Firewood & Developers', style: TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.bold, fontSize: 14)),
                 subtitle: const Text('App specs, zero-knowledge architecture & developer info', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                leading: AppIcon(AppIcons.info, color: AppColors.orangeAccent, size: 28),
-                trailing: AppIcon(AppIcons.chevronRight, color: AppColors.textMuted, size: 22),
+                leading: AppIcon(AppIcons.info, color: AppColors.orangeAccent, size: 34),
+                trailing: AppIcon(AppIcons.chevronRight, color: AppColors.textMuted, size: 26),
                 onTap: () {
                   Navigator.push(
                     context,
@@ -339,7 +339,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ListTile(
                 title: const Text('Delete Vault Data', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 14)),
                 subtitle: const Text('Permanently wipe local database and reset vault', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                leading: AppIcon(AppIcons.trash, color: Colors.redAccent, size: 28),
+                leading: AppIcon(AppIcons.trash, color: Colors.redAccent, size: 34),
                 onTap: () => _confirmDeleteVault(context, ref),
               ),
             ],
@@ -547,7 +547,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             backgroundColor: AppColors.surfaceZinc,
             title: Row(
               children: [
-                AppIcon(AppIcons.checkCircle, color: Colors.greenAccent, size: 28),
+                AppIcon(AppIcons.checkCircle, color: Colors.greenAccent, size: 34),
                 const SizedBox(width: 10),
                 const Text('Backup Exported', style: TextStyle(color: AppColors.offWhite, fontSize: 16)),
               ],
@@ -582,7 +582,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     const SnackBar(content: Text('Path copied to clipboard')),
                   );
                 },
-                icon: AppIcon(AppIcons.copy, size: 16, color: AppColors.orangeAccent),
+                icon: AppIcon(AppIcons.copy, size: 19, color: AppColors.orangeAccent),
                 label: Text('Copy Path', style: TextStyle(color: AppColors.orangeAccent)),
               ),
               ElevatedButton(
@@ -692,7 +692,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       const SizedBox(height: 16),
                       Row(
                         children: [
-                          AppIcon(AppIcons.typeDeveloperSecret, color: AppColors.orangeAccent, size: 28),
+                          AppIcon(AppIcons.typeDeveloperSecret, color: AppColors.orangeAccent, size: 34),
                           const SizedBox(width: 10),
                           const Expanded(
                             child: Text(
@@ -744,7 +744,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               value: isSelected,
                               title: Text(item.title, style: const TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.w600, fontSize: 13)),
                               subtitle: Text('${item.fields.length} attributes', style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
-                              secondary: AppIcon(AppIcons.key, color: isSelected ? AppColors.orangeAccent : AppColors.textMuted, size: 18),
+                              secondary: AppIcon(AppIcons.key, color: isSelected ? AppColors.orangeAccent : AppColors.textMuted, size: 22),
                               activeColor: AppColors.orangeAccent,
                               checkColor: Colors.white,
                               onChanged: (val) {
@@ -810,7 +810,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                         SnackBar(
                                           content: Row(
                                             children: [
-                                              AppIcon(AppIcons.checkCircle, color: Colors.greenAccent, size: 18),
+                                              AppIcon(AppIcons.checkCircle, color: Colors.greenAccent, size: 22),
                                               const SizedBox(width: 8),
                                               const Text('.env content copied to clipboard (clears in 30s)'),
                                             ],
@@ -819,7 +819,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                         ),
                                       );
                                     },
-                              icon: AppIcon(AppIcons.copy, size: 18, color: AppColors.orangeAccent),
+                              icon: AppIcon(AppIcons.copy, size: 22, color: AppColors.orangeAccent),
                               label: const Text('Copy .env', style: TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.bold)),
                               style: OutlinedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(vertical: 14),
@@ -861,7 +861,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                         }
                                       }
                                     },
-                              icon: AppIcon(AppIcons.download, size: 18),
+                              icon: AppIcon(AppIcons.download, size: 22),
                               label: const Text('Save File', style: TextStyle(fontWeight: FontWeight.bold)),
                               style: FilledButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(vertical: 14),
@@ -1099,7 +1099,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           backgroundColor: AppColors.surfaceZinc,
           title: Row(
             children: [
-              AppIcon(AppIcons.download, color: AppColors.orangeAccent, size: 28),
+              AppIcon(AppIcons.download, color: AppColors.orangeAccent, size: 34),
               const SizedBox(width: 8),
               const Text('Update Available', style: TextStyle(color: AppColors.offWhite)),
             ],
@@ -1252,7 +1252,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceZinc,
-        title: Row(children: [AppIcon(AppIcons.fire, color: AppColors.roseAccent, size: 20), const SizedBox(width: 8), const Text('Add Burner Password', style: TextStyle(color: AppColors.offWhite))]),
+        title: Row(children: [AppIcon(AppIcons.fire, color: AppColors.roseAccent, size: 24), const SizedBox(width: 8), const Text('Add Burner Password', style: TextStyle(color: AppColors.offWhite))]),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           const Text('Entering this password on the unlock screen will permanently destroy ALL vault data. Export a backup first if you need recovery.', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
           const SizedBox(height: 12),

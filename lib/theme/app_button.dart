@@ -41,7 +41,6 @@ class AppButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isDisabled = onPressed == null || isLoading;
-    final activeAccent = Theme.of(context).colorScheme.primary;
 
     late final Color background;
     late final Color borderColor;
@@ -49,24 +48,24 @@ class AppButton extends StatelessWidget {
 
     switch (variant) {
       case AppButtonVariant.primary:
-        background = activeAccent;
-        borderColor = activeAccent;
-        textColor = Colors.white;
+        background = AppColors.pastelPrimaryFill;
+        borderColor = AppColors.pastelPrimaryBorder;
+        textColor = AppColors.pastelPrimaryText;
         break;
       case AppButtonVariant.neon:
-        background = AppColors.orangeBright;
-        borderColor = AppColors.orangeBright;
-        textColor = Colors.white;
+        background = AppColors.pastelPrimaryFill;
+        borderColor = AppColors.pastelPrimaryBorder;
+        textColor = AppColors.pastelPrimaryText;
         break;
       case AppButtonVariant.danger:
-        background = AppColors.roseAccent;
-        borderColor = AppColors.roseAccent;
-        textColor = Colors.white;
+        background = AppColors.pastelDangerFill;
+        borderColor = AppColors.pastelDangerBorder;
+        textColor = AppColors.pastelDangerText;
         break;
       case AppButtonVariant.success:
-        background = AppColors.mintAccent;
-        borderColor = AppColors.mintAccent;
-        textColor = Colors.white;
+        background = AppColors.pastelSuccessFill;
+        borderColor = AppColors.pastelSuccessBorder;
+        textColor = AppColors.pastelSuccessText;
         break;
       case AppButtonVariant.secondary:
         background = AppColors.cardZinc;

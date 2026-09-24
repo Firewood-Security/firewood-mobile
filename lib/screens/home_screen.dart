@@ -444,8 +444,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               children: [
                 Image.asset(
                   'assets/FWS.png',
-                  width: 30,
-                  height: 30,
+                  width: 38,
+                  height: 38,
                   fit: BoxFit.contain,
                 ),
                 const SizedBox(width: 10),
@@ -461,7 +461,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             ),
             actions: [
               IconButton(
-                icon: AppIcon(AppIcons.lock, color: AppColors.orangeAccent, size: 20),
+                icon: AppIcon(AppIcons.lock, color: AppColors.orangeAccent, size: 30),
                 tooltip: 'Lock Vault',
                 onPressed: () {
                   HapticFeedback.mediumImpact();
@@ -510,9 +510,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       height: 56,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(18),
-                        color: Theme.of(context).colorScheme.primary,
+                        color: AppColors.pastelPrimaryFill,
                         border: Border.all(
-                          color: AppColors.orangeDark,
+                          color: AppColors.pastelPrimaryBorder,
                           width: 1,
                         ),
                       ),
@@ -524,7 +524,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           ),
                           onTap: () => _showPlusActionSheet(key),
                           child: const Center(
-                            child: AppIcon(AppIcons.add, color: Colors.white, size: 26, strokeWidth: 2.2),
+                            child: AppIcon(AppIcons.add, color: AppColors.pastelPrimaryText, size: 26, strokeWidth: 2.2),
                           ),
                         ),
                       ),

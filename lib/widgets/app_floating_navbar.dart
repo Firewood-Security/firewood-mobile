@@ -52,11 +52,11 @@ class AppFloatingNavBar extends StatelessWidget {
                     height: itemHeight,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: activeAccent,
+                        color: AppColors.cardZinc,
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: AppColors.orangeDark,
-                          width: 1,
+                          color: activeAccent,
+                          width: 1.5,
                         ),
                       ),
                     ),

@@ -44,6 +44,16 @@ class AppColors {
 
   // Functional Accents
   static const roseAccent = Color(0xFFEF4444);     // Danger
+  // Matte pastel fills for light-on-dark buttons (flat, no gloss).
+  static const pastelPrimaryFill = Color(0xFFF0B48F);
+  static const pastelPrimaryText = Color(0xFF3D2314);
+  static const pastelPrimaryBorder = Color(0xFFE29D72);
+  static const pastelDangerFill = Color(0xFFF0A8A8);
+  static const pastelDangerText = Color(0xFF4A1515);
+  static const pastelDangerBorder = Color(0xFFE08A8A);
+  static const pastelSuccessFill = Color(0xFFA9DDB3);
+  static const pastelSuccessText = Color(0xFF14301C);
+  static const pastelSuccessBorder = Color(0xFF86C493);
   static const roseContainer = Color(0xFF2E1517);
   static const roseBorder = Color(0xFF5A2529);
   static const roseOnContainer = Color(0xFFFECDD3);
@@ -176,8 +186,8 @@ class AppTheme {
       // --- Matte Flat Button Themes (no elevation, no glow) ---
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: accentColor,
-          foregroundColor: Colors.white,
+          backgroundColor: AppColors.pastelPrimaryFill,
+          foregroundColor: AppColors.pastelPrimaryText,
           elevation: 0,
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 22),
           shape: RoundedRectangleBorder(
