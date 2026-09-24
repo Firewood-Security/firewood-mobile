@@ -15,6 +15,8 @@ import '../services/burner_service.dart';
 import '../services/backup_service.dart';
 import '../services/native_security_bridge.dart';
 import '../theme/app_icons.dart';
+import '../services/app_version_service.dart';
+import 'package:hugeicons/hugeicons.dart';
 import '../theme/app_theme.dart';
 import 'vault_setup_screen.dart';
 
@@ -313,7 +315,7 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
                 side: const BorderSide(color: AppColors.borderZinc),
               ),
               title: Row(children: [
-                AppIcon(AppIcons.upload, color: AppColors.orangeAccent, size: 22),
+                AppIcon(HugeIcons.strokeRoundedUpload01, color: AppColors.orangeAccent, size: 22),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -434,59 +436,12 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
                           fit: BoxFit.contain,
                         ),
                         const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              'Firewood',
-                              style: theme.textTheme.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.offWhite,
-                                letterSpacing: -0.5,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: AppColors.orangeAccent,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: AppColors.orangeDark),
-                              ),
-                              child: Text(
-                                'v2.0',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceZinc,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: AppColors.borderZinc, width: 0.8),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              AppIcon(AppIcons.shield, size: 12, color: AppColors.orangeAccent),
-                              const SizedBox(width: 5),
-                              Text(
-                                'ZERO-KNOWLEDGE VAULT',
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: AppColors.textMuted,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ],
+                        Text(
+                          'Firewood',
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.offWhite,
+                            letterSpacing: -0.5,
                           ),
                         ),
                       ],
@@ -681,7 +636,7 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
                               height: 16,
                               child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.orangeAccent),
                             )
-                          : AppIcon(AppIcons.upload, size: 18, color: AppColors.orangeAccent),
+                          : AppIcon(HugeIcons.strokeRoundedUpload01, size: 18, color: AppColors.orangeAccent),
                       label: Text(
                         _isImporting ? 'Importing...' : 'Import Backup (.firewood)',
                         style: const TextStyle(fontSize: 13, color: AppColors.offWhite, fontWeight: FontWeight.w500),
@@ -700,6 +655,16 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: AppColors.textMuted.withValues(alpha: 0.6),
                       fontSize: 11,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${AppVersionService.fullVersionString} • Build ${AppVersionService.buildNumber}',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: AppColors.textMuted.withValues(alpha: 0.45),
+                      fontSize: 10,
+                      letterSpacing: 0.4,
                     ),
                     textAlign: TextAlign.center,
                   ),

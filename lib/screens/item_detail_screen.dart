@@ -12,6 +12,7 @@ import '../services/item_service.dart';
 import '../services/lock_service.dart';
 import '../services/generator_service.dart';
 import '../widgets/password_strength_meter.dart';
+import 'package:hugeicons/hugeicons.dart';
 import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_button.dart';
@@ -701,7 +702,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
         title: Text(isEditing ? 'Edit ${widget.existingItem!.title}' : 'Add Credential'),
         actions: [
           IconButton(
-            icon: AppIcon(AppIcons.help, color: AppColors.orangeAccent, size: 22),
+            icon: AppIcon(HugeIcons.strokeRoundedInformationCircle, color: AppColors.orangeAccent, size: 22),
             tooltip: 'Category & Fields Guide',
             onPressed: () => _showCategoryFieldGuide(context),
           ),
@@ -710,7 +711,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
               padding: const EdgeInsets.only(right: 12),
               child: AppButton(
                 label: 'Delete',
-                icon: AppIcons.delete,
+                icon: HugeIcons.strokeRoundedDelete02,
                 variant: AppButtonVariant.danger,
                 height: 36,
                 fontSize: 12,
@@ -1148,7 +1149,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                     const Spacer(),
                     if (_idImageBase64 != null)
                       IconButton(
-                        icon: const AppIcon(AppIcons.delete, color: Colors.redAccent, size: 20),
+                        icon: const AppIcon(HugeIcons.strokeRoundedDelete02, color: Colors.redAccent, size: 20),
                         onPressed: () => setState(() => _idImageBase64 = null),
                         tooltip: 'Remove Attachment',
                       ),
@@ -1171,7 +1172,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: _pickIdentityImage,
-                    icon: AppIcon(AppIcons.upload, color: AppColors.orangeAccent),
+                    icon: AppIcon(HugeIcons.strokeRoundedUpload01, color: AppColors.orangeAccent),
                     label: Text(
                       _idImageBase64 != null ? 'Replace ID Photo' : 'Upload ID Photo / Scan',
                       style: const TextStyle(color: AppColors.offWhite),
@@ -1311,7 +1312,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                   ),
                 ),
                 IconButton(
-                  icon: const AppIcon(AppIcons.close, color: Colors.redAccent, size: 20),
+                  icon: const AppIcon(HugeIcons.strokeRoundedCancel01, color: Colors.redAccent, size: 20),
                   onPressed: () {
                     setState(() {
                       cf.dispose();
@@ -1506,7 +1507,7 @@ class _PasswordGeneratorSheetState extends State<_PasswordGeneratorSheet> {
                   ),
                 ),
                 IconButton(
-                  icon: const AppIcon(AppIcons.close, color: AppColors.textMuted, size: 20),
+                  icon: const AppIcon(HugeIcons.strokeRoundedCancel01, color: AppColors.textMuted, size: 20),
                   onPressed: () => Navigator.pop(context),
                   visualDensity: VisualDensity.compact,
                 ),
@@ -1558,7 +1559,7 @@ class _PasswordGeneratorSheetState extends State<_PasswordGeneratorSheet> {
                         ),
                       ),
                       IconButton(
-                        icon: const AppIcon(AppIcons.refresh, size: 20),
+                        icon: const AppIcon(HugeIcons.strokeRoundedRefresh, size: 20),
                         tooltip: 'Regenerate',
                         onPressed: () {
                           HapticFeedback.lightImpact();
@@ -1700,7 +1701,7 @@ class _PasswordGeneratorSheetState extends State<_PasswordGeneratorSheet> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 elevation: 2,
               ),
-              icon: const AppIcon(AppIcons.checkCircle, size: 20, color: Colors.white),
+              icon: const AppIcon(HugeIcons.strokeRoundedCheckmarkCircle01, size: 20, color: Colors.white),
               label: const Text(
                 'Apply to Password Field',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),

@@ -140,14 +140,20 @@ class _NavItem extends StatelessWidget {
                   duration: const Duration(milliseconds: 250),
                   curve: Curves.easeOutBack,
                   scale: isSelected ? 1.1 : 1.0,
-                  // 3D artwork ignores tint; selection is the sliding pill
-                  // plus full/reduced opacity.
+                  // 3D artwork ignores `color`; the selected icon is tinted
+                  // to the accent via a modulate filter so the active screen
+                  // reads clearly against the inactive gray icons.
                   child: Opacity(
                     opacity: isSelected ? 1.0 : 0.5,
-                    child: AppIcon(
-                      isSelected ? activeIcon : icon,
-                      size: 30,
-                    ),
+                    child: isSelected
+                        ? ColorFiltered(
+                            colorFilter: ColorFilter.mode(
+                              Theme.of(context).colorScheme.primary,
+                              BlendMode.modulate,
+                            ),
+                            child: AppIcon(activeIcon, size: 30),
+                          )
+                        : AppIcon(icon, size: 30),
                   ),
                 ),
                 if (hasBadge)

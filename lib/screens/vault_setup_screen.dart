@@ -10,6 +10,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../services/vault_service.dart';
 import '../services/backup_service.dart';
 import '../providers/auth_provider.dart';
+import 'package:hugeicons/hugeicons.dart';
 import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_button.dart';
@@ -124,7 +125,7 @@ class _VaultSetupScreenState extends ConsumerState<VaultSetupScreen>
                 ),
                 title: Row(
                   children: [
-                    AppIcon(AppIcons.upload, color: AppColors.orangeAccent, size: 22),
+                    AppIcon(HugeIcons.strokeRoundedUpload01, color: AppColors.orangeAccent, size: 22),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
@@ -464,7 +465,7 @@ class _VaultSetupScreenState extends ConsumerState<VaultSetupScreen>
                         // Create Vault Button
                         AppButton(
                           label: _isLoading ? 'Creating Vault...' : 'Create Vault',
-                          icon: AppIcons.shield,
+                          icon: HugeIcons.strokeRoundedShield01,
                           variant: AppButtonVariant.primary,
                           isLoading: _isLoading,
                           fullWidth: true,
@@ -494,7 +495,7 @@ class _VaultSetupScreenState extends ConsumerState<VaultSetupScreen>
                         // Import Backup Button
                         AppButton(
                           label: _isImporting ? 'Importing Backup...' : 'Import Backup (.firewood)',
-                          icon: AppIcons.upload,
+                          icon: HugeIcons.strokeRoundedUpload01,
                           variant: AppButtonVariant.secondary,
                           isLoading: _isImporting,
                           fullWidth: true,

@@ -45,6 +45,7 @@ class AppButton extends StatelessWidget {
     late final Color background;
     late final Color borderColor;
     late final Color textColor;
+    late final Color lipColor;
 
     switch (variant) {
       case AppButtonVariant.primary:
@@ -52,31 +53,37 @@ class AppButton extends StatelessWidget {
         background = AppColors.orangeAccent;
         borderColor = AppColors.orangeDark;
         textColor = Colors.white;
+        lipColor = const Color(0xFF7C2D12);
         break;
       case AppButtonVariant.danger:
         background = AppColors.roseAccent;
         borderColor = const Color(0xFFB91C1C);
         textColor = Colors.white;
+        lipColor = const Color(0xFF7F1D1D);
         break;
       case AppButtonVariant.success:
         background = AppColors.mintAccent;
         borderColor = const Color(0xFF15803D);
         textColor = Colors.white;
+        lipColor = const Color(0xFF14532D);
         break;
       case AppButtonVariant.secondary:
         background = AppColors.cardZinc;
         borderColor = AppColors.borderZinc;
         textColor = AppColors.offWhite;
+        lipColor = const Color(0xFF27272A);
         break;
       case AppButtonVariant.soft:
         background = AppColors.orangeContainer;
         borderColor = AppColors.orangeBorder;
         textColor = AppColors.orangeOnContainer;
+        lipColor = AppColors.orangeDark;
         break;
       case AppButtonVariant.outline:
         background = Colors.transparent;
         borderColor = AppColors.borderZinc;
         textColor = AppColors.offWhite;
+        lipColor = const Color(0xFF27272A);
         break;
     }
 
@@ -121,6 +128,18 @@ class AppButton extends StatelessWidget {
             color: isDisabled ? AppColors.borderZinc : borderColor,
             width: 1,
           ),
+          // Soft-3D: a solid lip under the button (zero blur = matte edge,
+          // not a glow) gives the pressed-key depth the design calls for.
+          boxShadow: isDisabled
+              ? null
+              : [
+                  BoxShadow(
+                    color: lipColor,
+                    offset: const Offset(0, 3),
+                    blurRadius: 0,
+                    spreadRadius: 0,
+                  ),
+                ],
         ),
         child: Material(
           color: Colors.transparent,

@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/accent_color_service.dart';
+import 'package:hugeicons/hugeicons.dart';
 import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
 
@@ -72,7 +73,7 @@ class AccentColorPickerDialog extends StatelessWidget {
                           ),
                         ),
                         IconButton(
-                          icon: AppIcon(AppIcons.close, color: AppColors.textMuted, size: 20),
+                          icon: AppIcon(HugeIcons.strokeRoundedCancel01, color: AppColors.textMuted, size: 20),
                           onPressed: () => Navigator.of(context).pop(),
                         ),
                       ],

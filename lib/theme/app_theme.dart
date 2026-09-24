@@ -188,7 +188,8 @@ class AppTheme {
         style: FilledButton.styleFrom(
           backgroundColor: accentColor,
           foregroundColor: Colors.white,
-          elevation: 0,
+          elevation: 2,
+          shadowColor: const Color(0xFF7C2D12),
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 22),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -220,7 +221,8 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryContainer,
           foregroundColor: primaryOnContainer,
-          elevation: 0,
+          elevation: 2,
+          shadowColor: primaryBorder,
           side: BorderSide(color: primaryBorder, width: 1),
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
           shape: RoundedRectangleBorder(

@@ -14,6 +14,7 @@ import '../providers/auth_provider.dart';
 import '../services/item_service.dart';
 import '../services/lock_service.dart';
 import '../services/backup_service.dart';
+import 'package:hugeicons/hugeicons.dart';
 import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_feedback.dart';
@@ -461,7 +462,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             ),
             actions: [
               IconButton(
-                icon: AppIcon(AppIcons.lock, color: AppColors.orangeAccent, size: 30),
+                icon: AppIcon(HugeIcons.strokeRoundedLock, color: AppColors.orangeAccent, size: 30),
                 tooltip: 'Lock Vault',
                 onPressed: () {
                   HapticFeedback.mediumImpact();
@@ -820,7 +821,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   child: Row(
                     children: [
                       _CategorySummaryCard(
-                        title: 'Passwords',
+                        title: 'Accounts',
                         count: logins.length,
                         subtitle: '${logins.where((i) => (i.fields['totp_secret'] ?? '').toString().trim().isNotEmpty).length} 2FA Active',
                         icon: AppIcons.categoryLogin,
@@ -847,7 +848,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         onTap: () => setState(() { _filterType = ItemType.identity; _currentTabIndex = 1; }),
                       ),
                       _CategorySummaryCard(
-                        title: 'Accounts',
+                        title: 'Keys',
                         count: devSecrets,
                         subtitle: 'Keys & Tokens',
                         icon: AppIcons.key,
@@ -1065,7 +1066,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       // Grid/List View Toggle Button
                       OutlinedButton.icon(
                         onPressed: () => setState(() => _isGridView = !_isGridView),
-                        icon: AppIcon(_isGridView ? AppIcons.title : AppIcons.palette, size: 16, color: AppColors.orangeAccent),
+                        icon: AppIcon(_isGridView ? HugeIcons.strokeRoundedListView : HugeIcons.strokeRoundedGridView, size: 16, color: AppColors.orangeAccent),
                         label: Text(_isGridView ? 'List' : 'Grid', style: const TextStyle(fontSize: 12, color: AppColors.offWhite)),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
@@ -1281,7 +1282,7 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
                   HapticFeedback.lightImpact();
                   _regenerate();
                 },
-                icon: AppIcon(AppIcons.refresh, size: 18, color: AppColors.textMuted),
+                icon: AppIcon(HugeIcons.strokeRoundedRefresh, size: 18, color: AppColors.textMuted),
               ),
             ],
           ),
@@ -1299,17 +1300,17 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
               children: [
                 _buildModeOption(
                   mode: _GeneratorMode.password,
-                  icon: AppIcons.lock,
+                  icon: HugeIcons.strokeRoundedLock,
                   activeAccent: activeAccent,
                 ),
                 _buildModeOption(
                   mode: _GeneratorMode.passphrase,
-                  icon: AppIcons.title,
+                  icon: HugeIcons.strokeRoundedText,
                   activeAccent: activeAccent,
                 ),
                 _buildModeOption(
                   mode: _GeneratorMode.pin,
-                  icon: AppIcons.hash,
+                  icon: HugeIcons.strokeRoundedPinCode,
                   activeAccent: activeAccent,
                 ),
               ],
@@ -1370,7 +1371,7 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
-                        child: const AppIcon(AppIcons.refresh, size: 20),
+                        child: const AppIcon(HugeIcons.strokeRoundedRefresh, size: 20),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -1392,7 +1393,7 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           elevation: 0,
                         ),
-                        child: const AppIcon(AppIcons.copy, size: 20),
+                        child: const AppIcon(HugeIcons.strokeRoundedCopy01, size: 20),
                       ),
                     ),
                   ],

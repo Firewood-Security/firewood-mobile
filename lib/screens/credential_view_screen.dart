@@ -12,6 +12,7 @@ import '../services/item_service.dart';
 import '../services/lock_service.dart';
 import '../services/vault_service.dart';
 import '../services/native_security_bridge.dart';
+import 'package:hugeicons/hugeicons.dart';
 import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
 import 'item_detail_screen.dart';
@@ -273,7 +274,7 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
         title: Text(_currentItem.title),
         actions: [
           IconButton(
-            icon: AppIcon(AppIcons.edit, size: 20),
+            icon: AppIcon(HugeIcons.strokeRoundedEdit01, size: 20),
             tooltip: 'Edit Credential',
             onPressed: _openEditScreen,
           ),
@@ -351,7 +352,7 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
                             height: 20,
                             child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                           )
-                        : AppIcon(AppIcons.fingerprint, size: 22),
+                        : AppIcon(HugeIcons.strokeRoundedFingerPrint, size: 22),
                     label: const Text('Scan Biometrics to Unlock'),
                   ),
                 ),
@@ -385,7 +386,7 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
                 height: 52,
                 child: OutlinedButton.icon(
                   onPressed: _isAuthenticating ? null : _authenticatePassword,
-                  icon: AppIcon(AppIcons.lockOpen, color: AppColors.orangeAccent, size: 20),
+                  icon: AppIcon(HugeIcons.strokeRoundedLockPassword, color: AppColors.orangeAccent, size: 20),
                   label: const Text('Unlock with Master Password',
                       style: TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.w600)),
                   style: OutlinedButton.styleFrom(
@@ -483,7 +484,7 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () => _copyToClipboard('Username', fields['username'].toString()),
-                    icon: AppIcon(AppIcons.user, size: 16, color: AppColors.orangeAccent),
+                    icon: AppIcon(HugeIcons.strokeRoundedUser, size: 16, color: AppColors.orangeAccent),
                     label: const Text('User', style: TextStyle(fontSize: 12, color: AppColors.offWhite)),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -498,7 +499,7 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () => _copyToClipboard('Password', fields['password'].toString()),
-                    icon: AppIcon(AppIcons.key, size: 16, color: AppColors.orangeAccent),
+                    icon: AppIcon(HugeIcons.strokeRoundedKey01, size: 16, color: AppColors.orangeAccent),
                     label: const Text('Pass', style: TextStyle(fontSize: 12, color: AppColors.offWhite)),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -513,7 +514,7 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
               Expanded(
                 child: FilledButton.icon(
                   onPressed: _openEditScreen,
-                  icon: AppIcon(AppIcons.edit, size: 16),
+                  icon: AppIcon(HugeIcons.strokeRoundedEdit01, size: 16),
                   label: const Text('Edit', style: TextStyle(fontSize: 12)),
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 10),
@@ -782,7 +783,7 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer> {
         title: const Text('Identity Document Preview', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
-            icon: AppIcon(AppIcons.refresh, color: Colors.white70),
+            icon: AppIcon(HugeIcons.strokeRoundedRefresh, color: Colors.white70),
             tooltip: 'Reset Zoom',
             onPressed: () {
               _transformationController.value = Matrix4.identity();

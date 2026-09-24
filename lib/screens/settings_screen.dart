@@ -23,9 +23,11 @@ import '../services/vault_service.dart';
 import '../services/burner_service.dart';
 import '../database/schemas.dart';
 import '../services/native_security_bridge.dart';
+import 'package:hugeicons/hugeicons.dart';
 import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
 import 'about_screen.dart';
+import 'update_screen.dart';
 import '../services/app_version_service.dart';
 
 // Providers for Backup & Profile settings
@@ -210,7 +212,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         title: Text(b.label, style: const TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.bold, fontSize: 13)),
                         subtitle: Text('Created ${DateTime.now().difference(b.createdAt).inDays}d ago', style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
                         trailing: IconButton(
-                          icon: AppIcon(AppIcons.delete, color: AppColors.roseAccent, size: 22),
+                          icon: AppIcon(HugeIcons.strokeRoundedDelete02, color: AppColors.roseAccent, size: 22),
                           onPressed: () async { await BurnerService().removeBurner(b.id); if (mounted) setState(() {}); },
                         ),
                       )),
@@ -582,7 +584,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     const SnackBar(content: Text('Path copied to clipboard')),
                   );
                 },
-                icon: AppIcon(AppIcons.copy, size: 19, color: AppColors.orangeAccent),
+                icon: AppIcon(HugeIcons.strokeRoundedCopy01, size: 19, color: AppColors.orangeAccent),
                 label: Text('Copy Path', style: TextStyle(color: AppColors.orangeAccent)),
               ),
               ElevatedButton(
@@ -819,7 +821,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                         ),
                                       );
                                     },
-                              icon: AppIcon(AppIcons.copy, size: 22, color: AppColors.orangeAccent),
+                              icon: AppIcon(HugeIcons.strokeRoundedCopy01, size: 22, color: AppColors.orangeAccent),
                               label: const Text('Copy .env', style: TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.bold)),
                               style: OutlinedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(vertical: 14),
@@ -861,7 +863,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                         }
                                       }
                                     },
-                              icon: AppIcon(AppIcons.download, size: 22),
+                              icon: AppIcon(HugeIcons.strokeRoundedDownload01, size: 22),
                               label: const Text('Save File', style: TextStyle(fontWeight: FontWeight.bold)),
                               style: FilledButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(vertical: 14),
@@ -1085,58 +1087,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  void _checkForUpdates(BuildContext context) async {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Checking for updates...')),
+  void _checkForUpdates(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const UpdateScreen()),
     );
-    final updateInfo = await UpdateService().checkAppUpdate();
-    if (!context.mounted) return;
-
-    if (updateInfo.hasUpdate) {
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          backgroundColor: AppColors.surfaceZinc,
-          title: Row(
-            children: [
-              AppIcon(AppIcons.download, color: AppColors.orangeAccent, size: 34),
-              const SizedBox(width: 8),
-              const Text('Update Available', style: TextStyle(color: AppColors.offWhite)),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Version ${updateInfo.version} is now available.', style: const TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Text(updateInfo.releaseNotes, style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Later', style: TextStyle(color: AppColors.textMuted)),
-            ),
-            if (updateInfo.downloadUrl.isNotEmpty)
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.orangeAccent, foregroundColor: Colors.white),
-                child: const Text('Download'),
-              ),
-          ],
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Firewood is up to date (${AppVersionService.fullVersionString})'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    }
   }
 
   void _confirmDeleteVault(BuildContext context, WidgetRef ref) async {
