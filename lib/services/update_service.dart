@@ -3,6 +3,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'app_version_service.dart';
 import 'package:flutter/foundation.dart';
 
 class AppUpdateInfo {
@@ -54,8 +55,11 @@ class UpdateService {
     }
   }
 
-  static const String currentVersion = '1.0.0';
-  static const int currentBuildNumber = 1;
+  // The installed package is the source of truth (AppVersionService reads it
+  // from PackageInfo), so update checks always compare against what is
+  // actually deployed.
+  static String get currentVersion => AppVersionService.version;
+  static int get currentBuildNumber => AppVersionService.buildNumber;
 
   /// Fetches update info securely over HTTPS TLS
   Future<AppUpdateInfo> checkAppUpdate() async {

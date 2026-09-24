@@ -419,8 +419,13 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
       body: SafeArea(
         child: FadeTransition(
           opacity: _fadeAnimation,
-          child: Center(
-            child: SingleChildScrollView(
+          // Content scrolls in the expanded area; the attribution footer is
+          // pinned to the bottom edge of the screen.
+          child: Column(
+            children: [
+              Expanded(
+                child: Center(
+                  child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -613,29 +618,26 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
                       ),
                     ),
                   ),
-
-                  const SizedBox(height: 16),
-                  Text(
-                    'Zero-knowledge local encryption • Offline only',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: AppColors.textMuted.withValues(alpha: 0.6),
-                      fontSize: 11,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${AppVersionService.fullVersionString} • Build ${AppVersionService.buildNumber}',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: AppColors.textMuted.withValues(alpha: 0.45),
-                      fontSize: 10,
-                      letterSpacing: 0.4,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
                 ],
               ),
             ),
+          ),
+              ),
+              // Attribution footer pinned to the bottom of the screen.
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 4, 24, 14),
+                child: Text(
+                  'ZERO-KNOWLEDGE · OFFLINE ONLY · ${AppVersionService.fullVersionString} (BUILD ${AppVersionService.buildNumber})',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.8,
+                    color: AppColors.textMuted.withValues(alpha: 0.55),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

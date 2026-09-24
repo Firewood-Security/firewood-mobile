@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app.dart';
 import 'services/accent_color_service.dart';
+import 'services/app_version_service.dart';
 import 'services/lock_service.dart';
 import 'services/native_security_bridge.dart';
 import 'services/update_service.dart';
@@ -51,6 +52,10 @@ void main() async {
   } catch (e) {
     debugPrint('Failed to initialize AccentColorService: $e');
   }
+
+  // Read the deployed build's version (versionName/versionCode) so every
+  // version surface follows the actual installed package.
+  await AppVersionService.init();
 
 
 
