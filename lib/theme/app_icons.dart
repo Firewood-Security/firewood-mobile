@@ -176,13 +176,15 @@ class AppIcon extends StatelessWidget {
 
     if (icon is String) {
       // 3D asset icon: full-color artwork, tint never applies.
+      // Displayed at 2x the nominal size (global 3D scale factor).
+      final double displaySize = size * 2;
       return SizedBox(
-        width: size,
-        height: size,
+        width: displaySize,
+        height: displaySize,
         child: Image.asset(
           icon as String,
-          width: size,
-          height: size,
+          width: displaySize,
+          height: displaySize,
           fit: BoxFit.contain,
           errorBuilder: (_, __, ___) => const SizedBox.shrink(),
         ),
