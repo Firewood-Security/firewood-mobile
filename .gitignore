@@ -18,8 +18,14 @@ migrate_working_dir/
 *.iws
 .idea/
 
-# Node.js / npm / pnpm / yarn
+# Node.js / npm / pnpm / yarn / Web builds
 node_modules/
+dist/
+**/dist/
+out/
+**/out/
+.vite/
+.cache/
 .pnpm-store/
 .yarn/
 .yarn-cache/
@@ -146,7 +152,7 @@ logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*decoupled_features/
+pnpm-debug.log*
 
 p2p_backup/
 decoupled_features/
