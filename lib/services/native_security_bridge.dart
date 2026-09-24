@@ -54,7 +54,8 @@ class NativeSecurityBridge {
   /// This replaces: `await _secureStorage.read(key: _biometricPasswordKey)`
   static Future<String?> unwrapMasterPassword() async {
     try {
-      final result = await _channel.invokeMethod<String>('unwrapMasterPassword');
+      final result =
+          await _channel.invokeMethod<String>('unwrapMasterPassword');
       return result;
     } on PlatformException catch (e) {
       if (e.code == 'AUTH_FAILED') {
@@ -83,8 +84,8 @@ class NativeSecurityBridge {
   /// Records a failed unlock attempt and returns lockout state.
   /// Lockout follows exponential backoff: 5th → 5s, 6th → 10s, ..., 10+ → 300s.
   static Future<RateLimitState> recordFailedUnlockAttempt() async {
-    final result =
-        await _channel.invokeMethod<Map<dynamic, dynamic>>('recordFailedUnlockAttempt');
+    final result = await _channel
+        .invokeMethod<Map<dynamic, dynamic>>('recordFailedUnlockAttempt');
     return RateLimitState.fromMap(result ?? {});
   }
 
@@ -135,7 +136,8 @@ class NativeSecurityBridge {
   // --- Environment Integrity ---
 
   /// Checks for compromised environment indicators (dev options, accessibility overlays).
-  static Future<({bool isCompromised, List<String> findings})> auditEnvironment() async {
+  static Future<({bool isCompromised, List<String> findings})>
+      auditEnvironment() async {
     final result =
         await _channel.invokeMethod<Map<dynamic, dynamic>>('auditEnvironment');
     if (result == null) return (findings: <String>[], isCompromised: false);
@@ -154,8 +156,6 @@ class NativeSecurityBridge {
     final result = await _channel.invokeMethod<bool>('clearClipboard');
     return result ?? false;
   }
-
-
 }
 
 /// Represents the lockout state after failed unlock attempts.

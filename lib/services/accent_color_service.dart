@@ -30,13 +30,18 @@ class AccentColorService {
 
   static const List<AccentColorOption> presets = [
     defaultAccent,
-    AccentColorOption(name: 'Emerald Green', color: Color(0xFF10B981), hex: '#10B981'),
-    AccentColorOption(name: 'Electric Blue', color: Color(0xFF3B82F6), hex: '#3B82F6'),
-    AccentColorOption(name: 'Violet Purple', color: Color(0xFF8B5CF6), hex: '#8B5CF6'),
-    AccentColorOption(name: 'Rose Pink', color: Color(0xFFF43F5E), hex: '#F43F5E'),
+    AccentColorOption(
+        name: 'Emerald Green', color: Color(0xFF10B981), hex: '#10B981'),
+    AccentColorOption(
+        name: 'Electric Blue', color: Color(0xFF3B82F6), hex: '#3B82F6'),
+    AccentColorOption(
+        name: 'Violet Purple', color: Color(0xFF8B5CF6), hex: '#8B5CF6'),
+    AccentColorOption(
+        name: 'Rose Pink', color: Color(0xFFF43F5E), hex: '#F43F5E'),
   ];
 
-  static final ValueNotifier<Color> currentColor = ValueNotifier<Color>(defaultAccent.color);
+  static final ValueNotifier<Color> currentColor =
+      ValueNotifier<Color>(defaultAccent.color);
 
   /// Initializes accent color from local storage (SharedPreferences with SecureStorage fallback)
   static Future<void> init() async {

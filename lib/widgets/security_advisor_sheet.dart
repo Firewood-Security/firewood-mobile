@@ -15,7 +15,8 @@ import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
 
 class SecurityAdvisorSheet {
-  static Color colorForSeverity(SecuritySeverity severity) => switch (severity) {
+  static Color colorForSeverity(SecuritySeverity severity) =>
+      switch (severity) {
         SecuritySeverity.critical => AppColors.roseAccent,
         SecuritySeverity.warn => const Color(0xFFF59E0B),
         SecuritySeverity.info => AppColors.periwinkleAccent,
@@ -66,8 +67,7 @@ class SecurityAdvisorSheet {
           ),
           decoration: BoxDecoration(
             color: AppColors.surfaceZinc,
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             border: Border.all(color: AppColors.borderZinc, width: 1),
           ),
           padding: EdgeInsets.fromLTRB(
@@ -102,8 +102,8 @@ class SecurityAdvisorSheet {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     margin: const EdgeInsets.only(right: 6),
                     decoration: BoxDecoration(
                       color: advisory.securityScore >= 80
@@ -129,8 +129,8 @@ class SecurityAdvisorSheet {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: AppColors.cardZinc,
                       borderRadius: BorderRadius.circular(8),
@@ -155,10 +155,26 @@ class SecurityAdvisorSheet {
                 spacing: 14,
                 runSpacing: 4,
                 children: [
-                  _Metric(label: 'Strong', value: advisory.strongCount, color: const Color(0xFF22C55E)),
-                  _Metric(label: 'Weak', value: advisory.weakCount, color: advisory.weakCount > 0 ? AppColors.roseAccent : AppColors.textMuted),
-                  _Metric(label: 'Reused', value: advisory.reusedCount, color: advisory.reusedCount > 0 ? const Color(0xFFF59E0B) : AppColors.textMuted),
-                  _Metric(label: '2FA', value: '${advisory.totpCoveragePercent.round()}%', color: AppColors.orangeAccent),
+                  _Metric(
+                      label: 'Strong',
+                      value: advisory.strongCount,
+                      color: const Color(0xFF22C55E)),
+                  _Metric(
+                      label: 'Weak',
+                      value: advisory.weakCount,
+                      color: advisory.weakCount > 0
+                          ? AppColors.roseAccent
+                          : AppColors.textMuted),
+                  _Metric(
+                      label: 'Reused',
+                      value: advisory.reusedCount,
+                      color: advisory.reusedCount > 0
+                          ? const Color(0xFFF59E0B)
+                          : AppColors.textMuted),
+                  _Metric(
+                      label: '2FA',
+                      value: '${advisory.totpCoveragePercent.round()}%',
+                      color: AppColors.orangeAccent),
                 ],
               ),
               const SizedBox(height: 12),
@@ -168,8 +184,8 @@ class SecurityAdvisorSheet {
                   child: Center(
                     child: Text(
                       'No weak, reused, stale, or 2FA-less credentials found.',
-                      style: TextStyle(
-                          fontSize: 12, color: AppColors.textMuted),
+                      style:
+                          TextStyle(fontSize: 12, color: AppColors.textMuted),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -208,8 +224,7 @@ class SecurityAdvisorSheet {
                             decoration: BoxDecoration(
                               color: AppColors.cardZinc,
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                  color: AppColors.borderZinc),
+                              border: Border.all(color: AppColors.borderZinc),
                             ),
                             child: Material(
                               color: Colors.transparent,
@@ -227,8 +242,7 @@ class SecurityAdvisorSheet {
                                       AppIcon(
                                         _iconFor(issue.item),
                                         size: 26,
-                                        color:
-                                            colorForSeverity(issue.severity),
+                                        color: colorForSeverity(issue.severity),
                                       ),
                                       const SizedBox(width: 12),
                                       Expanded(
@@ -239,8 +253,7 @@ class SecurityAdvisorSheet {
                                             Text(
                                               issue.item.title,
                                               maxLines: 1,
-                                              overflow:
-                                                  TextOverflow.ellipsis,
+                                              overflow: TextOverflow.ellipsis,
                                               style: const TextStyle(
                                                 fontSize: 13,
                                                 fontWeight: FontWeight.w600,
@@ -252,8 +265,7 @@ class SecurityAdvisorSheet {
                                               issue.detail,
                                               style: const TextStyle(
                                                 fontSize: 11,
-                                                color:
-                                                    AppColors.textMuted,
+                                                color: AppColors.textMuted,
                                               ),
                                             ),
                                           ],

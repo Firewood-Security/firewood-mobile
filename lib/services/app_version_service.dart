@@ -25,8 +25,7 @@ class AppVersionService {
     try {
       final info = await PackageInfo.fromPlatform();
       _version = info.version;
-      _buildNumber =
-          int.tryParse(info.buildNumber) ?? _fallbackBuildNumber;
+      _buildNumber = int.tryParse(info.buildNumber) ?? _fallbackBuildNumber;
     } catch (_) {
       // Keep fallbacks if the platform channel is unavailable.
     }

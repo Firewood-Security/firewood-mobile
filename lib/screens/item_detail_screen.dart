@@ -209,11 +209,14 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           break;
 
         case ItemType.note:
-          _noteController.text = fields['content']?.toString() ?? fields['notes']?.toString() ?? '';
+          _noteController.text = fields['content']?.toString() ??
+              fields['notes']?.toString() ??
+              '';
           break;
 
         case ItemType.developerSecret:
-          _devSecretTypeController.text = fields['secret_type']?.toString() ?? '';
+          _devSecretTypeController.text =
+              fields['secret_type']?.toString() ?? '';
           _devSecretKeyController.text = fields['secret_key']?.toString() ?? '';
           _devPublicKeyController.text = fields['public_key']?.toString() ?? '';
           _devConfigController.text = fields['config_data']?.toString() ?? '';
@@ -223,16 +226,52 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
 
       // Populate any remaining non-standard fields as custom fields (never include timestamps, dates, or known category keys)
       final ignoredKeys = {
-        'username', 'password', 'url', 'totp_secret', 'notes',
-        'cardholder', 'number', 'expiry', 'cvv', 'pin', 'zip',
-        'full_name', 'id_number', 'passport', 'license', 'dob', 'address', 'phone', 'id_image', 'content',
-        'secret_type', 'secret_key', 'public_key', 'config_data',
-        'createdAt', 'updatedAt', 'created_at', 'updated_at', 'timestamp', 'date', 'date_created', 'date_modified',
-        'dateCreated', 'dateModified', 'lastModified', 'id', 'uuid', 'isFavorite', 'is_favorite', 'trash'
+        'username',
+        'password',
+        'url',
+        'totp_secret',
+        'notes',
+        'cardholder',
+        'number',
+        'expiry',
+        'cvv',
+        'pin',
+        'zip',
+        'full_name',
+        'id_number',
+        'passport',
+        'license',
+        'dob',
+        'address',
+        'phone',
+        'id_image',
+        'content',
+        'secret_type',
+        'secret_key',
+        'public_key',
+        'config_data',
+        'createdAt',
+        'updatedAt',
+        'created_at',
+        'updated_at',
+        'timestamp',
+        'date',
+        'date_created',
+        'date_modified',
+        'dateCreated',
+        'dateModified',
+        'lastModified',
+        'id',
+        'uuid',
+        'isFavorite',
+        'is_favorite',
+        'trash'
       };
 
       fields.forEach((key, val) {
-        if (!ignoredKeys.contains(key) && val != null && val.toString().trim().isNotEmpty) {
+        if (!ignoredKeys.contains(key) &&
+            val != null &&
+            val.toString().trim().isNotEmpty) {
           _customFields.add(_CustomField(
             keyController: TextEditingController(text: key),
             valueController: TextEditingController(text: val.toString()),
@@ -298,45 +337,71 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
 
     switch (_selectedType) {
       case ItemType.login:
-        if (_usernameController.text.isNotEmpty) fields['username'] = _usernameController.text.trim();
-        if (_passwordController.text.isNotEmpty) fields['password'] = _passwordController.text;
-        if (_urlController.text.isNotEmpty) fields['url'] = _urlController.text.trim();
-        if (_totpController.text.isNotEmpty) fields['totp_secret'] = _totpController.text.trim();
-        if (_noteController.text.isNotEmpty) fields['notes'] = _noteController.text.trim();
+        if (_usernameController.text.isNotEmpty)
+          fields['username'] = _usernameController.text.trim();
+        if (_passwordController.text.isNotEmpty)
+          fields['password'] = _passwordController.text;
+        if (_urlController.text.isNotEmpty)
+          fields['url'] = _urlController.text.trim();
+        if (_totpController.text.isNotEmpty)
+          fields['totp_secret'] = _totpController.text.trim();
+        if (_noteController.text.isNotEmpty)
+          fields['notes'] = _noteController.text.trim();
         break;
 
       case ItemType.card:
-        if (_cardholderController.text.isNotEmpty) fields['cardholder'] = _cardholderController.text.trim();
-        if (_cardNumberController.text.isNotEmpty) fields['number'] = _cardNumberController.text.trim();
-        if (_expiryController.text.isNotEmpty) fields['expiry'] = _expiryController.text.trim();
-        if (_cvvController.text.isNotEmpty) fields['cvv'] = _cvvController.text.trim();
-        if (_pinController.text.isNotEmpty) fields['pin'] = _pinController.text.trim();
-        if (_zipController.text.isNotEmpty) fields['zip'] = _zipController.text.trim();
-        if (_noteController.text.isNotEmpty) fields['notes'] = _noteController.text.trim();
+        if (_cardholderController.text.isNotEmpty)
+          fields['cardholder'] = _cardholderController.text.trim();
+        if (_cardNumberController.text.isNotEmpty)
+          fields['number'] = _cardNumberController.text.trim();
+        if (_expiryController.text.isNotEmpty)
+          fields['expiry'] = _expiryController.text.trim();
+        if (_cvvController.text.isNotEmpty)
+          fields['cvv'] = _cvvController.text.trim();
+        if (_pinController.text.isNotEmpty)
+          fields['pin'] = _pinController.text.trim();
+        if (_zipController.text.isNotEmpty)
+          fields['zip'] = _zipController.text.trim();
+        if (_noteController.text.isNotEmpty)
+          fields['notes'] = _noteController.text.trim();
         break;
 
       case ItemType.identity:
-        if (_fullNameController.text.isNotEmpty) fields['full_name'] = _fullNameController.text.trim();
-        if (_idNumberController.text.isNotEmpty) fields['id_number'] = _idNumberController.text.trim();
-        if (_passportController.text.isNotEmpty) fields['passport'] = _passportController.text.trim();
-        if (_licenseController.text.isNotEmpty) fields['license'] = _licenseController.text.trim();
-        if (_dobController.text.isNotEmpty) fields['dob'] = _dobController.text.trim();
-        if (_addressController.text.isNotEmpty) fields['address'] = _addressController.text.trim();
-        if (_phoneController.text.isNotEmpty) fields['phone'] = _phoneController.text.trim();
+        if (_fullNameController.text.isNotEmpty)
+          fields['full_name'] = _fullNameController.text.trim();
+        if (_idNumberController.text.isNotEmpty)
+          fields['id_number'] = _idNumberController.text.trim();
+        if (_passportController.text.isNotEmpty)
+          fields['passport'] = _passportController.text.trim();
+        if (_licenseController.text.isNotEmpty)
+          fields['license'] = _licenseController.text.trim();
+        if (_dobController.text.isNotEmpty)
+          fields['dob'] = _dobController.text.trim();
+        if (_addressController.text.isNotEmpty)
+          fields['address'] = _addressController.text.trim();
+        if (_phoneController.text.isNotEmpty)
+          fields['phone'] = _phoneController.text.trim();
         if (_idImageBase64 != null) fields['id_image'] = _idImageBase64;
-        if (_noteController.text.isNotEmpty) fields['notes'] = _noteController.text.trim();
+        if (_noteController.text.isNotEmpty)
+          fields['notes'] = _noteController.text.trim();
         break;
 
       case ItemType.note:
-        if (_noteController.text.isNotEmpty) fields['content'] = _noteController.text.trim();
+        if (_noteController.text.isNotEmpty)
+          fields['content'] = _noteController.text.trim();
         break;
 
       case ItemType.developerSecret:
-        if (_devSecretTypeController.text.isNotEmpty) fields['secret_type'] = _devSecretTypeController.text.trim();
-        if (_devSecretKeyController.text.isNotEmpty) fields['secret_key'] = _devSecretKeyController.text;
-        if (_devPublicKeyController.text.isNotEmpty) fields['public_key'] = _devPublicKeyController.text.trim();
-        if (_devConfigController.text.isNotEmpty) fields['config_data'] = _devConfigController.text;
-        if (_noteController.text.isNotEmpty) fields['notes'] = _noteController.text.trim();
+        if (_devSecretTypeController.text.isNotEmpty)
+          fields['secret_type'] = _devSecretTypeController.text.trim();
+        if (_devSecretKeyController.text.isNotEmpty)
+          fields['secret_key'] = _devSecretKeyController.text;
+        if (_devPublicKeyController.text.isNotEmpty)
+          fields['public_key'] = _devPublicKeyController.text.trim();
+        if (_devConfigController.text.isNotEmpty)
+          fields['config_data'] = _devConfigController.text;
+        if (_noteController.text.isNotEmpty)
+          fields['notes'] = _noteController.text.trim();
         break;
     }
 
@@ -402,7 +467,8 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
     final confirm = await AppDialog.showConfirmation(
       context,
       title: 'Delete Credential?',
-      message: 'Delete "${widget.existingItem!.title}" permanently from your encrypted vault?',
+      message:
+          'Delete "${widget.existingItem!.title}" permanently from your encrypted vault?',
       confirmLabel: 'Delete',
       isDanger: true,
       icon: AppIcons.delete,
@@ -412,11 +478,14 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
       try {
         await widget.itemService.deleteItem(widget.existingItem!.itemId);
         if (mounted) {
-          AppToast.show(context, message: 'Credential deleted successfully', type: ToastType.info);
+          AppToast.show(context,
+              message: 'Credential deleted successfully', type: ToastType.info);
           Navigator.pop(context);
         }
       } catch (e) {
-        if (mounted) AppToast.show(context, message: 'Failed to delete: $e', type: ToastType.error);
+        if (mounted)
+          AppToast.show(context,
+              message: 'Failed to delete: $e', type: ToastType.error);
       }
     }
   }
@@ -432,37 +501,44 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
     switch (_selectedType) {
       case ItemType.login:
         categoryTitle = 'Login Credentials Guide';
-        categoryDesc = 'Security guidelines for web accounts, logins, and 2FA keys';
+        categoryDesc =
+            'Security guidelines for web accounts, logins, and 2FA keys';
         categoryIcon = AppIcons.lock;
         guideItems = const [
           _FieldGuideItem(
             name: 'Title *',
-            description: 'Name of the service, website, or application (e.g. Google, GitHub, Netflix).',
+            description:
+                'Name of the service, website, or application (e.g. Google, GitHub, Netflix).',
             icon: AppIcons.title,
           ),
           _FieldGuideItem(
             name: 'Username / Email',
-            description: 'Account login identifier, handle, or registered email address.',
+            description:
+                'Account login identifier, handle, or registered email address.',
             icon: AppIcons.user,
           ),
           _FieldGuideItem(
             name: 'Password',
-            description: 'Confidential account secret. Auto-obscures on field change. Tap the wand icon to generate high-entropy passwords.',
+            description:
+                'Confidential account secret. Auto-obscures on field change. Tap the wand icon to generate high-entropy passwords.',
             icon: AppIcons.key,
           ),
           _FieldGuideItem(
             name: 'Website URL',
-            description: 'Login page URL for fast browser access and credential association.',
+            description:
+                'Login page URL for fast browser access and credential association.',
             icon: AppIcons.link,
           ),
           _FieldGuideItem(
             name: '2FA / TOTP Secret Key',
-            description: 'Base32 authenticator secret (e.g. JBSWY3DPEHPK3PXP). Generates real-time 6-digit rolling 2FA codes without third-party apps.',
+            description:
+                'Base32 authenticator secret (e.g. JBSWY3DPEHPK3PXP). Generates real-time 6-digit rolling 2FA codes without third-party apps.',
             icon: AppIcons.shieldCheck,
           ),
           _FieldGuideItem(
             name: 'Custom Extra Fields',
-            description: 'Store recovery codes, security questions, or secondary account IDs.',
+            description:
+                'Store recovery codes, security questions, or secondary account IDs.',
             icon: AppIcons.addCircle,
           ),
         ];
@@ -490,17 +566,20 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           ),
           _FieldGuideItem(
             name: 'CVV / CVC Security Code',
-            description: '3 or 4 digit security verification code. Obscured by default.',
+            description:
+                '3 or 4 digit security verification code. Obscured by default.',
             icon: AppIcons.shield,
           ),
           _FieldGuideItem(
             name: 'Card PIN',
-            description: 'ATM or merchant chip PIN code for contactless & debit transactions.',
+            description:
+                'ATM or merchant chip PIN code for contactless & debit transactions.',
             icon: AppIcons.hash,
           ),
           _FieldGuideItem(
             name: 'Billing ZIP / Postal Code',
-            description: 'Address verification code required for online transactions.',
+            description:
+                'Address verification code required for online transactions.',
             icon: AppIcons.location,
           ),
         ];
@@ -508,22 +587,26 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
 
       case ItemType.identity:
         categoryTitle = 'Identity Document Guide';
-        categoryDesc = 'Government-issued IDs, passports, driver licenses, and scanned attachments';
+        categoryDesc =
+            'Government-issued IDs, passports, driver licenses, and scanned attachments';
         categoryIcon = AppIcons.categoryIdentity;
         guideItems = const [
           _FieldGuideItem(
             name: 'Full Legal Name',
-            description: 'Full legal name as it appears on official government records.',
+            description:
+                'Full legal name as it appears on official government records.',
             icon: AppIcons.user,
           ),
           _FieldGuideItem(
             name: 'Date of Birth & Address',
-            description: 'Official identity demographics for fast copy & paste during verification.',
+            description:
+                'Official identity demographics for fast copy & paste during verification.',
             icon: AppIcons.location,
           ),
           _FieldGuideItem(
             name: 'ID Document Attachment',
-            description: 'Encrypted local document photo. Stored securely offline in your vault.',
+            description:
+                'Encrypted local document photo. Stored securely offline in your vault.',
             icon: AppIcons.image,
           ),
         ];
@@ -531,17 +614,20 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
 
       case ItemType.note:
         categoryTitle = 'Secure Note Guide';
-        categoryDesc = 'Guidelines for confidential notes, recovery seeds, and memos';
+        categoryDesc =
+            'Guidelines for confidential notes, recovery seeds, and memos';
         categoryIcon = AppIcons.categoryNote;
         guideItems = const [
           _FieldGuideItem(
             name: 'Title *',
-            description: 'Identifiable subject title for this confidential note.',
+            description:
+                'Identifiable subject title for this confidential note.',
             icon: AppIcons.title,
           ),
           _FieldGuideItem(
             name: 'Secure Note Content',
-            description: 'Freeform text, recovery mnemonics (12/24 words), private memos, or server keys.',
+            description:
+                'Freeform text, recovery mnemonics (12/24 words), private memos, or server keys.',
             icon: AppIcons.note,
           ),
           _FieldGuideItem(
@@ -554,27 +640,32 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
 
       case ItemType.developerSecret:
         categoryTitle = 'Developer Secret Guide';
-        categoryDesc = 'Guidelines for API keys, SSH credentials, and environment configs';
+        categoryDesc =
+            'Guidelines for API keys, SSH credentials, and environment configs';
         categoryIcon = AppIcons.typeDeveloperSecret;
         guideItems = const [
           _FieldGuideItem(
             name: 'Secret Sub-Type',
-            description: 'Tag or identifier (e.g. AWS_ACCESS_KEY, Stripe API, SSH Key, DB URI).',
+            description:
+                'Tag or identifier (e.g. AWS_ACCESS_KEY, Stripe API, SSH Key, DB URI).',
             icon: AppIcons.typeDeveloperSecret,
           ),
           _FieldGuideItem(
             name: 'Secret / Private Key',
-            description: 'Confidential API key, secret token, or private PEM cryptographic key.',
+            description:
+                'Confidential API key, secret token, or private PEM cryptographic key.',
             icon: AppIcons.key,
           ),
           _FieldGuideItem(
             name: 'Public Key / Endpoint',
-            description: 'Public SSH key, server host URL, or webhook receiving endpoint.',
+            description:
+                'Public SSH key, server host URL, or webhook receiving endpoint.',
             icon: AppIcons.globe,
           ),
           _FieldGuideItem(
             name: 'Configuration Data',
-            description: 'Multi-line .env, JSON, or YAML configuration payload.',
+            description:
+                'Multi-line .env, JSON, or YAML configuration payload.',
             icon: AppIcons.file,
           ),
         ];
@@ -646,7 +737,9 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                         decoration: BoxDecoration(
                           color: AppColors.surfaceZinc,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.borderZinc.withValues(alpha: 0.5)),
+                          border: Border.all(
+                              color:
+                                  AppColors.borderZinc.withValues(alpha: 0.5)),
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -698,10 +791,13 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
     return Scaffold(
       backgroundColor: AppColors.backgroundZinc,
       appBar: AppBar(
-        title: Text(isEditing ? 'Edit ${widget.existingItem!.title}' : 'Add Credential'),
+        title: Text(isEditing
+            ? 'Edit ${widget.existingItem!.title}'
+            : 'Add Credential'),
         actions: [
           IconButton(
-            icon: AppIcon(HugeIcons.strokeRoundedInformationCircle, color: AppColors.orangeAccent, size: 22),
+            icon: AppIcon(HugeIcons.strokeRoundedInformationCircle,
+                color: AppColors.orangeAccent, size: 22),
             tooltip: 'Category & Fields Guide',
             onPressed: () => _showCategoryFieldGuide(context),
           ),
@@ -732,15 +828,16 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                   padding: const EdgeInsets.all(12),
                   child: Row(
                     children: [
-                      AppIcon(AppIcons.alert, color: cs.onErrorContainer, size: 20),
+                      AppIcon(AppIcons.alert,
+                          color: cs.onErrorContainer, size: 20),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Text(_error!, style: TextStyle(color: cs.onErrorContainer)),
+                        child: Text(_error!,
+                            style: TextStyle(color: cs.onErrorContainer)),
                       ),
                     ],
                   ),
                 ),
-
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(20, 20, 20, 140),
@@ -761,9 +858,12 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                                 : _selectedType == ItemType.identity
                                     ? 'e.g. Passport, Driver License'
                                     : 'e.g. Recovery Phrase, Server Keys',
-                        prefixIcon: AppIcon(AppInputIcons.title, color: AppColors.orangeAccent, size: 18),
+                        prefixIcon: AppIcon(AppInputIcons.title,
+                            color: AppColors.orangeAccent, size: 18),
                       ),
-                      validator: (v) => v == null || v.trim().isEmpty ? 'Title required' : null,
+                      validator: (v) => v == null || v.trim().isEmpty
+                          ? 'Title required'
+                          : null,
                       textInputAction: TextInputAction.next,
                     ),
                     const SizedBox(height: 20),
@@ -782,7 +882,9 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
 
                     // Save Action Button
                     AppButton(
-                      label: _isLoading ? 'Saving...' : (isEditing ? 'Save Changes' : 'Save Credential'),
+                      label: _isLoading
+                          ? 'Saving...'
+                          : (isEditing ? 'Save Changes' : 'Save Credential'),
                       variant: AppButtonVariant.primary,
                       isLoading: _isLoading,
                       fullWidth: true,
@@ -848,12 +950,16 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
               children: [
                 if (_passwordController.text.isNotEmpty)
                   IconButton(
-                  padding: const EdgeInsets.all(4),
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                    icon: const AppIcon(AppInputIcons.copy, color: AppColors.textMuted, size: 18),
+                    padding: const EdgeInsets.all(4),
+                    constraints:
+                        const BoxConstraints(minWidth: 32, minHeight: 32),
+                    icon: const AppIcon(AppInputIcons.copy,
+                        color: AppColors.textMuted, size: 18),
                     tooltip: 'Copy Password',
                     onPressed: () {
-                      ref.read(lockServiceProvider).copySecret(_passwordController.text);
+                      ref
+                          .read(lockServiceProvider)
+                          .copySecret(_passwordController.text);
                       HapticFeedback.selectionClick();
                       AppToast.show(
                         context,
@@ -863,17 +969,25 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                     },
                   ),
                 IconButton(
-                padding: const EdgeInsets.all(4),
-                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                  icon: AppIcon(AppInputIcons.refresh, color: AppColors.orangeAccent, size: 18),
+                  padding: const EdgeInsets.all(4),
+                  constraints:
+                      const BoxConstraints(minWidth: 32, minHeight: 32),
+                  icon: AppIcon(AppInputIcons.refresh,
+                      color: AppColors.orangeAccent, size: 18),
                   tooltip: 'Generate Password',
                   onPressed: _generatePassword,
                 ),
                 IconButton(
-                padding: const EdgeInsets.all(4),
-                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                  icon: AppIcon(_obscurePassword ? AppInputIcons.viewOff : AppInputIcons.view, size: 18),
-                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                  padding: const EdgeInsets.all(4),
+                  constraints:
+                      const BoxConstraints(minWidth: 32, minHeight: 32),
+                  icon: AppIcon(
+                      _obscurePassword
+                          ? AppInputIcons.viewOff
+                          : AppInputIcons.view,
+                      size: 18),
+                  onPressed: () =>
+                      setState(() => _obscurePassword = !_obscurePassword),
                 ),
               ],
             ),
@@ -977,9 +1091,14 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                   labelText: 'CVV',
                   prefixIcon: const AppIcon(AppInputIcons.shield, size: 18),
                   suffixIcon: IconButton(
-                  padding: const EdgeInsets.all(4),
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                    icon: AppIcon(_obscureCvv ? AppInputIcons.viewOff : AppInputIcons.view, size: 18),
+                    padding: const EdgeInsets.all(4),
+                    constraints:
+                        const BoxConstraints(minWidth: 32, minHeight: 32),
+                    icon: AppIcon(
+                        _obscureCvv
+                            ? AppInputIcons.viewOff
+                            : AppInputIcons.view,
+                        size: 18),
                     onPressed: () => setState(() => _obscureCvv = !_obscureCvv),
                   ),
                 ),
@@ -1005,9 +1124,14 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                   labelText: 'Card PIN',
                   prefixIcon: const AppIcon(AppInputIcons.hash, size: 18),
                   suffixIcon: IconButton(
-                  padding: const EdgeInsets.all(4),
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                    icon: AppIcon(_obscurePin ? AppInputIcons.viewOff : AppInputIcons.view, size: 18),
+                    padding: const EdgeInsets.all(4),
+                    constraints:
+                        const BoxConstraints(minWidth: 32, minHeight: 32),
+                    icon: AppIcon(
+                        _obscurePin
+                            ? AppInputIcons.viewOff
+                            : AppInputIcons.view,
+                        size: 18),
                     onPressed: () => setState(() => _obscurePin = !_obscurePin),
                   ),
                 ),
@@ -1139,16 +1263,20 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
               children: [
                 Row(
                   children: [
-                    AppIcon(AppIcons.file, color: AppColors.orangeAccent, size: 20),
+                    AppIcon(AppIcons.file,
+                        color: AppColors.orangeAccent, size: 20),
                     const SizedBox(width: 8),
                     const Text(
                       'ID Document Photo / Attachment',
-                      style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.offWhite),
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.offWhite),
                     ),
                     const Spacer(),
                     if (_idImageBase64 != null)
                       IconButton(
-                        icon: const AppIcon(HugeIcons.strokeRoundedDelete02, color: Colors.redAccent, size: 20),
+                        icon: const AppIcon(HugeIcons.strokeRoundedDelete02,
+                            color: Colors.redAccent, size: 20),
                         onPressed: () => setState(() => _idImageBase64 = null),
                         tooltip: 'Remove Attachment',
                       ),
@@ -1171,9 +1299,12 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: _pickIdentityImage,
-                    icon: AppIcon(HugeIcons.strokeRoundedUpload01, color: AppColors.orangeAccent),
+                    icon: AppIcon(HugeIcons.strokeRoundedUpload01,
+                        color: AppColors.orangeAccent),
                     label: Text(
-                      _idImageBase64 != null ? 'Replace ID Photo' : 'Upload ID Photo / Scan',
+                      _idImageBase64 != null
+                          ? 'Replace ID Photo'
+                          : 'Upload ID Photo / Scan',
                       style: const TextStyle(color: AppColors.offWhite),
                     ),
                   ),
@@ -1194,7 +1325,8 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           controller: _noteController,
           decoration: const InputDecoration(
             labelText: 'Secure Note Content',
-            hintText: 'Enter confidential markdown, SSH keys, or recovery seeds...',
+            hintText:
+                'Enter confidential markdown, SSH keys, or recovery seeds...',
             alignLabelWithHint: true,
           ),
           maxLines: 8,
@@ -1225,10 +1357,13 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
             labelText: 'Secret Key / API Key / Private Key',
             prefixIcon: const AppIcon(AppInputIcons.key, size: 18),
             suffixIcon: IconButton(
-            padding: const EdgeInsets.all(4),
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-              icon: AppIcon(_obscurePassword ? AppInputIcons.viewOff : AppInputIcons.view, size: 18),
-              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+              padding: const EdgeInsets.all(4),
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              icon: AppIcon(
+                  _obscurePassword ? AppInputIcons.viewOff : AppInputIcons.view,
+                  size: 18),
+              onPressed: () =>
+                  setState(() => _obscurePassword = !_obscurePassword),
             ),
           ),
           maxLines: _obscurePassword ? 1 : 4,
@@ -1266,7 +1401,8 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           children: [
             const Text(
               'Custom Extra Fields',
-              style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textMuted),
+              style: TextStyle(
+                  fontWeight: FontWeight.bold, color: AppColors.textMuted),
             ),
             const Spacer(),
             TextButton.icon(
@@ -1311,7 +1447,8 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                   ),
                 ),
                 IconButton(
-                  icon: const AppIcon(HugeIcons.strokeRoundedCancel01, color: Colors.redAccent, size: 20),
+                  icon: const AppIcon(HugeIcons.strokeRoundedCancel01,
+                      color: Colors.redAccent, size: 20),
                   onPressed: () {
                     setState(() {
                       cf.dispose();
@@ -1345,7 +1482,8 @@ class _CustomField {
 
 class _CreditCardFormatter extends TextInputFormatter {
   @override
-  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
     if (newValue.text.isEmpty) return newValue;
     final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
     final buffer = StringBuffer();
@@ -1363,7 +1501,8 @@ class _CreditCardFormatter extends TextInputFormatter {
 
 class _ExpiryDateFormatter extends TextInputFormatter {
   @override
-  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
     if (newValue.text.isEmpty) return newValue;
     final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
     String formatted = '';
@@ -1373,7 +1512,8 @@ class _ExpiryDateFormatter extends TextInputFormatter {
       formatted = month.toString().padLeft(2, '0');
     }
     if (digits.length >= 3) {
-      formatted += '/${digits.substring(2, digits.length > 4 ? 4 : digits.length)}';
+      formatted +=
+          '/${digits.substring(2, digits.length > 4 ? 4 : digits.length)}';
     }
     return TextEditingValue(
       text: formatted,
@@ -1401,7 +1541,8 @@ class _PasswordGeneratorSheet extends StatefulWidget {
   const _PasswordGeneratorSheet({required this.initialPassword});
 
   @override
-  State<_PasswordGeneratorSheet> createState() => _PasswordGeneratorSheetState();
+  State<_PasswordGeneratorSheet> createState() =>
+      _PasswordGeneratorSheetState();
 }
 
 class _PasswordGeneratorSheetState extends State<_PasswordGeneratorSheet> {
@@ -1468,7 +1609,9 @@ class _PasswordGeneratorSheetState extends State<_PasswordGeneratorSheet> {
         left: 20,
         right: 20,
         top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + MediaQuery.of(context).padding.bottom + 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom +
+            MediaQuery.of(context).padding.bottom +
+            20,
       ),
       decoration: BoxDecoration(
         color: const Color(0xFF141418),
@@ -1506,7 +1649,8 @@ class _PasswordGeneratorSheetState extends State<_PasswordGeneratorSheet> {
                   ),
                 ),
                 IconButton(
-                  icon: const AppIcon(HugeIcons.strokeRoundedCancel01, color: AppColors.textMuted, size: 20),
+                  icon: const AppIcon(HugeIcons.strokeRoundedCancel01,
+                      color: AppColors.textMuted, size: 20),
                   onPressed: () => Navigator.pop(context),
                   visualDensity: VisualDensity.compact,
                 ),
@@ -1520,12 +1664,15 @@ class _PasswordGeneratorSheetState extends State<_PasswordGeneratorSheet> {
               decoration: BoxDecoration(
                 color: AppColors.surfaceZinc,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.borderZinc.withValues(alpha: 0.5)),
+                border: Border.all(
+                    color: AppColors.borderZinc.withValues(alpha: 0.5)),
               ),
               child: Row(
                 children: [
-                  _buildTabItem(_SheetGenMode.password, 'Password', activeAccent),
-                  _buildTabItem(_SheetGenMode.passphrase, 'Passphrase', activeAccent),
+                  _buildTabItem(
+                      _SheetGenMode.password, 'Password', activeAccent),
+                  _buildTabItem(
+                      _SheetGenMode.passphrase, 'Passphrase', activeAccent),
                   _buildTabItem(_SheetGenMode.pin, 'PIN', activeAccent),
                 ],
               ),
@@ -1552,13 +1699,15 @@ class _PasswordGeneratorSheetState extends State<_PasswordGeneratorSheet> {
                             fontSize: _generated.length > 24 ? 13 : 16,
                             fontWeight: FontWeight.bold,
                             color: activeAccent,
-                            letterSpacing: _mode == _SheetGenMode.pin ? 3.0 : 0.5,
+                            letterSpacing:
+                                _mode == _SheetGenMode.pin ? 3.0 : 0.5,
                           ),
                           textAlign: TextAlign.center,
                         ),
                       ),
                       IconButton(
-                        icon: const AppIcon(HugeIcons.strokeRoundedRefresh, size: 20),
+                        icon: const AppIcon(HugeIcons.strokeRoundedRefresh,
+                            size: 20),
                         tooltip: 'Regenerate',
                         onPressed: () {
                           HapticFeedback.lightImpact();
@@ -1582,8 +1731,14 @@ class _PasswordGeneratorSheetState extends State<_PasswordGeneratorSheet> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Length', style: TextStyle(color: AppColors.offWhite, fontSize: 13)),
-                  Text('${_passwordLength.round()} chars', style: TextStyle(color: activeAccent, fontWeight: FontWeight.bold, fontSize: 13)),
+                  const Text('Length',
+                      style:
+                          TextStyle(color: AppColors.offWhite, fontSize: 13)),
+                  Text('${_passwordLength.round()} chars',
+                      style: TextStyle(
+                          color: activeAccent,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13)),
                 ],
               ),
               Slider(
@@ -1600,19 +1755,41 @@ class _PasswordGeneratorSheetState extends State<_PasswordGeneratorSheet> {
                 spacing: 6,
                 runSpacing: 6,
                 children: [
-                  _buildChip('A-Z', _includeUpper, activeAccent, (v) { setState(() => _includeUpper = v); _regenerate(); }),
-                  _buildChip('a-z', _includeLower, activeAccent, (v) { setState(() => _includeLower = v); _regenerate(); }),
-                  _buildChip('0-9', _includeDigits, activeAccent, (v) { setState(() => _includeDigits = v); _regenerate(); }),
-                  _buildChip('!@#\$%', _includeSymbols, activeAccent, (v) { setState(() => _includeSymbols = v); _regenerate(); }),
-                  _buildChip('No Ambiguous', _excludeAmbiguous, activeAccent, (v) { setState(() => _excludeAmbiguous = v); _regenerate(); }),
+                  _buildChip('A-Z', _includeUpper, activeAccent, (v) {
+                    setState(() => _includeUpper = v);
+                    _regenerate();
+                  }),
+                  _buildChip('a-z', _includeLower, activeAccent, (v) {
+                    setState(() => _includeLower = v);
+                    _regenerate();
+                  }),
+                  _buildChip('0-9', _includeDigits, activeAccent, (v) {
+                    setState(() => _includeDigits = v);
+                    _regenerate();
+                  }),
+                  _buildChip('!@#\$%', _includeSymbols, activeAccent, (v) {
+                    setState(() => _includeSymbols = v);
+                    _regenerate();
+                  }),
+                  _buildChip('No Ambiguous', _excludeAmbiguous, activeAccent,
+                      (v) {
+                    setState(() => _excludeAmbiguous = v);
+                    _regenerate();
+                  }),
                 ],
               ),
             ] else if (_mode == _SheetGenMode.passphrase) ...[
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Words', style: TextStyle(color: AppColors.offWhite, fontSize: 13)),
-                  Text('${_wordCount.round()} words', style: TextStyle(color: activeAccent, fontWeight: FontWeight.bold, fontSize: 13)),
+                  const Text('Words',
+                      style:
+                          TextStyle(color: AppColors.offWhite, fontSize: 13)),
+                  Text('${_wordCount.round()} words',
+                      style: TextStyle(
+                          color: activeAccent,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13)),
                 ],
               ),
               Slider(
@@ -1630,15 +1807,25 @@ class _PasswordGeneratorSheetState extends State<_PasswordGeneratorSheet> {
                 spacing: 6,
                 runSpacing: 6,
                 children: [
-                  _buildChip('Capitalize', _capitalizePassphrase, activeAccent, (v) { setState(() => _capitalizePassphrase = v); _regenerate(); }),
-                  _buildChip('+4 Digits', _includePassphraseNumber, activeAccent, (v) { setState(() => _includePassphraseNumber = v); _regenerate(); }),
+                  _buildChip('Capitalize', _capitalizePassphrase, activeAccent,
+                      (v) {
+                    setState(() => _capitalizePassphrase = v);
+                    _regenerate();
+                  }),
+                  _buildChip(
+                      '+4 Digits', _includePassphraseNumber, activeAccent, (v) {
+                    setState(() => _includePassphraseNumber = v);
+                    _regenerate();
+                  }),
                 ],
               ),
               const SizedBox(height: 10),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Separator', style: TextStyle(color: AppColors.offWhite, fontSize: 13)),
+                  const Text('Separator',
+                      style:
+                          TextStyle(color: AppColors.offWhite, fontSize: 13)),
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: ['-', '.', '_', ' '].map((sep) {
@@ -1651,13 +1838,25 @@ class _PasswordGeneratorSheetState extends State<_PasswordGeneratorSheet> {
                         },
                         child: Container(
                           margin: const EdgeInsets.only(left: 6),
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: isSelected ? activeAccent : AppColors.surfaceZinc,
+                            color: isSelected
+                                ? activeAccent
+                                : AppColors.surfaceZinc,
                             borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: isSelected ? activeAccent : AppColors.borderZinc),
+                            border: Border.all(
+                                color: isSelected
+                                    ? activeAccent
+                                    : AppColors.borderZinc),
                           ),
-                          child: Text(sep == ' ' ? 'Space' : sep, style: TextStyle(color: isSelected ? Colors.white : AppColors.offWhite, fontSize: 12, fontWeight: FontWeight.bold)),
+                          child: Text(sep == ' ' ? 'Space' : sep,
+                              style: TextStyle(
+                                  color: isSelected
+                                      ? Colors.white
+                                      : AppColors.offWhite,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold)),
                         ),
                       );
                     }).toList(),
@@ -1668,8 +1867,14 @@ class _PasswordGeneratorSheetState extends State<_PasswordGeneratorSheet> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('PIN Digits', style: TextStyle(color: AppColors.offWhite, fontSize: 13)),
-                  Text('${_pinLength.round()} digits', style: TextStyle(color: activeAccent, fontWeight: FontWeight.bold, fontSize: 13)),
+                  const Text('PIN Digits',
+                      style:
+                          TextStyle(color: AppColors.offWhite, fontSize: 13)),
+                  Text('${_pinLength.round()} digits',
+                      style: TextStyle(
+                          color: activeAccent,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13)),
                 ],
               ),
               Slider(
@@ -1719,7 +1924,8 @@ class _PasswordGeneratorSheetState extends State<_PasswordGeneratorSheet> {
           decoration: BoxDecoration(
             color: isSelected ? activeAccent : Colors.transparent,
             borderRadius: BorderRadius.circular(9),
-            border: Border.all(color: isSelected ? activeAccent : Colors.transparent),
+            border: Border.all(
+                color: isSelected ? activeAccent : Colors.transparent),
           ),
           child: Text(
             label,
@@ -1735,9 +1941,12 @@ class _PasswordGeneratorSheetState extends State<_PasswordGeneratorSheet> {
     );
   }
 
-  Widget _buildChip(String label, bool value, Color activeAccent, ValueChanged<bool> onChanged) {
+  Widget _buildChip(String label, bool value, Color activeAccent,
+      ValueChanged<bool> onChanged) {
     return FilterChip(
-      label: Text(label, style: TextStyle(color: value ? Colors.white : AppColors.offWhite, fontSize: 12)),
+      label: Text(label,
+          style: TextStyle(
+              color: value ? Colors.white : AppColors.offWhite, fontSize: 12)),
       selected: value,
       selectedColor: activeAccent,
       backgroundColor: AppColors.surfaceZinc,

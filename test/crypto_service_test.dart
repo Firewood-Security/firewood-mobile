@@ -19,7 +19,8 @@ void main() {
       expect(salt1, isNot(equals(salt2)));
     });
 
-    test('deriveKey creates consistent key from same password and salt', () async {
+    test('deriveKey creates consistent key from same password and salt',
+        () async {
       final salt = crypto.generateSalt();
       const password = 'CorrectHorseBatteryStaple123!';
 
@@ -33,7 +34,8 @@ void main() {
       expect(bytes1.length, equals(32)); // 256-bit key
     });
 
-    test('deriveKey creates different keys for different passwords or salts', () async {
+    test('deriveKey creates different keys for different passwords or salts',
+        () async {
       final salt1 = crypto.generateSalt();
       final salt2 = crypto.generateSalt();
       const password = 'MySecretPassword';
@@ -50,7 +52,8 @@ void main() {
       expect(bytes1, isNot(equals(bytes3)));
     });
 
-    test('encrypt and decrypt roundtrip works correctly for UTF-8 strings', () async {
+    test('encrypt and decrypt roundtrip works correctly for UTF-8 strings',
+        () async {
       final salt = crypto.generateSalt();
       final key = await crypto.deriveKey('VaultMasterPassword', salt);
       const plaintext = 'Secret Bank Account Credentials 🔐';
@@ -59,7 +62,8 @@ void main() {
       expect(result.ciphertext, isNotEmpty);
       expect(result.nonce.length, equals(24)); // XChaCha20 nonce
 
-      final decrypted = await crypto.decryptString(result.ciphertext, result.nonce, key);
+      final decrypted =
+          await crypto.decryptString(result.ciphertext, result.nonce, key);
       expect(decrypted, equals(plaintext));
     });
 
@@ -71,14 +75,17 @@ void main() {
       final result = await crypto.encryptString('Super Secret Data', key);
 
       expect(
-        () async => await crypto.decryptString(result.ciphertext, result.nonce, wrongKey),
+        () async => await crypto.decryptString(
+            result.ciphertext, result.nonce, wrongKey),
         throwsA(anything),
       );
     });
 
     // --- Phase 3 security negatives (REQ-CRYPTO-01) ---
 
-    test('parameter pinning: 16 B salt, 24 B nonce, 32 B key, 16 B MAC overhead', () async {
+    test(
+        'parameter pinning: 16 B salt, 24 B nonce, 32 B key, 16 B MAC overhead',
+        () async {
       final salt = crypto.generateSalt();
       expect(salt.length, equals(16));
       final key = await crypto.deriveKey('PinMe', salt);
@@ -103,7 +110,8 @@ void main() {
 
     test('decrypt rejects truncated and short inputs', () async {
       final key = await crypto.deriveKey('TruncateTest', crypto.generateSalt());
-      final enc = await crypto.encryptString('Somewhat longer secret value', key);
+      final enc =
+          await crypto.encryptString('Somewhat longer secret value', key);
       final truncated = enc.ciphertext.sublist(0, enc.ciphertext.length - 1);
       expect(
         () async => await crypto.decrypt(truncated, enc.nonce, key),
@@ -128,7 +136,8 @@ void main() {
     test('empty plaintext roundtrips', () async {
       final key = await crypto.deriveKey('EmptyTest', crypto.generateSalt());
       final enc = await crypto.encryptString('', key);
-      expect(await crypto.decryptString(enc.ciphertext, enc.nonce, key), equals(''));
+      expect(await crypto.decryptString(enc.ciphertext, enc.nonce, key),
+          equals(''));
     });
 
     test('deriveSubkey is deterministic and domain-separated', () async {

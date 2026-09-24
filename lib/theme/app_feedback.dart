@@ -130,7 +130,8 @@ class AppDialog {
                     TextButton(
                       style: TextButton.styleFrom(
                         foregroundColor: AppColors.textMuted,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 10),
                       ),
                       onPressed: () => Navigator.of(context).pop(false),
                       child: Text(cancelLabel),
@@ -149,7 +150,8 @@ class AppDialog {
                           borderRadius: BorderRadius.circular(12),
                           onTap: () => Navigator.of(context).pop(true),
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 18, vertical: 10),
                             child: Text(
                               confirmLabel,
                               style: const TextStyle(

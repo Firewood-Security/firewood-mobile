@@ -73,7 +73,8 @@ class AccentColorPickerDialog extends StatelessWidget {
                           ),
                         ),
                         IconButton(
-                          icon: AppIcon(HugeIcons.strokeRoundedCancel01, color: AppColors.textMuted, size: 20),
+                          icon: AppIcon(HugeIcons.strokeRoundedCancel01,
+                              color: AppColors.textMuted, size: 20),
                           onPressed: () => Navigator.of(context).pop(),
                         ),
                       ],
@@ -84,7 +85,8 @@ class AccentColorPickerDialog extends StatelessWidget {
                       builder: (context, activeColor, _) {
                         return Column(
                           children: AccentColorService.presets.map((preset) {
-                            final isSelected = activeColor.toARGB32() == preset.color.toARGB32();
+                            final isSelected = activeColor.toARGB32() ==
+                                preset.color.toARGB32();
 
                             return Container(
                               margin: const EdgeInsets.only(bottom: 8),
@@ -106,11 +108,14 @@ class AccentColorPickerDialog extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(14),
                                   onTap: () async {
                                     HapticFeedback.selectionClick();
-                                    await AccentColorService.setAccentColor(preset);
-                                    if (context.mounted) Navigator.of(context).pop();
+                                    await AccentColorService.setAccentColor(
+                                        preset);
+                                    if (context.mounted)
+                                      Navigator.of(context).pop();
                                   },
                                   child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 14, vertical: 12),
                                     child: Row(
                                       children: [
                                         // Color Swatch
@@ -129,13 +134,18 @@ class AccentColorPickerDialog extends StatelessWidget {
                                         const SizedBox(width: 14),
                                         Expanded(
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               Text(
                                                 preset.name,
                                                 style: TextStyle(
-                                                  color: isSelected ? Colors.white : AppColors.offWhite,
-                                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                                  color: isSelected
+                                                      ? Colors.white
+                                                      : AppColors.offWhite,
+                                                  fontWeight: isSelected
+                                                      ? FontWeight.bold
+                                                      : FontWeight.w500,
                                                   fontSize: 14,
                                                 ),
                                               ),
@@ -223,7 +233,10 @@ class AccentColorPickerTile extends StatelessWidget {
           ),
           title: const Text(
             'Accent Theme Color',
-            style: TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.bold, fontSize: 14),
+            style: TextStyle(
+                color: AppColors.offWhite,
+                fontWeight: FontWeight.bold,
+                fontSize: 14),
           ),
           subtitle: Text(
             'Current: ${currentPreset.name} (${currentPreset.hex})',
@@ -248,7 +261,8 @@ class AccentColorPickerTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 4),
-                AppIcon(AppIcons.chevronDown, color: AppColors.textMuted, size: 16),
+                AppIcon(AppIcons.chevronDown,
+                    color: AppColors.textMuted, size: 16),
               ],
             ),
           ),

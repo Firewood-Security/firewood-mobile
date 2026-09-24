@@ -25,7 +25,9 @@ extension ItemTypeExt on ItemType {
       return ItemType.developerSecret;
     }
     return ItemType.values.firstWhere(
-      (e) => e.name.toLowerCase() == clean || e.label.toLowerCase().replaceAll(' ', '') == clean,
+      (e) =>
+          e.name.toLowerCase() == clean ||
+          e.label.toLowerCase().replaceAll(' ', '') == clean,
       orElse: () => ItemType.note,
     );
   }

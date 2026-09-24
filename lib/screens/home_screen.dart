@@ -134,7 +134,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
     if (!filePath.toLowerCase().endsWith('.firewood')) {
       if (mounted) {
-        AppToast.show(context, message: 'Please select a valid .firewood backup file', type: ToastType.error);
+        AppToast.show(context,
+            message: 'Please select a valid .firewood backup file',
+            type: ToastType.error);
       }
       return;
     }
@@ -146,7 +148,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceZinc,
-        title: const Text('Import Backup File', style: TextStyle(color: AppColors.offWhite, fontSize: 16, fontWeight: FontWeight.bold)),
+        title: const Text('Import Backup File',
+            style: TextStyle(
+                color: AppColors.offWhite,
+                fontSize: 16,
+                fontWeight: FontWeight.bold)),
         content: Form(
           key: formKey,
           child: TextFormField(
@@ -155,15 +161,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             style: const TextStyle(color: AppColors.offWhite),
             decoration: const InputDecoration(
               labelText: 'Backup Master Password',
-              prefixIcon: AppIcon(AppInputIcons.lock, size: 20, color: AppColors.textMuted),
+              prefixIcon: AppIcon(AppInputIcons.lock,
+                  size: 20, color: AppColors.textMuted),
             ),
-            validator: (v) => v == null || v.isEmpty ? 'Password required' : null,
+            validator: (v) =>
+                v == null || v.isEmpty ? 'Password required' : null,
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
+            child: const Text('Cancel',
+                style: TextStyle(color: AppColors.textMuted)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -171,7 +180,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 Navigator.pop(ctx, passwordController.text);
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.orangeAccent, foregroundColor: Colors.white, shadowColor: AppColors.shade(AppColors.orangeAccent, -0.18)),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.orangeAccent,
+                foregroundColor: Colors.white,
+                shadowColor: AppColors.shade(AppColors.orangeAccent, -0.18)),
             child: const Text('Import & Restore'),
           ),
         ],
@@ -223,7 +235,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             border: Border.all(color: AppColors.borderZinc, width: 1),
           ),
-          padding: EdgeInsets.fromLTRB(20, 12, 20, MediaQuery.of(ctx).padding.bottom + 20),
+          padding: EdgeInsets.fromLTRB(
+              20, 12, 20, MediaQuery.of(ctx).padding.bottom + 20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -255,7 +268,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         ),
                         Text(
                           'Choose an action to perform',
-                          style: TextStyle(color: AppColors.textMuted, fontSize: 11),
+                          style: TextStyle(
+                              color: AppColors.textMuted, fontSize: 11),
                         ),
                       ],
                     ),
@@ -280,7 +294,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       _addItem(key);
                     },
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
                       child: Row(
                         children: [
                           AppIcon(AppIcons.add, size: 36),
@@ -300,12 +315,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 SizedBox(height: 2),
                                 Text(
                                   'Create a new login, card, note, or ID',
-                                  style: TextStyle(color: AppColors.textMuted, fontSize: 11),
+                                  style: TextStyle(
+                                      color: AppColors.textMuted, fontSize: 11),
                                 ),
                               ],
                             ),
                           ),
-                          AppIcon(AppIcons.chevronRight, size: 16, color: activeAccent),
+                          AppIcon(AppIcons.chevronRight,
+                              size: 16, color: activeAccent),
                         ],
                       ),
                     ),
@@ -319,7 +336,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 decoration: BoxDecoration(
                   color: AppColors.surfaceZinc,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.borderZinc.withValues(alpha: 0.7), width: 1),
+                  border: Border.all(
+                      color: AppColors.borderZinc.withValues(alpha: 0.7),
+                      width: 1),
                 ),
                 child: Material(
                   color: Colors.transparent,
@@ -330,7 +349,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       _importBackup(key);
                     },
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
                       child: Row(
                         children: [
                           const AppIcon(AppIcons.download, size: 26),
@@ -350,12 +370,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 SizedBox(height: 2),
                                 Text(
                                   'Restore credentials from encrypted .firewood file',
-                                  style: TextStyle(color: AppColors.textMuted, fontSize: 11),
+                                  style: TextStyle(
+                                      color: AppColors.textMuted, fontSize: 11),
                                 ),
                               ],
                             ),
                           ),
-                          const AppIcon(AppIcons.chevronRight, size: 16, color: AppColors.textMuted),
+                          const AppIcon(AppIcons.chevronRight,
+                              size: 16, color: AppColors.textMuted),
                         ],
                       ),
                     ),
@@ -463,7 +485,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             ),
             actions: [
               IconButton(
-                icon: AppIcon(AppIcons.lock, color: AppColors.orangeAccent, size: 30),
+                icon: AppIcon(AppIcons.lock,
+                    color: AppColors.orangeAccent, size: 30),
                 tooltip: 'Lock Vault',
                 onPressed: () {
                   HapticFeedback.mediumImpact();
@@ -475,7 +498,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           ),
           body: key == null
               ? Center(
-                  child: CircularProgressIndicator(color: AppColors.orangeAccent),
+                  child:
+                      CircularProgressIndicator(color: AppColors.orangeAccent),
                 )
               : Stack(
                   children: [
@@ -504,7 +528,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 ),
           floatingActionButton: (key != null && _currentTabIndex <= 1)
               ? Padding(
-                  padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom + 120),
+                  padding: EdgeInsets.only(
+                      bottom: MediaQuery.of(context).padding.bottom + 120),
                   child: ScaleTransition(
                     scale: _fabController,
                     child: Container(
@@ -526,7 +551,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.shade(AppColors.orangeAccent, -0.18),
+                            color:
+                                AppColors.shade(AppColors.orangeAccent, -0.18),
                             offset: Offset(0, 3),
                             blurRadius: 0,
                           ),
@@ -540,7 +566,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           ),
                           onTap: () => _showPlusActionSheet(key),
                           child: const Center(
-                            child: AppIcon(AppIcons.add, color: Colors.white, size: 26, strokeWidth: 2.2),
+                            child: AppIcon(AppIcons.add,
+                                color: Colors.white,
+                                size: 26,
+                                strokeWidth: 2.2),
                           ),
                         ),
                       ),
@@ -563,11 +592,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         }
 
         final items = snapshot.data ?? [];
-        final logins = items.where((i) => ItemTypeExt.fromString(i.type) == ItemType.login).toList();
-        final cards = items.where((i) => ItemTypeExt.fromString(i.type) == ItemType.card).length;
-        final identities = items.where((i) => ItemTypeExt.fromString(i.type) == ItemType.identity).length;
-        final notes = items.where((i) => ItemTypeExt.fromString(i.type) == ItemType.note).length;
-        final devSecrets = items.where((i) => ItemTypeExt.fromString(i.type) == ItemType.developerSecret).length;
+        final logins = items
+            .where((i) => ItemTypeExt.fromString(i.type) == ItemType.login)
+            .toList();
+        final cards = items
+            .where((i) => ItemTypeExt.fromString(i.type) == ItemType.card)
+            .length;
+        final identities = items
+            .where((i) => ItemTypeExt.fromString(i.type) == ItemType.identity)
+            .length;
+        final notes = items
+            .where((i) => ItemTypeExt.fromString(i.type) == ItemType.note)
+            .length;
+        final devSecrets = items
+            .where((i) =>
+                ItemTypeExt.fromString(i.type) == ItemType.developerSecret)
+            .length;
         final advisory = SecurityAdvisorEngine.analyze(items);
         final activeAccent = Theme.of(context).colorScheme.primary;
 
@@ -590,7 +630,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         decoration: BoxDecoration(
                           color: AppColors.surfaceZinc,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppColors.borderZinc.withValues(alpha: 0.5)),
+                          border: Border.all(
+                              color:
+                                  AppColors.borderZinc.withValues(alpha: 0.5)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -602,7 +644,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 const Spacer(),
                                 Text(
                                   '${advisory.totalItems}',
-                                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.offWhite),
+                                  style: const TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.offWhite),
                                 ),
                               ],
                             ),
@@ -611,14 +656,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               children: [
                                 const Text(
                                   'TOTAL CREDENTIALS',
-                                  style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, letterSpacing: 0.8, color: AppColors.textMuted),
+                                  style: TextStyle(
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.8,
+                                      color: AppColors.textMuted),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   '${advisory.totalItems} Active & Protected',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: activeAccent),
+                                  style: TextStyle(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: activeAccent),
                                 ),
                               ],
                             ),
@@ -636,7 +688,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         decoration: BoxDecoration(
                           color: AppColors.surfaceZinc,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppColors.borderZinc.withValues(alpha: 0.5)),
+                          border: Border.all(
+                              color:
+                                  AppColors.borderZinc.withValues(alpha: 0.5)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -654,7 +708,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   style: TextStyle(
                                     fontSize: 22,
                                     fontWeight: FontWeight.bold,
-                                    color: advisory.securityScore >= 80 ? const Color(0xFF22C55E) : advisory.securityScore >= 50 ? const Color(0xFFF59E0B) : const Color(0xFFEF4444),
+                                    color: advisory.securityScore >= 80
+                                        ? const Color(0xFF22C55E)
+                                        : advisory.securityScore >= 50
+                                            ? const Color(0xFFF59E0B)
+                                            : const Color(0xFFEF4444),
                                   ),
                                 ),
                               ],
@@ -664,17 +722,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               children: [
                                 const Text(
                                   'SECURITY HEALTH',
-                                  style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, letterSpacing: 0.8, color: AppColors.textMuted),
+                                  style: TextStyle(
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.8,
+                                      color: AppColors.textMuted),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  advisory.securityScore >= 80 ? 'Optimal Protection' : advisory.securityScore >= 50 ? 'Attention Recommended' : 'Action Required',
+                                  advisory.securityScore >= 80
+                                      ? 'Optimal Protection'
+                                      : advisory.securityScore >= 50
+                                          ? 'Attention Recommended'
+                                          : 'Action Required',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: 10.5,
                                     fontWeight: FontWeight.w600,
-                                    color: advisory.securityScore >= 80 ? const Color(0xFF22C55E) : advisory.securityScore >= 50 ? const Color(0xFFF59E0B) : const Color(0xFFEF4444),
+                                    color: advisory.securityScore >= 80
+                                        ? const Color(0xFF22C55E)
+                                        : advisory.securityScore >= 50
+                                            ? const Color(0xFFF59E0B)
+                                            : const Color(0xFFEF4444),
                                   ),
                                 ),
                               ],
@@ -701,66 +771,67 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     ),
                     child: Container(
                       padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceZinc,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.borderZinc.withValues(alpha: 0.4)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceZinc,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                            color: AppColors.borderZinc.withValues(alpha: 0.4)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          AppIcon(AppIcons.shieldCheck, size: 22),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'SECURITY ADVISOR',
-                            style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1.1,
-                                color: AppColors.offWhite),
+                          Row(
+                            children: [
+                              AppIcon(AppIcons.shieldCheck, size: 22),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'SECURITY ADVISOR',
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.1,
+                                    color: AppColors.offWhite),
+                              ),
+                              const Spacer(),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: advisory.issueCount > 0
+                                      ? AppColors.roseAccent
+                                      : AppColors.mintAccent,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  advisory.issueCount > 0
+                                      ? '${advisory.issueCount} issue${advisory.issueCount == 1 ? '' : 's'}'
+                                      : 'All clear',
+                                  style: const TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white),
+                                ),
+                              ),
+                            ],
                           ),
-                          const Spacer(),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: advisory.issueCount > 0
-                                  ? AppColors.roseAccent
-                                  : AppColors.mintAccent,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              advisory.issueCount > 0
-                                  ? '${advisory.issueCount} issue${advisory.issueCount == 1 ? '' : 's'}'
-                                  : 'All clear',
-                              style: const TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white),
+                          const SizedBox(height: 8),
+                          Text(
+                            advisory.topGroup?.headline ??
+                                'Strong, unique passwords with 2FA coverage',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: advisory.topGroup == null
+                                  ? AppColors.textMuted
+                                  : SecurityAdvisorSheet.colorForSeverity(
+                                      advisory.topGroup!.severity),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        advisory.topGroup?.headline ??
-                            'Strong, unique passwords with 2FA coverage',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: advisory.topGroup == null
-                              ? AppColors.textMuted
-                              : SecurityAdvisorSheet.colorForSeverity(
-                                  advisory.topGroup!.severity),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -768,9 +839,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 // ROW 3: FIVE CREDENTIAL CATEGORY CARDS
                 Row(
                   children: [
-                    const Text('CREDENTIAL CATEGORIES', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: AppColors.textMuted)),
+                    const Text('CREDENTIAL CATEGORIES',
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.2,
+                            color: AppColors.textMuted)),
                     const Spacer(),
-                    Text('${items.length} Total', style: TextStyle(fontSize: 11, color: activeAccent, fontWeight: FontWeight.w600)),
+                    Text('${items.length} Total',
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: activeAccent,
+                            fontWeight: FontWeight.w600)),
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -782,11 +862,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       _CategorySummaryCard(
                         title: 'Accounts',
                         count: logins.length,
-                        subtitle: '${logins.where((i) => (i.fields['totp_secret'] ?? '').toString().trim().isNotEmpty).length} 2FA Active',
+                        subtitle:
+                            '${logins.where((i) => (i.fields['totp_secret'] ?? '').toString().trim().isNotEmpty).length} 2FA Active',
                         icon: AppIcons.categoryLogin,
                         accentColor: activeAccent,
                         isSelected: _filterType == ItemType.login,
-                        onTap: () => setState(() { _filterType = ItemType.login; _currentTabIndex = 1; }),
+                        onTap: () => setState(() {
+                          _filterType = ItemType.login;
+                          _currentTabIndex = 1;
+                        }),
                       ),
                       _CategorySummaryCard(
                         title: 'Cards',
@@ -795,7 +879,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         icon: AppIcons.categoryCard,
                         accentColor: const Color(0xFF3B82F6),
                         isSelected: _filterType == ItemType.card,
-                        onTap: () => setState(() { _filterType = ItemType.card; _currentTabIndex = 1; }),
+                        onTap: () => setState(() {
+                          _filterType = ItemType.card;
+                          _currentTabIndex = 1;
+                        }),
                       ),
                       _CategorySummaryCard(
                         title: 'Identity',
@@ -804,7 +891,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         icon: AppIcons.categoryIdentity,
                         accentColor: const Color(0xFF8B5CF6),
                         isSelected: _filterType == ItemType.identity,
-                        onTap: () => setState(() { _filterType = ItemType.identity; _currentTabIndex = 1; }),
+                        onTap: () => setState(() {
+                          _filterType = ItemType.identity;
+                          _currentTabIndex = 1;
+                        }),
                       ),
                       _CategorySummaryCard(
                         title: 'Keys',
@@ -813,7 +903,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         icon: AppIcons.key,
                         accentColor: const Color(0xFF10B981),
                         isSelected: _filterType == ItemType.developerSecret,
-                        onTap: () => setState(() { _filterType = ItemType.developerSecret; _currentTabIndex = 1; }),
+                        onTap: () => setState(() {
+                          _filterType = ItemType.developerSecret;
+                          _currentTabIndex = 1;
+                        }),
                       ),
                       _CategorySummaryCard(
                         title: 'Secure Notes',
@@ -822,7 +915,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         icon: AppIcons.categoryNote,
                         accentColor: const Color(0xFFF43F5E),
                         isSelected: _filterType == ItemType.note,
-                        onTap: () => setState(() { _filterType = ItemType.note; _currentTabIndex = 1; }),
+                        onTap: () => setState(() {
+                          _filterType = ItemType.note;
+                          _currentTabIndex = 1;
+                        }),
                       ),
                     ],
                   ),
@@ -833,11 +929,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 // ROW 4: RECENT ACTIVITY LIST
                 Row(
                   children: [
-                    const Text('RECENT CREDENTIALS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: AppColors.textMuted)),
+                    const Text('RECENT CREDENTIALS',
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.2,
+                            color: AppColors.textMuted)),
                     const Spacer(),
                     TextButton(
                       onPressed: () => setState(() => _currentTabIndex = 1),
-                      child: Text('View All', style: TextStyle(color: activeAccent, fontSize: 12, fontWeight: FontWeight.bold)),
+                      child: Text('View All',
+                          style: TextStyle(
+                              color: activeAccent,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
@@ -849,15 +954,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     decoration: BoxDecoration(
                       color: AppColors.surfaceZinc,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.borderZinc.withValues(alpha: 0.4)),
+                      border: Border.all(
+                          color: AppColors.borderZinc.withValues(alpha: 0.4)),
                     ),
                     child: const Column(
                       children: [
-                        AppIcon(AppIcons.shield, size: 40, color: AppColors.textMuted),
+                        AppIcon(AppIcons.shield,
+                            size: 40, color: AppColors.textMuted),
                         SizedBox(height: 8),
-                        Text('Vault is Empty', style: TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.bold)),
+                        Text('Vault is Empty',
+                            style: TextStyle(
+                                color: AppColors.offWhite,
+                                fontWeight: FontWeight.bold)),
                         SizedBox(height: 4),
-                        Text('Tap + to add your first password or card', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                        Text('Tap + to add your first password or card',
+                            style: TextStyle(
+                                fontSize: 12, color: AppColors.textMuted)),
                       ],
                     ),
                   )
@@ -894,18 +1006,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           items = items.where((item) {
             final title = item.title.toLowerCase();
             final query = _searchQuery.toLowerCase();
-            final fields = item.fields.values.map((v) => v.toString().toLowerCase()).join(' ');
+            final fields = item.fields.values
+                .map((v) => v.toString().toLowerCase())
+                .join(' ');
             return title.contains(query) || fields.contains(query);
           }).toList();
         }
 
         // Apply category filter
         if (_filterType != null) {
-          items = items.where((item) => ItemTypeExt.fromString(item.type) == _filterType).toList();
+          items = items
+              .where((item) => ItemTypeExt.fromString(item.type) == _filterType)
+              .toList();
         }
 
         // Sort items
-        items.sort((a, b) => _sortDescending ? b.updatedAt.compareTo(a.updatedAt) : a.updatedAt.compareTo(b.updatedAt));
+        items.sort((a, b) => _sortDescending
+            ? b.updatedAt.compareTo(a.updatedAt)
+            : a.updatedAt.compareTo(b.updatedAt));
 
         return Column(
           children: [
@@ -917,23 +1035,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   TextField(
                     controller: _searchController,
                     onChanged: (val) => setState(() => _searchQuery = val),
-                    style: const TextStyle(color: AppColors.offWhite, fontSize: 14),
+                    style: const TextStyle(
+                        color: AppColors.offWhite, fontSize: 14),
                     decoration: InputDecoration(
                       hintText: 'Search vault items...',
                       prefixIcon: const Padding(
                         padding: EdgeInsets.all(12),
-                        child: AppIcon(AppInputIcons.search, color: AppColors.textMuted, size: 20),
+                        child: AppIcon(AppInputIcons.search,
+                            color: AppColors.textMuted, size: 20),
                       ),
                       suffixIcon: _searchQuery.isNotEmpty
                           ? IconButton(
-                              icon: const AppIcon(AppInputIcons.close, color: AppColors.textMuted, size: 18),
+                              icon: const AppIcon(AppInputIcons.close,
+                                  color: AppColors.textMuted, size: 18),
                               onPressed: () {
                                 _searchController.clear();
                                 setState(() => _searchQuery = '');
                               },
                             )
                           : null,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
                       fillColor: AppColors.surfaceZinc,
                     ),
                   ),
@@ -948,24 +1070,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           isExpanded: true,
                           dropdownColor: AppColors.surfaceZinc,
                           borderRadius: BorderRadius.circular(12),
-                          icon: AppIcon(AppIcons.chevronDown, color: AppColors.orangeAccent, size: 18),
-                          style: const TextStyle(color: AppColors.offWhite, fontSize: 13),
+                          icon: AppIcon(AppIcons.chevronDown,
+                              color: AppColors.orangeAccent, size: 18),
+                          style: const TextStyle(
+                              color: AppColors.offWhite, fontSize: 13),
                           decoration: InputDecoration(
                             isDense: true,
                             filled: true,
                             fillColor: AppColors.inputZinc,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 10),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: AppColors.borderZinc.withValues(alpha: 0.5)),
+                              borderSide: BorderSide(
+                                  color: AppColors.borderZinc
+                                      .withValues(alpha: 0.5)),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: AppColors.borderZinc.withValues(alpha: 0.5)),
+                              borderSide: BorderSide(
+                                  color: AppColors.borderZinc
+                                      .withValues(alpha: 0.5)),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: AppColors.orangeAccent, width: 1.5),
+                              borderSide: BorderSide(
+                                  color: AppColors.orangeAccent, width: 1.5),
                             ),
                           ),
                           items: [
@@ -973,12 +1103,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               value: null,
                               child: const Row(
                                 children: [
-                                  AppIcon(AppIcons.folder, size: 16, color: AppColors.textMuted),
+                                  AppIcon(AppIcons.folder,
+                                      size: 16, color: AppColors.textMuted),
                                   SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
                                       'All Categories',
-                                      style: TextStyle(color: AppColors.offWhite, fontSize: 13),
+                                      style: TextStyle(
+                                          color: AppColors.offWhite,
+                                          fontSize: 13),
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
@@ -990,12 +1123,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 value: t,
                                 child: Row(
                                   children: [
-                                    AppIcon(_getTypeIcon(t), size: 16, color: AppColors.orangeAccent),
+                                    AppIcon(_getTypeIcon(t),
+                                        size: 16,
+                                        color: AppColors.orangeAccent),
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
                                         t.label,
-                                        style: const TextStyle(color: AppColors.offWhite, fontSize: 13),
+                                        style: const TextStyle(
+                                            color: AppColors.offWhite,
+                                            fontSize: 13),
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
@@ -1011,26 +1148,50 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
                       // Sort Direction Button
                       OutlinedButton.icon(
-                        onPressed: () => setState(() => _sortDescending = !_sortDescending),
-                        icon: AppIcon(_sortDescending ? AppIcons.chevronDown : AppIcons.chevronUp, size: 16, color: AppColors.orangeAccent),
-                        label: Text(_sortDescending ? 'Newest' : 'Oldest', style: const TextStyle(fontSize: 12, color: AppColors.offWhite)),
+                        onPressed: () =>
+                            setState(() => _sortDescending = !_sortDescending),
+                        icon: AppIcon(
+                            _sortDescending
+                                ? AppIcons.chevronDown
+                                : AppIcons.chevronUp,
+                            size: 16,
+                            color: AppColors.orangeAccent),
+                        label: Text(_sortDescending ? 'Newest' : 'Oldest',
+                            style: const TextStyle(
+                                fontSize: 12, color: AppColors.offWhite)),
                         style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-                          side: BorderSide(color: AppColors.borderZinc.withValues(alpha: 0.5)),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 12),
+                          side: BorderSide(
+                              color:
+                                  AppColors.borderZinc.withValues(alpha: 0.5)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
                         ),
                       ),
                       const SizedBox(width: 6),
 
                       // Grid/List View Toggle Button
                       OutlinedButton.icon(
-                        onPressed: () => setState(() => _isGridView = !_isGridView),
-                        icon: AppIcon(_isGridView ? HugeIcons.strokeRoundedListView : HugeIcons.strokeRoundedGridView, size: 16, color: AppColors.orangeAccent),
-                        label: Text(_isGridView ? 'List' : 'Grid', style: const TextStyle(fontSize: 12, color: AppColors.offWhite)),
+                        onPressed: () =>
+                            setState(() => _isGridView = !_isGridView),
+                        icon: AppIcon(
+                            _isGridView
+                                ? HugeIcons.strokeRoundedListView
+                                : HugeIcons.strokeRoundedGridView,
+                            size: 16,
+                            color: AppColors.orangeAccent),
+                        label: Text(_isGridView ? 'List' : 'Grid',
+                            style: const TextStyle(
+                                fontSize: 12, color: AppColors.offWhite)),
                         style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-                          side: BorderSide(color: AppColors.borderZinc.withValues(alpha: 0.5)),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 12),
+                          side: BorderSide(
+                              color:
+                                  AppColors.borderZinc.withValues(alpha: 0.5)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
                         ),
                       ),
                     ],
@@ -1043,12 +1204,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             Expanded(
               child: items.isEmpty
                   ? const Center(
-                      child: Text('No matching items', style: TextStyle(color: AppColors.textMuted)),
+                      child: Text('No matching items',
+                          style: TextStyle(color: AppColors.textMuted)),
                     )
                   : _isGridView
                       ? GridView.builder(
                           padding: const EdgeInsets.fromLTRB(16, 8, 16, 140),
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 2,
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
@@ -1058,12 +1221,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           itemBuilder: (context, index) {
                             final item = items[index];
                             final type = ItemTypeExt.fromString(item.type);
-                            final sub = item.fields['username']?.toString() ?? item.fields['cardholder']?.toString() ?? '••••••••';
+                            final sub = item.fields['username']?.toString() ??
+                                item.fields['cardholder']?.toString() ??
+                                '••••••••';
                             return Card(
                               color: AppColors.surfaceZinc,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
-                                side: BorderSide(color: AppColors.borderZinc.withValues(alpha: 0.5)),
+                                side: BorderSide(
+                                    color: AppColors.borderZinc
+                                        .withValues(alpha: 0.5)),
                               ),
                               child: InkWell(
                                 onTap: () => _viewItem(key, item),
@@ -1071,13 +1238,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 child: Padding(
                                   padding: const EdgeInsets.all(14),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Row(
                                         children: [
-                                          AppIcon(_getTypeIcon(type), color: AppColors.orangeAccent, size: 20),
+                                          AppIcon(_getTypeIcon(type),
+                                              color: AppColors.orangeAccent,
+                                              size: 20),
                                           const Spacer(),
-                                          const AppIcon(AppIcons.shield, size: 14, color: AppColors.textMuted),
+                                          const AppIcon(AppIcons.shield,
+                                              size: 14,
+                                              color: AppColors.textMuted),
                                         ],
                                       ),
                                       const Spacer(),
@@ -1085,14 +1257,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                         item.title,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.offWhite),
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.offWhite),
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
                                         sub,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+                                        style: const TextStyle(
+                                            fontSize: 11,
+                                            color: AppColors.textMuted),
                                       ),
                                     ],
                                   ),
@@ -1128,11 +1304,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   dynamic _getTypeIcon(ItemType type) {
     switch (type) {
-      case ItemType.login: return AppIcons.categoryLogin;
-      case ItemType.card: return AppIcons.categoryCard;
-      case ItemType.identity: return AppIcons.categoryIdentity;
-      case ItemType.note: return AppIcons.categoryNote;
-      case ItemType.developerSecret: return AppIcons.key;
+      case ItemType.login:
+        return AppIcons.categoryLogin;
+      case ItemType.card:
+        return AppIcons.categoryCard;
+      case ItemType.identity:
+        return AppIcons.categoryIdentity;
+      case ItemType.note:
+        return AppIcons.categoryNote;
+      case ItemType.developerSecret:
+        return AppIcons.key;
     }
   }
 }
@@ -1240,7 +1421,8 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
             decoration: BoxDecoration(
               color: AppColors.surfaceZinc,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.borderZinc.withValues(alpha: 0.5)),
+              border: Border.all(
+                  color: AppColors.borderZinc.withValues(alpha: 0.5)),
             ),
             child: Row(
               children: [
@@ -1315,9 +1497,11 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
                           foregroundColor: AppColors.offWhite,
                           side: const BorderSide(color: AppColors.borderZinc),
                           padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
                         ),
-                        child: const AppIcon(HugeIcons.strokeRoundedRefresh, size: 20),
+                        child: const AppIcon(HugeIcons.strokeRoundedRefresh,
+                            size: 20),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -1329,7 +1513,9 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
                         fullWidth: true,
                         height: 46,
                         onPressed: () {
-                          ref.read(lockServiceProvider).copySecret(_generatedSecret);
+                          ref
+                              .read(lockServiceProvider)
+                              .copySecret(_generatedSecret);
                           HapticFeedback.selectionClick();
                           AppToast.show(
                             context,
@@ -1495,7 +1681,8 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
                   selected: _capitalizePassphrase,
                   tooltip: 'Capitalize each word',
                   onTap: () {
-                    setState(() => _capitalizePassphrase = !_capitalizePassphrase);
+                    setState(
+                        () => _capitalizePassphrase = !_capitalizePassphrase);
                     _regenerate();
                   },
                 ),
@@ -1504,7 +1691,8 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
                   selected: _includePassphraseNumber,
                   tooltip: 'Append 4-digit number',
                   onTap: () {
-                    setState(() => _includePassphraseNumber = !_includePassphraseNumber);
+                    setState(() =>
+                        _includePassphraseNumber = !_includePassphraseNumber);
                     _regenerate();
                   },
                 ),
@@ -1669,7 +1857,8 @@ class _CategorySummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveAccent = accentColor ?? Theme.of(context).colorScheme.primary;
+    final effectiveAccent =
+        accentColor ?? Theme.of(context).colorScheme.primary;
 
     return Container(
       width: 114,
@@ -1774,7 +1963,8 @@ class _ItemTile extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
         ),
-        trailing: const AppIcon(AppIcons.chevronRight, color: AppColors.textMuted, size: 18),
+        trailing: const AppIcon(AppIcons.chevronRight,
+            color: AppColors.textMuted, size: 18),
         onTap: onTap,
       ),
     );
@@ -1782,12 +1972,16 @@ class _ItemTile extends StatelessWidget {
 
   dynamic _getTypeIcon(ItemType type) {
     switch (type) {
-      case ItemType.login: return AppIcons.categoryLogin;
-      case ItemType.card: return AppIcons.categoryCard;
-      case ItemType.identity: return AppIcons.categoryIdentity;
-      case ItemType.note: return AppIcons.categoryNote;
-      case ItemType.developerSecret: return AppIcons.key;
+      case ItemType.login:
+        return AppIcons.categoryLogin;
+      case ItemType.card:
+        return AppIcons.categoryCard;
+      case ItemType.identity:
+        return AppIcons.categoryIdentity;
+      case ItemType.note:
+        return AppIcons.categoryNote;
+      case ItemType.developerSecret:
+        return AppIcons.key;
     }
   }
 }
-

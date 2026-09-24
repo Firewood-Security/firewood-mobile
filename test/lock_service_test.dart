@@ -44,7 +44,8 @@ void main() {
       final service = LockService();
       await service.copySecret('first', ttl: const Duration(milliseconds: 80));
       await Future.delayed(const Duration(milliseconds: 40));
-      await service.copySecret('second', ttl: const Duration(milliseconds: 120));
+      await service.copySecret('second',
+          ttl: const Duration(milliseconds: 120));
       await Future.delayed(const Duration(milliseconds: 80));
       // First timer was cancelled; second value still present.
       expect(clipboard, equals('second'));

@@ -27,16 +27,16 @@ class _VaultSetupScreenState extends ConsumerState<VaultSetupScreen>
   final _formKey = GlobalKey<FormState>();
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
-  
+
   final _vaultService = VaultService();
   final _backupService = BackupService();
-  
+
   bool _isLoading = false;
   bool _isImporting = false;
   String? _error;
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
-  
+
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
 
@@ -64,7 +64,7 @@ class _VaultSetupScreenState extends ConsumerState<VaultSetupScreen>
 
   Future<void> _importBackup() async {
     setState(() => _error = null);
-    
+
     try {
       if (Platform.isAndroid) {
         final storageStatus = await Permission.storage.status;
@@ -100,7 +100,8 @@ class _VaultSetupScreenState extends ConsumerState<VaultSetupScreen>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Invalid file format. Only .firewood backup files are allowed.'),
+              content: Text(
+                  'Invalid file format. Only .firewood backup files are allowed.'),
               backgroundColor: Colors.redAccent,
             ),
           );
@@ -125,15 +126,17 @@ class _VaultSetupScreenState extends ConsumerState<VaultSetupScreen>
                 ),
                 title: Row(
                   children: [
-                    AppIcon(HugeIcons.strokeRoundedUpload01, color: AppColors.orangeAccent, size: 22),
+                    AppIcon(HugeIcons.strokeRoundedUpload01,
+                        color: AppColors.orangeAccent, size: 22),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         'Import Vault Backup',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.offWhite,
-                        ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.offWhite,
+                                ),
                       ),
                     ),
                   ],
@@ -145,8 +148,8 @@ class _VaultSetupScreenState extends ConsumerState<VaultSetupScreen>
                     Text(
                       'Enter the master password used for "$fileName":',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textMuted,
-                      ),
+                            color: AppColors.textMuted,
+                          ),
                     ),
                     const SizedBox(height: 12),
                     Form(
@@ -162,13 +165,17 @@ class _VaultSetupScreenState extends ConsumerState<VaultSetupScreen>
                           prefixIcon: AppIcon(AppInputIcons.lock, size: 20),
                           suffixIcon: IconButton(
                             icon: AppIcon(
-                              obscureModalPassword ? AppInputIcons.eyeOff : AppInputIcons.eye,
+                              obscureModalPassword
+                                  ? AppInputIcons.eyeOff
+                                  : AppInputIcons.eye,
                               size: 18,
                             ),
-                            onPressed: () => setModalState(() => obscureModalPassword = !obscureModalPassword),
+                            onPressed: () => setModalState(() =>
+                                obscureModalPassword = !obscureModalPassword),
                           ),
                         ),
-                        validator: (v) => v == null || v.isEmpty ? 'Password required' : null,
+                        validator: (v) =>
+                            v == null || v.isEmpty ? 'Password required' : null,
                       ),
                     ),
                   ],
@@ -176,7 +183,8 @@ class _VaultSetupScreenState extends ConsumerState<VaultSetupScreen>
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
+                    child: const Text('Cancel',
+                        style: TextStyle(color: AppColors.textMuted)),
                   ),
                   FilledButton(
                     onPressed: () {
@@ -185,7 +193,8 @@ class _VaultSetupScreenState extends ConsumerState<VaultSetupScreen>
                       }
                     },
                     style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10),
                     ),
                     child: const Text('Restore Vault'),
                   ),
@@ -247,25 +256,38 @@ class _VaultSetupScreenState extends ConsumerState<VaultSetupScreen>
 
   String _getStrengthLabel(int score) {
     switch (score) {
-      case 0: return 'Very Weak';
-      case 1: return 'Weak';
-      case 2: return 'Fair';
-      case 3: return 'Good';
-      case 4: return 'Strong';
-      case 5: return 'Very Strong';
-      default: return 'Weak';
+      case 0:
+        return 'Very Weak';
+      case 1:
+        return 'Weak';
+      case 2:
+        return 'Fair';
+      case 3:
+        return 'Good';
+      case 4:
+        return 'Strong';
+      case 5:
+        return 'Very Strong';
+      default:
+        return 'Weak';
     }
   }
 
   Color _getStrengthColor(int score) {
     switch (score) {
       case 0:
-      case 1: return Colors.redAccent;
-      case 2: return Colors.orangeAccent;
-      case 3: return Colors.amber;
-      case 4: return Colors.lightGreenAccent;
-      case 5: return Colors.greenAccent;
-      default: return Colors.redAccent;
+      case 1:
+        return Colors.redAccent;
+      case 2:
+        return Colors.orangeAccent;
+      case 3:
+        return Colors.amber;
+      case 4:
+        return Colors.lightGreenAccent;
+      case 5:
+        return Colors.greenAccent;
+      default:
+        return Colors.redAccent;
     }
   }
 
@@ -356,22 +378,30 @@ class _VaultSetupScreenState extends ConsumerState<VaultSetupScreen>
                           TextFormField(
                             controller: _passwordController,
                             obscureText: _obscurePassword,
-                            style: const TextStyle(color: AppColors.offWhite, fontSize: 14),
+                            style: const TextStyle(
+                                color: AppColors.offWhite, fontSize: 14),
                             decoration: InputDecoration(
                               isDense: true,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 12),
                               labelText: 'Master Password *',
-                              prefixIconConstraints: const BoxConstraints(minWidth: 42, minHeight: 42),
+                              prefixIconConstraints: const BoxConstraints(
+                                  minWidth: 42, minHeight: 42),
                               prefixIcon: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                                child: AppIcon(AppInputIcons.lock, size: 18, color: AppColors.textMuted),
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 12),
+                                child: AppIcon(AppInputIcons.lock,
+                                    size: 18, color: AppColors.textMuted),
                               ),
                               suffixIcon: IconButton(
                                 icon: AppIcon(
-                                  _obscurePassword ? AppInputIcons.eyeOff : AppInputIcons.eye,
+                                  _obscurePassword
+                                      ? AppInputIcons.eyeOff
+                                      : AppInputIcons.eye,
                                   size: 18,
                                 ),
-                                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                                onPressed: () => setState(
+                                    () => _obscurePassword = !_obscurePassword),
                               ),
                               fillColor: AppColors.surfaceZinc,
                             ),
@@ -401,22 +431,30 @@ class _VaultSetupScreenState extends ConsumerState<VaultSetupScreen>
                           TextFormField(
                             controller: _confirmController,
                             obscureText: _obscureConfirm,
-                            style: const TextStyle(color: AppColors.offWhite, fontSize: 14),
+                            style: const TextStyle(
+                                color: AppColors.offWhite, fontSize: 14),
                             decoration: InputDecoration(
                               isDense: true,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 12),
                               labelText: 'Confirm Password *',
-                              prefixIconConstraints: const BoxConstraints(minWidth: 42, minHeight: 42),
+                              prefixIconConstraints: const BoxConstraints(
+                                  minWidth: 42, minHeight: 42),
                               prefixIcon: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                                child: AppIcon(AppInputIcons.lockClock, size: 18, color: AppColors.textMuted),
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 12),
+                                child: AppIcon(AppInputIcons.lockClock,
+                                    size: 18, color: AppColors.textMuted),
                               ),
                               suffixIcon: IconButton(
                                 icon: AppIcon(
-                                  _obscureConfirm ? AppInputIcons.eyeOff : AppInputIcons.eye,
+                                  _obscureConfirm
+                                      ? AppInputIcons.eyeOff
+                                      : AppInputIcons.eye,
                                   size: 18,
                                 ),
-                                onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
+                                onPressed: () => setState(
+                                    () => _obscureConfirm = !_obscureConfirm),
                               ),
                               fillColor: AppColors.surfaceZinc,
                             ),
@@ -435,19 +473,23 @@ class _VaultSetupScreenState extends ConsumerState<VaultSetupScreen>
                             const SizedBox(height: 8),
                             Container(
                               width: double.infinity,
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
                               decoration: BoxDecoration(
                                 color: cs.errorContainer.withValues(alpha: 0.8),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Row(
                                 children: [
-                                  AppIcon(AppIcons.alertCircle, color: cs.onErrorContainer, size: 16),
+                                  AppIcon(AppIcons.alertCircle,
+                                      color: cs.onErrorContainer, size: 16),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
                                       _error!,
-                                      style: TextStyle(color: cs.onErrorContainer, fontSize: 12),
+                                      style: TextStyle(
+                                          color: cs.onErrorContainer,
+                                          fontSize: 12),
                                     ),
                                   ),
                                 ],
@@ -464,13 +506,16 @@ class _VaultSetupScreenState extends ConsumerState<VaultSetupScreen>
                       children: [
                         // Create Vault Button
                         AppButton(
-                          label: _isLoading ? 'Creating Vault...' : 'Create Vault',
+                          label:
+                              _isLoading ? 'Creating Vault...' : 'Create Vault',
                           icon: HugeIcons.strokeRoundedShield01,
                           variant: AppButtonVariant.primary,
                           isLoading: _isLoading,
                           fullWidth: true,
                           height: 52,
-                          onPressed: (_isLoading || _isImporting) ? null : _createVault,
+                          onPressed: (_isLoading || _isImporting)
+                              ? null
+                              : _createVault,
                         ),
 
                         const SizedBox(height: 12),
@@ -478,15 +523,25 @@ class _VaultSetupScreenState extends ConsumerState<VaultSetupScreen>
                         // Divider
                         Row(
                           children: [
-                            Expanded(child: Divider(color: AppColors.borderZinc.withValues(alpha: 0.6))),
+                            Expanded(
+                                child: Divider(
+                                    color: AppColors.borderZinc
+                                        .withValues(alpha: 0.6))),
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 14),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 14),
                               child: Text(
                                 'OR',
-                                style: theme.textTheme.labelSmall?.copyWith(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.w600),
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                    color: AppColors.textMuted,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600),
                               ),
                             ),
-                            Expanded(child: Divider(color: AppColors.borderZinc.withValues(alpha: 0.6))),
+                            Expanded(
+                                child: Divider(
+                                    color: AppColors.borderZinc
+                                        .withValues(alpha: 0.6))),
                           ],
                         ),
 
@@ -494,13 +549,17 @@ class _VaultSetupScreenState extends ConsumerState<VaultSetupScreen>
 
                         // Import Backup Button
                         AppButton(
-                          label: _isImporting ? 'Importing Backup...' : 'Import Backup (.firewood)',
+                          label: _isImporting
+                              ? 'Importing Backup...'
+                              : 'Import Backup (.firewood)',
                           icon: HugeIcons.strokeRoundedUpload01,
                           variant: AppButtonVariant.secondary,
                           isLoading: _isImporting,
                           fullWidth: true,
                           height: 48,
-                          onPressed: (_isLoading || _isImporting) ? null : _importBackup,
+                          onPressed: (_isLoading || _isImporting)
+                              ? null
+                              : _importBackup,
                         ),
                       ],
                     ),

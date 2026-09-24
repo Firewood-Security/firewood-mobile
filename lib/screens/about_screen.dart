@@ -14,7 +14,11 @@ class AboutScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.backgroundZinc,
       appBar: AppBar(
-        title: const Text('About Firewood', style: TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.bold, fontSize: 18)),
+        title: const Text('About Firewood',
+            style: TextStyle(
+                color: AppColors.offWhite,
+                fontWeight: FontWeight.bold,
+                fontSize: 18)),
         backgroundColor: AppColors.backgroundZinc,
         elevation: 0,
         iconTheme: const IconThemeData(color: AppColors.offWhite),
@@ -45,7 +49,8 @@ class AboutScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceZinc,
                     borderRadius: BorderRadius.circular(12),
@@ -53,7 +58,10 @@ class AboutScreen extends StatelessWidget {
                   ),
                   child: Text(
                     'Version 1.0.0 • Zero-Knowledge Vault',
-                    style: TextStyle(fontSize: 11, color: AppColors.orangeAccent, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.orangeAccent,
+                        fontWeight: FontWeight.w600),
                   ),
                 ),
               ],
@@ -68,7 +76,8 @@ class AboutScreen extends StatelessWidget {
             children: [
               const Text(
                 'Firewood is an open-source, zero-knowledge password vault engineered for absolute offline privacy.',
-                style: TextStyle(color: AppColors.offWhite, fontSize: 13, height: 1.5),
+                style: TextStyle(
+                    color: AppColors.offWhite, fontSize: 13, height: 1.5),
               ),
             ],
           ),
@@ -82,19 +91,22 @@ class AboutScreen extends StatelessWidget {
               _FeatureTile(
                 icon: AppIcons.shield,
                 title: 'Zero-Knowledge Security',
-                subtitle: 'Master password never leaves device RAM. Client-side XChaCha20-Poly1305 encryption.',
+                subtitle:
+                    'Master password never leaves device RAM. Client-side XChaCha20-Poly1305 encryption.',
               ),
               const Divider(color: AppColors.borderZinc, height: 1),
               _FeatureTile(
                 icon: AppIcons.timer,
                 title: 'Integrated TOTP Authenticator',
-                subtitle: 'Generate 2-factor authentication codes with built-in countdown timers.',
+                subtitle:
+                    'Generate 2-factor authentication codes with built-in countdown timers.',
               ),
               const Divider(color: AppColors.borderZinc, height: 1),
               _FeatureTile(
                 icon: AppIcons.shield,
                 title: 'Mini ML Security Advisor',
-                subtitle: 'On-device Decision Tree classifier tracking vault health and recommending security tips.',
+                subtitle:
+                    'On-device Decision Tree classifier tracking vault health and recommending security tips.',
               ),
             ],
           ),
@@ -108,19 +120,22 @@ class AboutScreen extends StatelessWidget {
               _FeatureTile(
                 icon: AppIcons.key,
                 title: 'Argon2id Key Derivation',
-                subtitle: 'Master key derived using Argon2id with 16-byte random salt to resist GPU brute-force attacks.',
+                subtitle:
+                    'Master key derived using Argon2id with 16-byte random salt to resist GPU brute-force attacks.',
               ),
               const Divider(color: AppColors.borderZinc, height: 1),
               _FeatureTile(
                 icon: AppIcons.lock,
                 title: 'XChaCha20-Poly1305 Field Cipher',
-                subtitle: 'Individual fields encrypted with 256-bit stream cipher and Poly1305 authentication tags.',
+                subtitle:
+                    'Individual fields encrypted with 256-bit stream cipher and Poly1305 authentication tags.',
               ),
               const Divider(color: AppColors.borderZinc, height: 1),
               _FeatureTile(
                 icon: AppIcons.cloud,
                 title: 'Offline Storage Isolation',
-                subtitle: 'Zero cloud dependencies. All data stored strictly in local Isar NoSQL encrypted database.',
+                subtitle:
+                    'Zero cloud dependencies. All data stored strictly in local Isar NoSQL encrypted database.',
               ),
             ],
           ),
@@ -155,18 +170,33 @@ class AboutScreen extends StatelessWidget {
           _AboutCard(
             children: [
               ListTile(
-                leading: AppIcon(AppIcons.shield, color: AppColors.orangeAccent, size: 20),
-                title: const Text('Privacy Policy', style: TextStyle(color: AppColors.offWhite, fontSize: 13, fontWeight: FontWeight.bold)),
-                subtitle: const Text('100% Offline • Zero Analytics • Zero Data Collection', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                trailing: AppIcon(AppIcons.chevronRight, color: AppColors.textMuted, size: 18),
+                leading: AppIcon(AppIcons.shield,
+                    color: AppColors.orangeAccent, size: 20),
+                title: const Text('Privacy Policy',
+                    style: TextStyle(
+                        color: AppColors.offWhite,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold)),
+                subtitle: const Text(
+                    '100% Offline • Zero Analytics • Zero Data Collection',
+                    style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                trailing: AppIcon(AppIcons.chevronRight,
+                    color: AppColors.textMuted, size: 18),
                 onTap: () => _showPrivacyDialog(context),
               ),
               const Divider(color: AppColors.borderZinc, height: 1),
               ListTile(
-                leading: AppIcon(AppIcons.file, color: AppColors.orangeAccent, size: 20),
-                title: const Text('License & Legal', style: TextStyle(color: AppColors.offWhite, fontSize: 13, fontWeight: FontWeight.bold)),
-                subtitle: const Text('MIT Open Source License', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                trailing: AppIcon(AppIcons.chevronRight, color: AppColors.textMuted, size: 18),
+                leading: AppIcon(AppIcons.file,
+                    color: AppColors.orangeAccent, size: 20),
+                title: const Text('License & Legal',
+                    style: TextStyle(
+                        color: AppColors.offWhite,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold)),
+                subtitle: const Text('MIT Open Source License',
+                    style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                trailing: AppIcon(AppIcons.chevronRight,
+                    color: AppColors.textMuted, size: 18),
                 onTap: () => _showLicenseDialog(context),
               ),
             ],
@@ -177,7 +207,10 @@ class AboutScreen extends StatelessWidget {
           const Center(
             child: Text(
               'Crafted for Total Privacy & Security',
-              style: TextStyle(fontSize: 11, color: AppColors.textMuted, fontStyle: FontStyle.italic),
+              style: TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textMuted,
+                  fontStyle: FontStyle.italic),
             ),
           ),
         ],
@@ -190,15 +223,20 @@ class AboutScreen extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.surfaceZinc,
-        title: const Text('Privacy Policy', style: TextStyle(color: AppColors.offWhite, fontSize: 16)),
+        title: const Text('Privacy Policy',
+            style: TextStyle(color: AppColors.offWhite, fontSize: 16)),
         content: const Text(
           'Firewood is completely offline. It contains zero trackers, zero analytics, and zero cloud backends.\n\nAll passwords, notes, credit cards, and secrets are stored exclusively on your device, encrypted with your master key.',
-          style: TextStyle(color: AppColors.textMuted, fontSize: 12, height: 1.5),
+          style:
+              TextStyle(color: AppColors.textMuted, fontSize: 12, height: 1.5),
         ),
         actions: [
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.orangeAccent, foregroundColor: Colors.white, shadowColor: AppColors.shade(AppColors.orangeAccent, -0.18)),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.orangeAccent,
+                foregroundColor: Colors.white,
+                shadowColor: AppColors.shade(AppColors.orangeAccent, -0.18)),
             child: const Text('OK'),
           ),
         ],
@@ -211,15 +249,20 @@ class AboutScreen extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.surfaceZinc,
-        title: const Text('MIT License', style: TextStyle(color: AppColors.offWhite, fontSize: 16)),
+        title: const Text('MIT License',
+            style: TextStyle(color: AppColors.offWhite, fontSize: 16)),
         content: const Text(
           'Copyright (c) 2026 Firewood Contributors.\n\nPermission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files to deal in the Software without restriction.',
-          style: TextStyle(color: AppColors.textMuted, fontSize: 11, height: 1.4),
+          style:
+              TextStyle(color: AppColors.textMuted, fontSize: 11, height: 1.4),
         ),
         actions: [
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.orangeAccent, foregroundColor: Colors.white, shadowColor: AppColors.shade(AppColors.orangeAccent, -0.18)),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.orangeAccent,
+                foregroundColor: Colors.white,
+                shadowColor: AppColors.shade(AppColors.orangeAccent, -0.18)),
             child: const Text('OK'),
           ),
         ],
@@ -308,11 +351,22 @@ class _DeveloperTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: const TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.bold, fontSize: 13)),
-                Text(role, style: TextStyle(color: AppColors.orangeAccent, fontSize: 11, fontWeight: FontWeight.w600)),
+                Text(name,
+                    style: const TextStyle(
+                        color: AppColors.offWhite,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13)),
+                Text(role,
+                    style: TextStyle(
+                        color: AppColors.orangeAccent,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600)),
                 const SizedBox(height: 4),
-                Text(details, style: const TextStyle(color: AppColors.textMuted, fontSize: 11, height: 1.4)),
-                if (githubUrl != null || websiteUrl != null) const SizedBox(height: 8),
+                Text(details,
+                    style: const TextStyle(
+                        color: AppColors.textMuted, fontSize: 11, height: 1.4)),
+                if (githubUrl != null || websiteUrl != null)
+                  const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
                   runSpacing: 4,
@@ -322,7 +376,8 @@ class _DeveloperTile extends StatelessWidget {
                         onTap: () => _openUrl(githubUrl!),
                         borderRadius: BorderRadius.circular(6),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                             color: AppColors.cardZinc,
                             borderRadius: BorderRadius.circular(6),
@@ -331,9 +386,14 @@ class _DeveloperTile extends StatelessWidget {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              AppIcon(AppIcons.typeDeveloperSecret, size: 12, color: AppColors.orangeAccent),
+                              AppIcon(AppIcons.typeDeveloperSecret,
+                                  size: 12, color: AppColors.orangeAccent),
                               const SizedBox(width: 4),
-                              Text('github.com/yahyaoncloud', style: TextStyle(fontSize: 10, color: AppColors.orangeAccent, fontWeight: FontWeight.bold)),
+                              Text('github.com/yahyaoncloud',
+                                  style: TextStyle(
+                                      fontSize: 10,
+                                      color: AppColors.orangeAccent,
+                                      fontWeight: FontWeight.bold)),
                             ],
                           ),
                         ),
@@ -343,7 +403,8 @@ class _DeveloperTile extends StatelessWidget {
                         onTap: () => _openUrl(websiteUrl!),
                         borderRadius: BorderRadius.circular(6),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                             color: AppColors.cardZinc,
                             borderRadius: BorderRadius.circular(6),
@@ -352,9 +413,14 @@ class _DeveloperTile extends StatelessWidget {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              AppIcon(AppIcons.globe, size: 12, color: AppColors.orangeAccent),
+                              AppIcon(AppIcons.globe,
+                                  size: 12, color: AppColors.orangeAccent),
                               const SizedBox(width: 4),
-                              Text('yahyaoncloud.vercel.app', style: TextStyle(fontSize: 10, color: AppColors.orangeAccent, fontWeight: FontWeight.bold)),
+                              Text('yahyaoncloud.vercel.app',
+                                  style: TextStyle(
+                                      fontSize: 10,
+                                      color: AppColors.orangeAccent,
+                                      fontWeight: FontWeight.bold)),
                             ],
                           ),
                         ),
@@ -405,7 +471,8 @@ class _FeatureTile extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: const TextStyle(color: AppColors.textMuted, fontSize: 11, height: 1.4),
+                  style: const TextStyle(
+                      color: AppColors.textMuted, fontSize: 11, height: 1.4),
                 ),
               ],
             ),

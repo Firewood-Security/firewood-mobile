@@ -91,7 +91,8 @@ class AppButton extends StatelessWidget {
 
     final Color face = isDisabled ? AppColors.cardZinc : background;
     final bool useGradient = !isDisabled && background != Colors.transparent;
-    final String shownLabel = isLoading ? (loadingLabel ?? 'Loading...') : label;
+    final String shownLabel =
+        isLoading ? (loadingLabel ?? 'Loading...') : label;
 
     Widget content = Row(
       mainAxisAlignment: MainAxisAlignment.center,

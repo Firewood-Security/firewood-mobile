@@ -172,8 +172,7 @@ void main() {
         _login('Ok', password: 'Str0ng!Pass#2026'),
         _login('Stale', password: 'An0ther!Pass#2026', ageDays: 365),
       ], now: _now);
-      final ranks =
-          a.groups.map((g) => severityRank(g.severity)).toList();
+      final ranks = a.groups.map((g) => severityRank(g.severity)).toList();
       final sorted = [...ranks]..sort();
       expect(ranks, sorted);
     });

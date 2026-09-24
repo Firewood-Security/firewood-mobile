@@ -68,11 +68,10 @@ class CategorySegmentedBar extends StatelessWidget {
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 180),
                   curve: Curves.easeInOut,
-                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 2),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 10, horizontal: 2),
                   decoration: BoxDecoration(
-                    color: isSelected
-                        ? activeAccent
-                        : Colors.transparent,
+                    color: isSelected ? activeAccent : Colors.transparent,
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -80,7 +79,9 @@ class CategorySegmentedBar extends StatelessWidget {
                       AppIcon(
                         _getTypeIcon(type),
                         size: 22,
-                        color: isSelected ? Colors.white : AppColors.textMuted.withValues(alpha: 0.7),
+                        color: isSelected
+                            ? Colors.white
+                            : AppColors.textMuted.withValues(alpha: 0.7),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -89,8 +90,11 @@ class CategorySegmentedBar extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 11,
-                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                          color: isSelected ? Colors.white : AppColors.textMuted.withValues(alpha: 0.75),
+                          fontWeight:
+                              isSelected ? FontWeight.w700 : FontWeight.w500,
+                          color: isSelected
+                              ? Colors.white
+                              : AppColors.textMuted.withValues(alpha: 0.75),
                           letterSpacing: isSelected ? -0.1 : 0,
                         ),
                       ),

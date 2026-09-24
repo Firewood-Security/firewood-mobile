@@ -54,8 +54,10 @@ void main() {
       final file = File('${tempDir.path}/tiny.firewood');
       await file.writeAsBytes(List<int>.filled(10, 0));
       expect(
-        () async => await backupService.importVault(file.path, 'whatever12', overwrite: true),
-        throwsA(predicate((e) => e.toString().contains('Invalid backup file format'))),
+        () async => await backupService.importVault(file.path, 'whatever12',
+            overwrite: true),
+        throwsA(predicate(
+            (e) => e.toString().contains('Invalid backup file format'))),
       );
     });
 
@@ -63,11 +65,16 @@ void main() {
       const password = 'CorrectBackupPass1!';
       await vaultService.createVault(password);
       final key = await vaultService.unlock(password);
-      await itemService.addItem(key: key, type: 'Login', title: 'a', fields: {'username': 'u'});
-      final path = await backupService.exportVault(password, '${tempDir.path}/good.firewood');
+      await itemService.addItem(
+          key: key, type: 'Login', title: 'a', fields: {'username': 'u'});
+      final path = await backupService.exportVault(
+          password, '${tempDir.path}/good.firewood');
       expect(
-        () async => await backupService.importVault(path, 'WrongPassword9!', overwrite: true),
-        throwsA(predicate((e) => e.toString().contains('Incorrect backup password or corrupted backup file'))),
+        () async => await backupService.importVault(path, 'WrongPassword9!',
+            overwrite: true),
+        throwsA(predicate((e) => e
+            .toString()
+            .contains('Incorrect backup password or corrupted backup file'))),
       );
     });
 
@@ -87,19 +94,25 @@ void main() {
       final fixed = File('${tempDir.path}/badver.firewood');
       await fixed.writeAsBytes(bytes);
       expect(
-        () async => await backupService.importVault(fixed.path, password, overwrite: true),
-        throwsA(predicate((e) => e.toString().contains('Incompatible backup version'))),
+        () async => await backupService.importVault(fixed.path, password,
+            overwrite: true),
+        throwsA(predicate(
+            (e) => e.toString().contains('Incompatible backup version'))),
       );
     });
 
-    test('merge import preserves existing items and adds backup items', () async {
+    test('merge import preserves existing items and adds backup items',
+        () async {
       const backupPassword = 'BackupMergePass1!';
       await vaultService.createVault(backupPassword);
       final backupKey = await vaultService.unlock(backupPassword);
       await itemService.addItem(
-          key: backupKey, type: 'Login', title: 'from-backup', fields: {'username': 'b'});
-      final path =
-          await backupService.exportVault(backupPassword, '${tempDir.path}/m.firewood');
+          key: backupKey,
+          type: 'Login',
+          title: 'from-backup',
+          fields: {'username': 'b'});
+      final path = await backupService.exportVault(
+          backupPassword, '${tempDir.path}/m.firewood');
 
       await vaultService.burnAllVaults();
       try {
@@ -110,13 +123,17 @@ void main() {
       await vaultService.createVault(livePassword);
       final liveKey = await vaultService.unlock(livePassword);
       await itemService.addItem(
-          key: liveKey, type: 'Note', title: 'live-item', fields: {'content': 'hi'});
+          key: liveKey,
+          type: 'Note',
+          title: 'live-item',
+          fields: {'content': 'hi'});
 
       final name = await backupService.importVault(path, backupPassword,
           overwrite: false, activeVaultKey: liveKey);
       expect(name, isNotEmpty);
       final items = await itemService.getAllItems(liveKey);
-      expect(items.map((e) => e.title), containsAll(['live-item', 'from-backup']));
+      expect(
+          items.map((e) => e.title), containsAll(['live-item', 'from-backup']));
     });
   });
 }

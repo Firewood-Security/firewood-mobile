@@ -27,7 +27,8 @@ class VaultService {
   // --- Vault CRUD ---
 
   /// Creates (or overwrites) the single default vault.
-  Future<void> createVault(String password, {String vaultName = 'Primary Vault'}) async {
+  Future<void> createVault(String password,
+      {String vaultName = 'Primary Vault'}) async {
     if (password.length < 8) {
       throw VaultException('Master password must be at least 8 characters');
     }
@@ -79,7 +80,7 @@ class VaultService {
     if (vault.verifierToken != null && vault.verifierNonce != null) {
       try {
         final decrypted = await _crypto.decryptString(
-          vault.verifierToken!, vault.verifierNonce!, key);
+            vault.verifierToken!, vault.verifierNonce!, key);
         if (decrypted != _verifierSentinel) {
           throw VaultException('Invalid master password');
         }
@@ -140,14 +141,16 @@ class VaultService {
       'verifierToken': vault.verifierToken,
       'verifierNonce': vault.verifierNonce,
       'createdAt': vault.createdAt.toIso8601String(),
-      'items': items.map((item) => {
-        'id': item.itemId,
-        'type': item.type,
-        'title': item.title,
-        'encryptedData': item.encryptedData,
-        'nonce': item.nonce,
-        'updatedAt': item.updatedAt.toIso8601String(),
-      }).toList(),
+      'items': items
+          .map((item) => {
+                'id': item.itemId,
+                'type': item.type,
+                'title': item.title,
+                'encryptedData': item.encryptedData,
+                'nonce': item.nonce,
+                'updatedAt': item.updatedAt.toIso8601String(),
+              })
+          .toList(),
     };
   }
 
@@ -212,7 +215,8 @@ class VaultService {
 
     if (verifierToken != null && verifierNonce != null) {
       try {
-        final sentinel = await _crypto.decryptString(verifierToken, verifierNonce, senderKey);
+        final sentinel = await _crypto.decryptString(
+            verifierToken, verifierNonce, senderKey);
         if (sentinel != _verifierSentinel) {
           throw VaultException('Invalid sender master password');
         }
@@ -228,7 +232,8 @@ class VaultService {
         final itemMap = Map<String, dynamic>.from(rawItem as Map);
         final encryptedData = (itemMap['encryptedData'] as List).cast<int>();
         final nonce = (itemMap['nonce'] as List).cast<int>();
-        final plaintextBytes = await _crypto.decrypt(encryptedData, nonce, senderKey);
+        final plaintextBytes =
+            await _crypto.decrypt(encryptedData, nonce, senderKey);
         final fieldsJson = utf8.decode(plaintextBytes);
         final fields = jsonDecode(fieldsJson) as Map<String, dynamic>;
 
@@ -243,7 +248,6 @@ class VaultService {
     }
     return importedCount;
   }
-
 }
 
 class VaultException implements Exception {

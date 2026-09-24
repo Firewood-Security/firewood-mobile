@@ -193,8 +193,9 @@ class _CubeMatrixPainter extends CustomPainter {
 
     for (int r = 0; r < gridRows; r++) {
       for (int c = 0; c < gridCols; c++) {
-        final heightOffset = (sin(r * 0.8) * cos(c * 0.8) * 35 + rand.nextDouble() * 25).abs();
-        
+        final heightOffset =
+            (sin(r * 0.8) * cos(c * 0.8) * 35 + rand.nextDouble() * 25).abs();
+
         final isoX = centerX + (c - r) * (cubeSize * 0.866);
         final isoY = centerY + (c + r) * (cubeSize * 0.5) - heightOffset;
 
@@ -204,7 +205,8 @@ class _CubeMatrixPainter extends CustomPainter {
     }
   }
 
-  void _drawIsometricCube(Canvas canvas, double x, double y, double size, int r, int c) {
+  void _drawIsometricCube(
+      Canvas canvas, double x, double y, double size, int r, int c) {
     final w = size * 0.866;
     final h = size * 0.5;
     final depth = size * 0.9;

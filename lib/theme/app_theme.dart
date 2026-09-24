@@ -9,15 +9,15 @@ import '../services/accent_color_service.dart';
 class AppColors {
   // Dark Zinc Base
   static const backgroundZinc = Color(0xFF09090B); // Deep Dark Zinc
-  static const surfaceZinc = Color(0xFF18181B);    // Surface Zinc
-  static const cardZinc = Color(0xFF242427);       // Card Zinc
-  static const borderZinc = Color(0xFF3F3F46);     // Border Zinc
-  static const inputZinc = Color(0xFF141416);      // Input Fill
+  static const surfaceZinc = Color(0xFF18181B); // Surface Zinc
+  static const cardZinc = Color(0xFF242427); // Card Zinc
+  static const borderZinc = Color(0xFF3F3F46); // Border Zinc
+  static const inputZinc = Color(0xFF141416); // Input Fill
 
   // Text palette
-  static const offWhite = Color(0xFFFAFAFA);       // Pure Soft White
-  static const textSecondary = Color(0xFFE4E4E7);  // Light Gray
-  static const textMuted = Color(0xFFA1A1AA);      // Slate Gray
+  static const offWhite = Color(0xFFFAFAFA); // Pure Soft White
+  static const textSecondary = Color(0xFFE4E4E7); // Light Gray
+  static const textMuted = Color(0xFFA1A1AA); // Slate Gray
 
   // --- Dynamic Accent Palette (Synced with AccentColorService) ---
   static Color get orangeAccent => AccentColorService.currentColor.value;
@@ -25,18 +25,22 @@ class AppColors {
     final hsl = HSLColor.fromColor(orangeAccent);
     return hsl.withLightness((hsl.lightness + 0.1).clamp(0.0, 1.0)).toColor();
   }
+
   static Color get orangeDark {
     final hsl = HSLColor.fromColor(orangeAccent);
     return hsl.withLightness((hsl.lightness - 0.1).clamp(0.0, 1.0)).toColor();
   }
+
   static Color get orangeContainer {
     final hsl = HSLColor.fromColor(orangeAccent);
     return hsl.withLightness(0.14).withSaturation(0.65).toColor();
   }
+
   static Color get orangeBorder {
     final hsl = HSLColor.fromColor(orangeAccent);
     return hsl.withLightness(0.26).withSaturation(0.55).toColor();
   }
+
   static Color get orangeOnContainer {
     final hsl = HSLColor.fromColor(orangeAccent);
     return hsl.withLightness(0.85).toColor();
@@ -48,23 +52,26 @@ class AppColors {
     final hsl = HSLColor.fromColor(color);
     return hsl.withLightness((hsl.lightness + delta).clamp(0.0, 1.0)).toColor();
   }
+
   // Matte pastel deep-orange for 3D button faces: softer (non-neon) orange
   // derived from the live accent so the accent picker keeps working.
   static Color get pastelDeepOrangeFill {
     final hsl = HSLColor.fromColor(orangeAccent);
     return hsl.withSaturation(0.78).withLightness(0.58).toColor();
   }
+
   static Color get pastelDeepOrangeBorder {
     final hsl = HSLColor.fromColor(orangeAccent);
     return hsl.withSaturation(0.78).withLightness(0.44).toColor();
   }
+
   static Color get pastelDeepOrangeLip {
     final hsl = HSLColor.fromColor(orangeAccent);
     return hsl.withSaturation(0.80).withLightness(0.32).toColor();
   }
 
   // Functional Accents
-  static const roseAccent = Color(0xFFEF4444);     // Danger
+  static const roseAccent = Color(0xFFEF4444); // Danger
   // Matte pastel fills for light-on-dark buttons (flat, no gloss).
   static const pastelPrimaryFill = Color(0xFFF0B48F);
   static const pastelPrimaryText = Color(0xFF3D2314);
@@ -79,7 +86,7 @@ class AppColors {
   static const roseBorder = Color(0xFF5A2529);
   static const roseOnContainer = Color(0xFFFECDD3);
 
-  static const mintAccent = Color(0xFF22C55E);     // Success
+  static const mintAccent = Color(0xFF22C55E); // Success
   static const mintContainer = Color(0xFF132A1C);
   static const mintBorder = Color(0xFF235432);
   static const mintOnContainer = Color(0xFFDCFCE7);
@@ -119,25 +126,26 @@ class AppTheme {
     final accentColor = accent ?? AppColors.orangeAccent;
     // Dynamically compute complementary container, border, and contrast colors from accentColor
     final HSLColor hsl = HSLColor.fromColor(accentColor);
-    final Color primaryContainer = hsl.withLightness(0.14).withSaturation(0.65).toColor();
+    final Color primaryContainer =
+        hsl.withLightness(0.14).withSaturation(0.65).toColor();
     final Color primaryOnContainer = hsl.withLightness(0.85).toColor();
-    final Color primaryBorder = hsl.withLightness(0.26).withSaturation(0.55).toColor();
-    
+    final Color primaryBorder =
+        hsl.withLightness(0.26).withSaturation(0.55).toColor();
+
     // Complementary secondary palette (180deg hue shift)
     final Color secondaryColor = HSLColor.fromColor(accentColor)
         .withHue((hsl.hue + 180) % 360)
         .withSaturation(0.45)
         .withLightness(0.65)
         .toColor();
-    final Color secondaryContainer = HSLColor.fromColor(secondaryColor)
-        .withLightness(0.14)
-        .toColor();
-    final Color secondaryOnContainer = HSLColor.fromColor(secondaryColor)
-        .withLightness(0.85)
-        .toColor();
+    final Color secondaryContainer =
+        HSLColor.fromColor(secondaryColor).withLightness(0.14).toColor();
+    final Color secondaryOnContainer =
+        HSLColor.fromColor(secondaryColor).withLightness(0.85).toColor();
 
     final bool isLightAccent = hsl.lightness > 0.65;
-    final Color onPrimaryText = isLightAccent ? const Color(0xFF140C08) : Colors.white;
+    final Color onPrimaryText =
+        isLightAccent ? const Color(0xFF140C08) : Colors.white;
 
     return ThemeData(
       useMaterial3: true,
@@ -183,7 +191,8 @@ class AppTheme {
         isDense: true,
         filled: true,
         fillColor: AppColors.inputZinc,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         labelStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
         hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
         border: OutlineInputBorder(
@@ -289,4 +298,3 @@ class AppTheme {
 
   static ThemeData get lightTheme => darkTheme;
 }
-

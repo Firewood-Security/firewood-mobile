@@ -132,8 +132,7 @@ class VaultAdvisory {
 
   bool get allClear => issueCount == 0;
 
-  SecurityFindingGroup? get topGroup =>
-      groups.isEmpty ? null : groups.first;
+  SecurityFindingGroup? get topGroup => groups.isEmpty ? null : groups.first;
 }
 
 class SecurityAdvisorEngine {
@@ -237,7 +236,8 @@ class SecurityAdvisorEngine {
             category: SecurityTipCategory.weakPasswords,
             severity: SecuritySeverity.critical,
             item: login,
-            detail: 'Only ${pwd.length} characters — minimum is $kWeakCriticalBelow',
+            detail:
+                'Only ${pwd.length} characters — minimum is $kWeakCriticalBelow',
           ));
         } else if (pwd.length < kWeakWarnBelow) {
           weakIssues.add(AdvisorIssue(
@@ -263,9 +263,8 @@ class SecurityAdvisorEngine {
         if (shared > 1) {
           reuseIssues.add(AdvisorIssue(
             category: SecurityTipCategory.reusedPasswords,
-            severity: shared >= 3
-                ? SecuritySeverity.critical
-                : SecuritySeverity.warn,
+            severity:
+                shared >= 3 ? SecuritySeverity.critical : SecuritySeverity.warn,
             item: login,
             detail: 'Shared with $shared credentials',
           ));
@@ -346,7 +345,8 @@ class SecurityAdvisorEngine {
     );
   }
 
-  static List<AdvisorIssue> _staleIssues(List<DecryptedItem> items, DateTime now) {
+  static List<AdvisorIssue> _staleIssues(
+      List<DecryptedItem> items, DateTime now) {
     final issues = <AdvisorIssue>[];
     for (final item in items) {
       final touched = item.updatedAt.isAfter(item.createdAt)
@@ -368,7 +368,8 @@ class SecurityAdvisorEngine {
   static List<SecurityFindingGroup> _buildGroups(
       List<SecurityFindingGroup> groups) {
     groups.sort((a, b) {
-      final bySeverity = severityRank(a.severity).compareTo(severityRank(b.severity));
+      final bySeverity =
+          severityRank(a.severity).compareTo(severityRank(b.severity));
       return bySeverity != 0 ? bySeverity : b.count.compareTo(a.count);
     });
     return groups;
@@ -377,7 +378,8 @@ class SecurityAdvisorEngine {
   static SecuritySeverity worstSeverity(List<AdvisorIssue> issues) {
     var worst = SecuritySeverity.info;
     for (final issue in issues) {
-      if (severityRank(issue.severity) < severityRank(worst)) worst = issue.severity;
+      if (severityRank(issue.severity) < severityRank(worst))
+        worst = issue.severity;
     }
     return worst;
   }
@@ -386,7 +388,8 @@ class SecurityAdvisorEngine {
       n == 1 ? '1 $noun' : '$n ${noun}s';
 
   /// Folded decision tree: one urgent tip, worst-first, login-count-gated.
-  static SecurityTip? _topTip(List<SecurityFindingGroup> groups, int totalLogins) {
+  static SecurityTip? _topTip(
+      List<SecurityFindingGroup> groups, int totalLogins) {
     final byCategory = <SecurityTipCategory, SecurityFindingGroup>{
       for (final g in groups) g.category: g,
     };
@@ -395,7 +398,8 @@ class SecurityAdvisorEngine {
     if (weak != null && weak.severity == SecuritySeverity.critical) {
       return SecurityTip(
         title: 'Weak Passwords Detected',
-        message: '${weak.count} credential(s) use passwords under $kWeakCriticalBelow characters. Consider updating them with the Generator.',
+        message:
+            '${weak.count} credential(s) use passwords under $kWeakCriticalBelow characters. Consider updating them with the Generator.',
         category: SecurityTipCategory.weakPasswords,
         actionLabel: 'Open Vault',
       );
@@ -405,7 +409,8 @@ class SecurityAdvisorEngine {
     if (reuse != null && reuse.count >= 2) {
       return SecurityTip(
         title: 'Password Reuse Risk',
-        message: '${reuse.count} credentials share identical passwords. Reusing passwords increases breach risk.',
+        message:
+            '${reuse.count} credentials share identical passwords. Reusing passwords increases breach risk.',
         category: SecurityTipCategory.reusedPasswords,
         actionLabel: 'View Reused',
       );
@@ -417,7 +422,8 @@ class SecurityAdvisorEngine {
         totalLogins >= kTotpPenaltyMinLogins) {
       return SecurityTip(
         title: 'Boost Account Protection',
-        message: '${no2fa.count} logins have no 2FA secret stored. Add TOTP secrets to secure your accounts.',
+        message:
+            '${no2fa.count} logins have no 2FA secret stored. Add TOTP secrets to secure your accounts.',
         category: SecurityTipCategory.missing2FA,
         actionLabel: 'Add 2FA',
       );
@@ -427,7 +433,8 @@ class SecurityAdvisorEngine {
     if (stale != null) {
       return SecurityTip(
         title: 'Credential Rotation Reminder',
-        message: 'Some credentials have not been updated in over ${(kStaleAfterDays / 30).round()} months. Periodic rotation keeps your vault secure.',
+        message:
+            'Some credentials have not been updated in over ${(kStaleAfterDays / 30).round()} months. Periodic rotation keeps your vault secure.',
         category: SecurityTipCategory.staleCredentials,
         actionLabel: 'Review Vault',
       );
@@ -436,7 +443,8 @@ class SecurityAdvisorEngine {
     if (weak != null) {
       return SecurityTip(
         title: 'Shorten the Gap',
-        message: '${weak.count} password(s) are under $kWeakWarnBelow characters. Longer passphrases resist brute force.',
+        message:
+            '${weak.count} password(s) are under $kWeakWarnBelow characters. Longer passphrases resist brute force.',
         category: SecurityTipCategory.weakPasswords,
         actionLabel: 'Open Vault',
       );
@@ -453,7 +461,8 @@ class MiniMLSecurityAdvisor {
 
   /// Evaluates vault health on-device and returns an occasional smart tip if
   /// the cooldown period has passed. Returns null when healthy or suppressed.
-  static Future<SecurityTip?> evaluateOccasionalTip(List<DecryptedItem> items) async {
+  static Future<SecurityTip?> evaluateOccasionalTip(
+      List<DecryptedItem> items) async {
     final prefs = await SharedPreferences.getInstance();
     final lastTipMs = prefs.getInt(_kLastTipKey) ?? 0;
     final nowMs = DateTime.now().millisecondsSinceEpoch;

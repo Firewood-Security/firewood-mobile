@@ -36,8 +36,12 @@ void main() {
     });
 
     tearDown(() async {
-      try { await IsarService().close(); } catch (_) {}
-      if (await tempDir.exists()) { await tempDir.delete(recursive: true); }
+      try {
+        await IsarService().close();
+      } catch (_) {}
+      if (await tempDir.exists()) {
+        await tempDir.delete(recursive: true);
+      }
     });
 
     test('hasAnyVault returns false initially', () async {

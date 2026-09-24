@@ -49,14 +49,16 @@ class _WelcomeBannerState extends State<WelcomeBanner> {
     _PageData(
       icon: AppIcons.fire,
       title: 'Burner Password',
-      body: 'Set a duress/parent password that permanently destroys ALL vault data '
+      body:
+          'Set a duress/parent password that permanently destroys ALL vault data '
           'when entered on the unlock screen. Use this if you are ever coerced '
           'into opening your vault.',
     ),
     _PageData(
       icon: AppIcons.shield,
       title: 'Privacy Agreement',
-      body: 'Firewood stores all data locally on your device. Nothing is sent to '
+      body:
+          'Firewood stores all data locally on your device. Nothing is sent to '
           'any server. You are solely responsible for your master password. '
           'Lost passwords CANNOT be recovered.',
     ),
@@ -131,7 +133,8 @@ class _WelcomeBannerState extends State<WelcomeBanner> {
               if (_page > 0)
                 TextButton(
                   onPressed: () => setState(() => _page--),
-                  child: const Text('Back', style: TextStyle(color: AppColors.textMuted)),
+                  child: const Text('Back',
+                      style: TextStyle(color: AppColors.textMuted)),
                 )
               else
                 const SizedBox(width: 64),
@@ -151,11 +154,13 @@ class _WelcomeBannerState extends State<WelcomeBanner> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 ),
                 child: Text(
                   isLast ? 'Got it' : 'Next',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 13),
                 ),
               ),
             ],

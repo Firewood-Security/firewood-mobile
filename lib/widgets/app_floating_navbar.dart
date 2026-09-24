@@ -155,7 +155,8 @@ class _NavItem extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: const Color(0xFFEF4444),
                         shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFF141418), width: 1.2),
+                        border: Border.all(
+                            color: const Color(0xFF141418), width: 1.2),
                       ),
                     ),
                   ),

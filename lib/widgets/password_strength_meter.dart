@@ -45,9 +45,7 @@ class PasswordStrengthMeter extends StatelessWidget {
                     color: isFilled ? color : AppColors.surfaceZinc,
                     borderRadius: BorderRadius.circular(4),
                     border: Border.all(
-                      color: isFilled
-                          ? color
-                          : AppColors.borderZinc,
+                      color: isFilled ? color : AppColors.borderZinc,
                       width: 0.8,
                     ),
                   ),

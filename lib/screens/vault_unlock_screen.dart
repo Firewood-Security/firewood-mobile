@@ -55,7 +55,8 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
       duration: const Duration(milliseconds: 500),
       vsync: this,
     );
-    _fadeAnimation = CurvedAnimation(parent: _fadeController, curve: Curves.easeOut);
+    _fadeAnimation =
+        CurvedAnimation(parent: _fadeController, curve: Curves.easeOut);
     _passwordController = TextEditingController();
     _fadeController.forward();
 
@@ -76,7 +77,8 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
         _authenticateBiometricUnlock();
       } else {
         try {
-          final storedPwd = await _secureStorage.read(key: _biometricPasswordKey);
+          final storedPwd =
+              await _secureStorage.read(key: _biometricPasswordKey);
           if (storedPwd != null && storedPwd.isNotEmpty && mounted) {
             _authenticateBiometricUnlock();
           }
@@ -110,7 +112,8 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
       }
       final didAuth = await localAuth.authenticate(
         localizedReason: 'Scan fingerprint or face to unlock Firewood',
-        options: const AuthenticationOptions(stickyAuth: true, biometricOnly: true),
+        options:
+            const AuthenticationOptions(stickyAuth: true, biometricOnly: true),
       );
       if (didAuth && mounted) {
         HapticFeedback.mediumImpact();
@@ -131,7 +134,9 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
           if (mounted) {
             setState(() {});
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Biometrics verified. Enter your master password.')),
+              const SnackBar(
+                  content:
+                      Text('Biometrics verified. Enter your master password.')),
             );
           }
         }
@@ -154,7 +159,8 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
     // Check lockout rate limiting
     final lockout = await NativeSecurityBridge.getLockoutStatus();
     if (lockout.isLockedOut) {
-      setState(() => _error = 'Too many failed attempts. Wait ${lockout.lockoutRemainingMs ~/ 1000}s.');
+      setState(() => _error =
+          'Too many failed attempts. Wait ${lockout.lockoutRemainingMs ~/ 1000}s.');
       return;
     }
 
@@ -195,10 +201,13 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
             await _secureStorage.delete(key: _biometricPasswordKey);
           } catch (_) {}
         } else if (mounted) {
-          await ref.read(biometricAuthEnabledProvider.notifier).setEnabled(false);
+          await ref
+              .read(biometricAuthEnabledProvider.notifier)
+              .setEnabled(false);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-                content: Text('Biometric unlock unavailable on this device and was disabled.')),
+                content: Text(
+                    'Biometric unlock unavailable on this device and was disabled.')),
           );
         }
       }
@@ -288,7 +297,8 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
       final file = result.files.single;
       final filePath = file.path;
       final fileName = file.name;
-      if (filePath == null && file.bytes == null) throw Exception('Could not access selected file');
+      if (filePath == null && file.bytes == null)
+        throw Exception('Could not access selected file');
 
       if (!fileName.toLowerCase().endsWith('.firewood')) {
         if (mounted) {
@@ -316,7 +326,8 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
                 side: const BorderSide(color: AppColors.borderZinc),
               ),
               title: Row(children: [
-                AppIcon(HugeIcons.strokeRoundedUpload01, color: AppColors.orangeAccent, size: 22),
+                AppIcon(HugeIcons.strokeRoundedUpload01,
+                    color: AppColors.orangeAccent, size: 22),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -334,7 +345,10 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
                 children: [
                   Text(
                     'Enter master password for "$fileName":',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: AppColors.textMuted),
                   ),
                   const SizedBox(height: 12),
                   Form(
@@ -349,11 +363,17 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
                         labelText: 'Backup Password',
                         prefixIcon: AppIcon(AppInputIcons.lock, size: 20),
                         suffixIcon: IconButton(
-                          icon: AppIcon(obscure ? AppInputIcons.eyeOff : AppInputIcons.eye, size: 18),
-                          onPressed: () => setModalState(() => obscure = !obscure),
+                          icon: AppIcon(
+                              obscure
+                                  ? AppInputIcons.eyeOff
+                                  : AppInputIcons.eye,
+                              size: 18),
+                          onPressed: () =>
+                              setModalState(() => obscure = !obscure),
                         ),
                       ),
-                      validator: (v) => v == null || v.isEmpty ? 'Password required' : null,
+                      validator: (v) =>
+                          v == null || v.isEmpty ? 'Password required' : null,
                     ),
                   ),
                 ],
@@ -361,14 +381,17 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
+                  child: const Text('Cancel',
+                      style: TextStyle(color: AppColors.textMuted)),
                 ),
                 FilledButton(
                   onPressed: () {
-                    if (formKey.currentState!.validate()) Navigator.pop(ctx, pwdCtrl.text);
+                    if (formKey.currentState!.validate())
+                      Navigator.pop(ctx, pwdCtrl.text);
                   },
                   style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
                   ),
                   child: const Text('Restore Vault'),
                 ),
@@ -383,20 +406,24 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
 
       setState(() => _isImporting = true);
       final targetPath = filePath ?? fileName;
-      final importedVaultName = await _backupService.importVault(targetPath, password, overwrite: true);
+      final importedVaultName = await _backupService
+          .importVault(targetPath, password, overwrite: true);
 
       final key = await _vaultService.unlock(password);
       ref.read(authProvider.notifier).state = key;
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Imported vault: $importedVaultName'), backgroundColor: AppColors.orangeAccent),
+          SnackBar(
+              content: Text('Imported vault: $importedVaultName'),
+              backgroundColor: AppColors.orangeAccent),
         );
         HapticFeedback.lightImpact();
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _error = 'Import failed: ${e.toString().replaceAll('BackupException: ', '')}');
+        setState(() => _error =
+            'Import failed: ${e.toString().replaceAll('BackupException: ', '')}');
       }
     } finally {
       if (mounted) setState(() => _isImporting = false);
@@ -426,202 +453,238 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
               Expanded(
                 child: Center(
                   child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Logo & Brand Header
-                  Center(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 32),
                     child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Image.asset(
-                          'assets/FWS.png',
-                          width: 72,
-                          height: 72,
-                          fit: BoxFit.contain,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Firewood',
-                          style: theme.textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.offWhite,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-
-                  // Error banner
-                  if (_error != null)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: AppColors.roseContainer,
-                        border: Border.all(color: AppColors.roseBorder),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Row(
-                        children: [
-                          AppIcon(AppIcons.alertCircle, color: AppColors.roseAccent, size: 18),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              _error!,
-                              style: const TextStyle(
-                                color: AppColors.roseOnContainer,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
+                        // Logo & Brand Header
+                        Center(
+                          child: Column(
+                            children: [
+                              Image.asset(
+                                'assets/FWS.png',
+                                width: 72,
+                                height: 72,
+                                fit: BoxFit.contain,
                               ),
-                            ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Firewood',
+                                style: theme.textTheme.headlineMedium?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.offWhite,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ),
+                        ),
+                        const SizedBox(height: 32),
 
-                  // Biometric Button (if enabled)
-                  if (isBiometricEnabled)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: _authenticateBiometricUnlock,
-                          borderRadius: BorderRadius.circular(16),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                        // Error banner
+                        if (_error != null)
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 12),
                             decoration: BoxDecoration(
-                              color: AppColors.periwinkleContainer.withValues(alpha: 0.4),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: AppColors.periwinkleBorder.withValues(alpha: 0.6)),
+                              color: AppColors.roseContainer,
+                              border: Border.all(color: AppColors.roseBorder),
+                              borderRadius: BorderRadius.circular(14),
                             ),
                             child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                AppIcon(
-                                  AppIcons.fingerprint,
-                                  color: _biometricTriggered ? AppColors.orangeAccent : AppColors.periwinkleAccent,
-                                  size: 24,
-                                ),
+                                AppIcon(AppIcons.alertCircle,
+                                    color: AppColors.roseAccent, size: 18),
                                 const SizedBox(width: 10),
-                                Text(
-                                  _biometricTriggered ? 'Verifying biometrics...' : 'Unlock with Biometrics',
-                                  style: TextStyle(
-                                    color: AppColors.periwinkleOnContainer.withValues(alpha: 0.9),
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
+                                Expanded(
+                                  child: Text(
+                                    _error!,
+                                    style: const TextStyle(
+                                      color: AppColors.roseOnContainer,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                        ),
-                      ),
-                    ),
 
-                  // --- MAIN MASTER PASSWORD UNLOCK CARD ---
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceZinc,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: AppColors.borderZinc,
-                        width: 1,
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const SizedBox(height: 18),
-                        TextField(
-                          controller: _passwordController,
-                          obscureText: _obscurePassword,
-                          enabled: !_isLoading && !_isBurning,
-                          autofocus: true,
-                          style: const TextStyle(color: AppColors.offWhite, fontSize: 14),
-                          textInputAction: TextInputAction.done,
-                          onSubmitted: (val) {
-                            if (val.isNotEmpty) _unlock();
-                          },
-                          decoration: InputDecoration(
-                            isDense: true,
-                            hintText: 'Master password',
-                            hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
-                            prefixIconConstraints: const BoxConstraints(minWidth: 42, minHeight: 42),
-                            prefixIcon: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
-                              child: AppIcon(AppInputIcons.key, size: 18, color: AppColors.textMuted),
-                            ),
-                            suffixIcon: IconButton(
-                              icon: AppIcon(
-                                _obscurePassword ? AppInputIcons.eyeOff : AppInputIcons.eye,
-                                size: 18,
-                                color: AppColors.textMuted,
+                        // Biometric Button (if enabled)
+                        if (isBiometricEnabled)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: _authenticateBiometricUnlock,
+                                borderRadius: BorderRadius.circular(16),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 14, horizontal: 16),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.periwinkleContainer
+                                        .withValues(alpha: 0.4),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                        color: AppColors.periwinkleBorder
+                                            .withValues(alpha: 0.6)),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      AppIcon(
+                                        AppIcons.fingerprint,
+                                        color: _biometricTriggered
+                                            ? AppColors.orangeAccent
+                                            : AppColors.periwinkleAccent,
+                                        size: 24,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        _biometricTriggered
+                                            ? 'Verifying biometrics...'
+                                            : 'Unlock with Biometrics',
+                                        style: TextStyle(
+                                          color: AppColors.periwinkleOnContainer
+                                              .withValues(alpha: 0.9),
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
-                              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                            ),
-                            fillColor: AppColors.inputZinc,
-                            filled: true,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide.none,
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: AppColors.orangeAccent, width: 1.2),
                             ),
                           ),
+
+                        // --- MAIN MASTER PASSWORD UNLOCK CARD ---
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceZinc,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: AppColors.borderZinc,
+                              width: 1,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const SizedBox(height: 18),
+                              TextField(
+                                controller: _passwordController,
+                                obscureText: _obscurePassword,
+                                enabled: !_isLoading && !_isBurning,
+                                autofocus: true,
+                                style: const TextStyle(
+                                    color: AppColors.offWhite, fontSize: 14),
+                                textInputAction: TextInputAction.done,
+                                onSubmitted: (val) {
+                                  if (val.isNotEmpty) _unlock();
+                                },
+                                decoration: InputDecoration(
+                                  isDense: true,
+                                  hintText: 'Master password',
+                                  hintStyle: const TextStyle(
+                                      color: AppColors.textMuted, fontSize: 13),
+                                  prefixIconConstraints: const BoxConstraints(
+                                      minWidth: 42, minHeight: 42),
+                                  prefixIcon: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12),
+                                    child: AppIcon(AppInputIcons.key,
+                                        size: 18, color: AppColors.textMuted),
+                                  ),
+                                  suffixIcon: IconButton(
+                                    icon: AppIcon(
+                                      _obscurePassword
+                                          ? AppInputIcons.eyeOff
+                                          : AppInputIcons.eye,
+                                      size: 18,
+                                      color: AppColors.textMuted,
+                                    ),
+                                    onPressed: () => setState(() =>
+                                        _obscurePassword = !_obscurePassword),
+                                  ),
+                                  fillColor: AppColors.inputZinc,
+                                  filled: true,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 14),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(
+                                        color: AppColors.orangeAccent,
+                                        width: 1.2),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              AppButton(
+                                label: 'Unlock Vault',
+                                icon: HugeIcons.strokeRoundedArrowRight01,
+                                variant: AppButtonVariant.primary,
+                                isLoading: _isLoading || _isBurning,
+                                loadingLabel: _isBurning
+                                    ? 'Processing...'
+                                    : 'Unlocking...',
+                                fullWidth: true,
+                                height: 48,
+                                onPressed:
+                                    _isLoading || _isBurning ? null : _unlock,
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 16),
-                        AppButton(
-                          label: 'Unlock Vault',
-                          icon: HugeIcons.strokeRoundedArrowRight01,
-                          variant: AppButtonVariant.primary,
-                          isLoading: _isLoading || _isBurning,
-                          loadingLabel: _isBurning ? 'Processing...' : 'Unlocking...',
-                          fullWidth: true,
-                          height: 48,
-                          onPressed: _isLoading || _isBurning ? null : _unlock,
+
+                        const SizedBox(height: 24),
+
+                        // Import Backup Action Button
+                        SizedBox(
+                          height: 46,
+                          child: OutlinedButton.icon(
+                            onPressed: _isImporting ? null : _importBackup,
+                            icon: _isImporting
+                                ? SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: AppColors.orangeAccent),
+                                  )
+                                : AppIcon(HugeIcons.strokeRoundedUpload01,
+                                    size: 18, color: AppColors.orangeAccent),
+                            label: Text(
+                              _isImporting
+                                  ? 'Importing...'
+                                  : 'Import Backup (.firewood)',
+                              style: const TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.offWhite,
+                                  fontWeight: FontWeight.w500),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              backgroundColor: AppColors.surfaceZinc,
+                              side:
+                                  const BorderSide(color: AppColors.borderZinc),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14)),
+                            ),
+                          ),
                         ),
                       ],
                     ),
                   ),
-
-                  const SizedBox(height: 24),
-
-                  // Import Backup Action Button
-                  SizedBox(
-                    height: 46,
-                    child: OutlinedButton.icon(
-                      onPressed: _isImporting ? null : _importBackup,
-                      icon: _isImporting
-                          ? SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.orangeAccent),
-                            )
-                          : AppIcon(HugeIcons.strokeRoundedUpload01, size: 18, color: AppColors.orangeAccent),
-                      label: Text(
-                        _isImporting ? 'Importing...' : 'Import Backup (.firewood)',
-                        style: const TextStyle(fontSize: 13, color: AppColors.offWhite, fontWeight: FontWeight.w500),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        backgroundColor: AppColors.surfaceZinc,
-                        side: const BorderSide(color: AppColors.borderZinc),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+                ),
               ),
               // Attribution footer pinned to the bottom of the screen.
               Padding(

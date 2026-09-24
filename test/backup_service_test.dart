@@ -68,7 +68,8 @@ void main() {
 
       // 3. Export vault
       final exportPath = '${tempDir.path}/test_backup.firewood';
-      final generatedPath = await backupService.exportVault(password, exportPath);
+      final generatedPath =
+          await backupService.exportVault(password, exportPath);
       expect(File(generatedPath).existsSync(), isTrue);
 
       // 4. Wipe vault

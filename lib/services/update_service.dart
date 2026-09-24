@@ -27,7 +27,8 @@ class AppUpdateInfo {
 }
 
 class UpdateService {
-  static final ValueNotifier<bool> hasUpdateAvailable = ValueNotifier<bool>(false);
+  static final ValueNotifier<bool> hasUpdateAvailable =
+      ValueNotifier<bool>(false);
 
   /// Owned update-channel constant (D-12, version registry). The host is a
   /// source-code constant by decision, NOT config: changing it is a
@@ -68,7 +69,8 @@ class UpdateService {
 
     try {
       final request = await client.getUrl(Uri.parse(_updateEndpoint));
-      request.headers.set('User-Agent', 'Firewood-Vault/1.0.0 (Android; Secure)');
+      request.headers
+          .set('User-Agent', 'Firewood-Vault/1.0.0 (Android; Secure)');
       request.headers.set('Accept', 'application/json');
 
       final response = await request.close();
@@ -78,13 +80,16 @@ class UpdateService {
         final json = jsonDecode(bodyStr) as Map<String, dynamic>;
 
         final latestVersion = json['version'] as String? ?? currentVersion;
-        final latestBuild = (json['buildNumber'] as num?)?.toInt() ?? currentBuildNumber;
-        final notes = json['releaseNotes'] as String? ?? 'Bug fixes and performance improvements.';
+        final latestBuild =
+            (json['buildNumber'] as num?)?.toInt() ?? currentBuildNumber;
+        final notes = json['releaseNotes'] as String? ??
+            'Bug fixes and performance improvements.';
         final url = json['downloadUrl'] as String? ?? '';
         final hash = json['sha256'] as String?;
         final mandatory = json['mandatory'] as bool? ?? false;
 
-        final hasUpdate = latestBuild > currentBuildNumber || _isVersionHigher(latestVersion, currentVersion);
+        final hasUpdate = latestBuild > currentBuildNumber ||
+            _isVersionHigher(latestVersion, currentVersion);
         hasUpdateAvailable.value = hasUpdate;
 
         return AppUpdateInfo(
@@ -97,14 +102,16 @@ class UpdateService {
           hasUpdate: hasUpdate,
         );
       } else {
-        throw Exception('HTTP Server returned status code: ${response.statusCode}');
+        throw Exception(
+            'HTTP Server returned status code: ${response.statusCode}');
       }
     } catch (e) {
       // Fallback: Default to secure local version check if API offline or unreachable
       return AppUpdateInfo(
         version: currentVersion,
         buildNumber: currentBuildNumber,
-        releaseNotes: 'You are running the latest verified release of Firewood.',
+        releaseNotes:
+            'You are running the latest verified release of Firewood.',
         downloadUrl: '',
         isMandatory: false,
         hasUpdate: false,
@@ -116,8 +123,10 @@ class UpdateService {
 
   bool _isVersionHigher(String newVer, String currentVer) {
     try {
-      final newParts = newVer.split('.').map((e) => int.tryParse(e) ?? 0).toList();
-      final currParts = currentVer.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+      final newParts =
+          newVer.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+      final currParts =
+          currentVer.split('.').map((e) => int.tryParse(e) ?? 0).toList();
 
       for (int i = 0; i < newParts.length && i < currParts.length; i++) {
         if (newParts[i] > currParts[i]) return true;

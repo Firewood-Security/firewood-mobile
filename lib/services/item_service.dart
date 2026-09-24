@@ -133,10 +133,8 @@ class ItemService {
     final isar = await _isarService.instance;
 
     try {
-      final item = await isar.secureItems
-          .filter()
-          .itemIdEqualTo(itemId)
-          .findFirst();
+      final item =
+          await isar.secureItems.filter().itemIdEqualTo(itemId).findFirst();
 
       if (item == null) {
         throw ItemException('Item not found: $itemId');
@@ -148,7 +146,8 @@ class ItemService {
         item.nonce,
         key,
       );
-      final existingFields = jsonDecode(utf8.decode(plaintext)) as Map<String, dynamic>;
+      final existingFields =
+          jsonDecode(utf8.decode(plaintext)) as Map<String, dynamic>;
       final updatedFields = {...existingFields, ...newFields};
 
       // Re-encrypt with NEW nonce (critical: never reuse nonce!)
@@ -179,10 +178,7 @@ class ItemService {
 
     try {
       await isar.writeTxn(() async {
-        await isar.secureItems
-            .filter()
-            .itemIdEqualTo(itemId)
-            .deleteAll();
+        await isar.secureItems.filter().itemIdEqualTo(itemId).deleteAll();
       });
     } catch (e) {
       throw ItemException('Failed to delete item: $e');
@@ -194,10 +190,8 @@ class ItemService {
     final isar = await _isarService.instance;
 
     try {
-      final item = await isar.secureItems
-          .filter()
-          .itemIdEqualTo(itemId)
-          .findFirst();
+      final item =
+          await isar.secureItems.filter().itemIdEqualTo(itemId).findFirst();
 
       if (item == null) return null;
 

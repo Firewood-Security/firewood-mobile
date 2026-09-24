@@ -35,7 +35,8 @@ final cryptoServiceProvider = Provider<CryptoService>((ref) {
 });
 
 // Biometric Auth setting provider
-final biometricAuthEnabledProvider = StateNotifierProvider<BiometricAuthNotifier, bool>((ref) {
+final biometricAuthEnabledProvider =
+    StateNotifierProvider<BiometricAuthNotifier, bool>((ref) {
   return BiometricAuthNotifier();
 });
 

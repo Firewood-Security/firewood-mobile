@@ -136,10 +136,10 @@ class LockService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final secs = prefs.getInt(_kTimeoutKey);
-      final timeout = (secs != null &&
-              lockTimeoutOptions.any((d) => d.inSeconds == secs))
-          ? Duration(seconds: secs)
-          : _defaultLockTimeout;
+      final timeout =
+          (secs != null && lockTimeoutOptions.any((d) => d.inSeconds == secs))
+              ? Duration(seconds: secs)
+              : _defaultLockTimeout;
       final enabled = prefs.getBool(_kEnabledKey) ?? true;
       return (timeout: timeout, enabled: enabled);
     } catch (_) {

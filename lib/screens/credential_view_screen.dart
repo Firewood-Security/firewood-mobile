@@ -30,7 +30,8 @@ class CredentialViewScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<CredentialViewScreen> createState() => _CredentialViewScreenState();
+  ConsumerState<CredentialViewScreen> createState() =>
+      _CredentialViewScreenState();
 }
 
 class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
@@ -96,7 +97,8 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
 
     try {
       final didAuthenticate = await _localAuth.authenticate(
-        localizedReason: 'Scan biometrics to view ${_currentItem.title} credentials',
+        localizedReason:
+            'Scan biometrics to view ${_currentItem.title} credentials',
         options: const AuthenticationOptions(
           stickyAuth: true,
           biometricOnly: true,
@@ -146,7 +148,8 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
       if (lockout.isLockedOut && mounted) {
         setState(() {
           _isAuthenticating = false;
-          _authError = 'Too many failed attempts. Wait ${lockout.lockoutRemainingMs ~/ 1000}s.';
+          _authError =
+              'Too many failed attempts. Wait ${lockout.lockoutRemainingMs ~/ 1000}s.';
         });
         return;
       }
@@ -201,7 +204,8 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
         await _authenticateBiometric();
       } else {
         messenger.showSnackBar(
-          const SnackBar(content: Text('Please unlock credential first to edit')),
+          const SnackBar(
+              content: Text('Please unlock credential first to edit')),
         );
         return;
       }
@@ -242,7 +246,8 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
         SnackBar(
           content: Row(
             children: [
-              AppIcon(AppIcons.checkCircle, color: Colors.greenAccent, size: 18),
+              AppIcon(AppIcons.checkCircle,
+                  color: Colors.greenAccent, size: 18),
               const SizedBox(width: 8),
               Expanded(child: Text('Copied $label (clears in 30s)')),
             ],
@@ -280,7 +285,9 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
           ),
         ],
       ),
-      body: _isUnlocked ? _buildCredentialDetails(itemType) : _buildLockPrompt(itemType),
+      body: _isUnlocked
+          ? _buildCredentialDetails(itemType)
+          : _buildLockPrompt(itemType),
     );
   }
 
@@ -315,23 +322,25 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
-
               if (_authError != null) ...[
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: Colors.red.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                    border:
+                        Border.all(color: Colors.red.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
-                      AppIcon(AppIcons.alertCircle, color: Colors.redAccent, size: 20),
+                      AppIcon(AppIcons.alertCircle,
+                          color: Colors.redAccent, size: 20),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           _authError!,
-                          style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+                          style: const TextStyle(
+                              color: Colors.redAccent, fontSize: 13),
                         ),
                       ),
                     ],
@@ -339,18 +348,19 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
                 ),
                 const SizedBox(height: 20),
               ],
-
               if (_canCheckBiometrics) ...[
                 SizedBox(
                   width: double.infinity,
                   height: 54,
                   child: FilledButton.icon(
-                    onPressed: _isAuthenticating ? null : _authenticateBiometric,
+                    onPressed:
+                        _isAuthenticating ? null : _authenticateBiometric,
                     icon: _isAuthenticating
                         ? const SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
                           )
                         : AppIcon(HugeIcons.strokeRoundedFingerPrint, size: 22),
                     label: const Text('Scan Biometrics to Unlock'),
@@ -363,14 +373,16 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: 12),
                       child: Text('OR USE PASSWORD',
-                          style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.bold)),
+                          style: TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold)),
                     ),
                     Expanded(child: Divider(color: AppColors.borderZinc)),
                   ],
                 ),
                 const SizedBox(height: 16),
               ],
-
               TextField(
                 controller: _passwordController,
                 obscureText: true,
@@ -386,12 +398,16 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
                 height: 52,
                 child: OutlinedButton.icon(
                   onPressed: _isAuthenticating ? null : _authenticatePassword,
-                  icon: AppIcon(HugeIcons.strokeRoundedLockPassword, color: AppColors.orangeAccent, size: 20),
+                  icon: AppIcon(HugeIcons.strokeRoundedLockPassword,
+                      color: AppColors.orangeAccent, size: 20),
                   label: const Text('Unlock with Master Password',
-                      style: TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.w600)),
+                      style: TextStyle(
+                          color: AppColors.offWhite,
+                          fontWeight: FontWeight.w600)),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: AppColors.borderZinc),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
               ),
@@ -408,7 +424,9 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
     // Exclude metadata timestamps since they are shown exclusively in the Metadata section
     fields.removeWhere((k, _) {
       final clean = k.toLowerCase().replaceAll(' ', '').replaceAll('_', '');
-      return clean == 'createdat' || clean == 'updatedat' || clean == 'timestamp';
+      return clean == 'createdat' ||
+          clean == 'updatedat' ||
+          clean == 'timestamp';
     });
 
     return FadeTransition(
@@ -447,14 +465,18 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
                       children: [
                         Text(
                           _currentItem.title,
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineSmall
+                              ?.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.offWhite,
                               ),
                         ),
                         const SizedBox(height: 4),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
                             color: AppColors.cardZinc,
                             borderRadius: BorderRadius.circular(8),
@@ -483,13 +505,18 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
               if (fields.containsKey('username')) ...[
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => _copyToClipboard('Username', fields['username'].toString()),
-                    icon: AppIcon(HugeIcons.strokeRoundedUser, size: 16, color: AppColors.orangeAccent),
-                    label: const Text('User', style: TextStyle(fontSize: 12, color: AppColors.offWhite)),
+                    onPressed: () => _copyToClipboard(
+                        'Username', fields['username'].toString()),
+                    icon: AppIcon(HugeIcons.strokeRoundedUser,
+                        size: 16, color: AppColors.orangeAccent),
+                    label: const Text('User',
+                        style:
+                            TextStyle(fontSize: 12, color: AppColors.offWhite)),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       side: const BorderSide(color: AppColors.borderZinc),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
                     ),
                   ),
                 ),
@@ -498,19 +525,23 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
               if (fields.containsKey('password')) ...[
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => _copyToClipboard('Password', fields['password'].toString()),
-                    icon: AppIcon(HugeIcons.strokeRoundedKey01, size: 16, color: AppColors.orangeAccent),
-                    label: const Text('Pass', style: TextStyle(fontSize: 12, color: AppColors.offWhite)),
+                    onPressed: () => _copyToClipboard(
+                        'Password', fields['password'].toString()),
+                    icon: AppIcon(HugeIcons.strokeRoundedKey01,
+                        size: 16, color: AppColors.orangeAccent),
+                    label: const Text('Pass',
+                        style:
+                            TextStyle(fontSize: 12, color: AppColors.offWhite)),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       side: const BorderSide(color: AppColors.borderZinc),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
               ],
-
               Expanded(
                 child: FilledButton.icon(
                   onPressed: _openEditScreen,
@@ -518,7 +549,8 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
                   label: const Text('Edit', style: TextStyle(fontSize: 12)),
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
               ),
@@ -557,7 +589,8 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
                     ),
                     Container(
                       margin: const EdgeInsets.all(12),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: Colors.black.withValues(alpha: 0.7),
                         borderRadius: BorderRadius.circular(20),
@@ -565,9 +598,12 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          AppIcon(AppIcons.search, color: Colors.white, size: 14),
+                          AppIcon(AppIcons.search,
+                              color: Colors.white, size: 14),
                           const SizedBox(width: 6),
-                          const Text('Tap to expand', style: TextStyle(color: Colors.white, fontSize: 12)),
+                          const Text('Tap to expand',
+                              style:
+                                  TextStyle(color: Colors.white, fontSize: 12)),
                         ],
                       ),
                     ),
@@ -628,7 +664,9 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
                         if (isSensitive)
                           IconButton(
                             icon: AppIcon(
-                              isRevealed ? AppInputIcons.eyeOff : AppInputIcons.eye,
+                              isRevealed
+                                  ? AppInputIcons.eyeOff
+                                  : AppInputIcons.eye,
                               size: 18,
                               color: AppColors.textMuted,
                             ),
@@ -643,7 +681,8 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
                             },
                           ),
                         IconButton(
-                          icon: AppIcon(AppInputIcons.copy, size: 18, color: AppColors.orangeAccent),
+                          icon: AppIcon(AppInputIcons.copy,
+                              size: 18, color: AppColors.orangeAccent),
                           onPressed: () => _copyToClipboard(key, val),
                           tooltip: 'Copy $key',
                         ),
@@ -654,7 +693,8 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
                       isSensitive && !isRevealed ? '••••••••••••••••' : val,
                       style: TextStyle(
                         fontSize: 15,
-                        fontFamily: isSensitive && !isRevealed ? null : 'Monospace',
+                        fontFamily:
+                            isSensitive && !isRevealed ? null : 'Monospace',
                         fontWeight: FontWeight.w600,
                         color: AppColors.offWhite,
                       ),
@@ -682,17 +722,25 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
             decoration: BoxDecoration(
               color: AppColors.surfaceZinc,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.borderZinc.withValues(alpha: 0.5)),
+              border: Border.all(
+                  color: AppColors.borderZinc.withValues(alpha: 0.5)),
             ),
             child: Column(
               children: [
                 Row(
                   children: [
-                    AppIcon(AppIcons.calendar, size: 16, color: AppColors.textMuted),
+                    AppIcon(AppIcons.calendar,
+                        size: 16, color: AppColors.textMuted),
                     const SizedBox(width: 8),
-                    const Text('Created At', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                    const Text('Created At',
+                        style: TextStyle(
+                            fontSize: 12, color: AppColors.textMuted)),
                     const Spacer(),
-                    Text(_formatDateTime(_currentItem.createdAt), style: const TextStyle(fontSize: 12, color: AppColors.offWhite, fontWeight: FontWeight.w600)),
+                    Text(_formatDateTime(_currentItem.createdAt),
+                        style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.offWhite,
+                            fontWeight: FontWeight.w600)),
                   ],
                 ),
                 const Padding(
@@ -701,11 +749,18 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
                 ),
                 Row(
                   children: [
-                    AppIcon(AppIcons.history, size: 16, color: AppColors.textMuted),
+                    AppIcon(AppIcons.history,
+                        size: 16, color: AppColors.textMuted),
                     const SizedBox(width: 8),
-                    const Text('Last Updated', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                    const Text('Last Updated',
+                        style: TextStyle(
+                            fontSize: 12, color: AppColors.textMuted)),
                     const Spacer(),
-                    Text(_formatDateTime(_currentItem.updatedAt), style: TextStyle(fontSize: 12, color: AppColors.orangeAccent, fontWeight: FontWeight.w600)),
+                    Text(_formatDateTime(_currentItem.updatedAt),
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.orangeAccent,
+                            fontWeight: FontWeight.w600)),
                   ],
                 ),
               ],
@@ -720,7 +775,8 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
     final year = dt.year;
     final month = dt.month.toString().padLeft(2, '0');
     final day = dt.day.toString().padLeft(2, '0');
-    final hour = (dt.hour % 12 == 0 ? 12 : dt.hour % 12).toString().padLeft(2, '0');
+    final hour =
+        (dt.hour % 12 == 0 ? 12 : dt.hour % 12).toString().padLeft(2, '0');
     final minute = dt.minute.toString().padLeft(2, '0');
     final ampm = dt.hour >= 12 ? 'PM' : 'AM';
     return '$year-$month-$day  $hour:$minute $ampm';
@@ -751,7 +807,8 @@ class _FullscreenImageViewer extends StatefulWidget {
 }
 
 class _FullscreenImageViewerState extends State<_FullscreenImageViewer> {
-  final TransformationController _transformationController = TransformationController();
+  final TransformationController _transformationController =
+      TransformationController();
   TapDownDetails? _doubleTapDetails;
 
   @override
@@ -784,10 +841,15 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer> {
           icon: AppIcon(AppIcons.arrowLeft, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Identity Document Preview', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+        title: const Text('Identity Document Preview',
+            style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
-            icon: AppIcon(HugeIcons.strokeRoundedRefresh, color: Colors.white70),
+            icon:
+                AppIcon(HugeIcons.strokeRoundedRefresh, color: Colors.white70),
             tooltip: 'Reset Zoom',
             onPressed: () {
               _transformationController.value = Matrix4.identity();

@@ -65,16 +65,20 @@ class _UpdateScreenState extends State<UpdateScreen> {
     return Scaffold(
       backgroundColor: AppColors.surfaceZinc,
       appBar: AppBar(
-        title: const Text('Updates', style: TextStyle(color: AppColors.offWhite, fontWeight: FontWeight.bold)),
+        title: const Text('Updates',
+            style: TextStyle(
+                color: AppColors.offWhite, fontWeight: FontWeight.bold)),
         leading: IconButton(
-          icon: const AppIcon(HugeIcons.strokeRoundedArrowLeft01, color: AppColors.offWhite, size: 22),
+          icon: const AppIcon(HugeIcons.strokeRoundedArrowLeft01,
+              color: AppColors.offWhite, size: 22),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
           IconButton(
             tooltip: 'Re-check',
             onPressed: _state == _CheckState.checking ? null : _check,
-            icon: const AppIcon(HugeIcons.strokeRoundedRefresh, color: AppColors.textMuted, size: 20),
+            icon: const AppIcon(HugeIcons.strokeRoundedRefresh,
+                color: AppColors.textMuted, size: 20),
           ),
         ],
       ),
@@ -129,7 +133,9 @@ class _UpdateScreenState extends State<UpdateScreen> {
         color: AppColors.cardZinc,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: _state == _CheckState.available ? activeAccent : AppColors.borderZinc,
+          color: _state == _CheckState.available
+              ? activeAccent
+              : AppColors.borderZinc,
           width: 1,
         ),
       ),
@@ -153,12 +159,15 @@ class _UpdateScreenState extends State<UpdateScreen> {
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 250),
                   child: _state == _CheckState.checking
-                      ? RotatingIcon(icon: stateIcon, color: activeAccent, size: 30)
+                      ? RotatingIcon(
+                          icon: stateIcon, color: activeAccent, size: 30)
                       : AppIcon(
                           stateIcon,
                           key: ValueKey(stateIcon),
                           size: 34,
-                          color: _state == _CheckState.available ? activeAccent : AppColors.mintAccent,
+                          color: _state == _CheckState.available
+                              ? activeAccent
+                              : AppColors.mintAccent,
                         ),
                 ),
               ],
@@ -176,7 +185,8 @@ class _UpdateScreenState extends State<UpdateScreen> {
           const SizedBox(height: 6),
           Text(
             subtitle,
-            style: const TextStyle(color: AppColors.textMuted, fontSize: 12.5, height: 1.4),
+            style: const TextStyle(
+                color: AppColors.textMuted, fontSize: 12.5, height: 1.4),
             textAlign: TextAlign.center,
           ),
           if (_state == _CheckState.available) ...[
@@ -222,7 +232,8 @@ class _UpdateScreenState extends State<UpdateScreen> {
         children: [
           Row(
             children: [
-              const AppIcon(HugeIcons.strokeRoundedFile01, size: 16, color: AppColors.textMuted),
+              const AppIcon(HugeIcons.strokeRoundedFile01,
+                  size: 16, color: AppColors.textMuted),
               const SizedBox(width: 8),
               Text(
                 'CHANGELOG',
@@ -243,7 +254,8 @@ class _UpdateScreenState extends State<UpdateScreen> {
                 child: SizedBox(
                   width: 18,
                   height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textMuted),
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: AppColors.textMuted),
                 ),
               ),
             )
@@ -284,17 +296,20 @@ class _VersionCompareRow extends StatelessWidget {
           ),
           child: Text(
             text,
-            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: fg),
+            style: TextStyle(
+                fontSize: 11.5, fontWeight: FontWeight.bold, color: fg),
           ),
         );
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        pill(current, AppColors.textMuted, AppColors.surfaceZinc, AppColors.borderZinc),
+        pill(current, AppColors.textMuted, AppColors.surfaceZinc,
+            AppColors.borderZinc),
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 8),
-          child: AppIcon(HugeIcons.strokeRoundedArrowRight01, size: 14, color: AppColors.textMuted),
+          child: AppIcon(HugeIcons.strokeRoundedArrowRight01,
+              size: 14, color: AppColors.textMuted),
         ),
         pill(latest, Colors.white, accent, AppColors.orangeDark),
       ],

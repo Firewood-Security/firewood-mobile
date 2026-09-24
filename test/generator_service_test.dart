@@ -20,8 +20,10 @@ void main() {
 
     test('calculateStrength returns accurate ratings', () {
       expect(GeneratorService.calculateStrength('123'), equals(0));
-      expect(GeneratorService.calculateStrength('password123'), lessThanOrEqualTo(2));
-      expect(GeneratorService.calculateStrength('C0mpl3x!P@ssw0rd#2026'), greaterThanOrEqualTo(3));
+      expect(GeneratorService.calculateStrength('password123'),
+          lessThanOrEqualTo(2));
+      expect(GeneratorService.calculateStrength('C0mpl3x!P@ssw0rd#2026'),
+          greaterThanOrEqualTo(3));
     });
 
     test('Base32 encode and decode RFC 4648 roundtrip', () {

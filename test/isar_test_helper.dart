@@ -40,7 +40,10 @@ Future<List<String>> _pubCacheCandidates() async {
   final hits = <String>[];
   await for (final entity in hosted.list()) {
     if (entity is Directory &&
-        entity.path.split(Platform.pathSeparator).last.startsWith('isar_flutter_libs-')) {
+        entity.path
+            .split(Platform.pathSeparator)
+            .last
+            .startsWith('isar_flutter_libs-')) {
       hits.add('${entity.path}/linux/libisar.so');
     }
   }

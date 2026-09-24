@@ -36,7 +36,8 @@ class GuideModal extends StatefulWidget {
   State<GuideModal> createState() => _GuideModalState();
 }
 
-class _GuideModalState extends State<GuideModal> with SingleTickerProviderStateMixin {
+class _GuideModalState extends State<GuideModal>
+    with SingleTickerProviderStateMixin {
   int _page = 0;
   late final PageController _pageController;
 
@@ -45,27 +46,31 @@ class _GuideModalState extends State<GuideModal> with SingleTickerProviderStateM
       icon: AppIcons.shield,
       title: 'Zero-Knowledge Encryption',
       subtitle: 'ARGON2ID + XCHACHA20-POLY1305',
-      body: 'Your vault data is locally encrypted. Your master password NEVER leaves your device. '
+      body:
+          'Your vault data is locally encrypted. Your master password NEVER leaves your device. '
           'Firewood cannot access, decrypt, or transmit your credentials.',
     ),
     _GuidePageData(
       icon: AppIcons.fingerprint,
       title: 'Biometric Security',
       subtitle: 'HARDWARE KEYSTORE INTEGRATION',
-      body: 'Unlock seamlessly with fingerprint or face biometric authentication. '
+      body:
+          'Unlock seamlessly with fingerprint or face biometric authentication. '
           'Keys are protected by the hardware security module.',
     ),
     _GuidePageData(
       icon: AppIcons.fire,
       title: 'Burner Password',
       subtitle: 'EMERGENCY DURESS WIPING',
-      body: 'Configure a duress password that permanently destroys all vault data if you are ever coerced into unlocking your device.',
+      body:
+          'Configure a duress password that permanently destroys all vault data if you are ever coerced into unlocking your device.',
     ),
     _GuidePageData(
       icon: AppIcons.lockClock,
       title: 'Auto-Lock & Inactivity',
       subtitle: 'SCREEN PRIVACY & CLIPBOARD AUTO-CLEAR',
-      body: 'Automatic locking on app minimization and clipboard auto-clearing protect your data from memory dumping and background snooping.',
+      body:
+          'Automatic locking on app minimization and clipboard auto-clearing protect your data from memory dumping and background snooping.',
     ),
   ];
 
@@ -121,7 +126,9 @@ class _GuideModalState extends State<GuideModal> with SingleTickerProviderStateM
                             width: isCurrent ? 24 : 6,
                             height: 5,
                             decoration: BoxDecoration(
-                              color: isCurrent ? activeAccent : AppColors.borderZinc,
+                              color: isCurrent
+                                  ? activeAccent
+                                  : AppColors.borderZinc,
                               borderRadius: BorderRadius.circular(3),
                             ),
                           );
@@ -190,7 +197,8 @@ class _GuideModalState extends State<GuideModal> with SingleTickerProviderStateM
                             TextButton(
                               style: TextButton.styleFrom(
                                 foregroundColor: AppColors.textMuted,
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 10),
                               ),
                               onPressed: () {
                                 HapticFeedback.selectionClick();
@@ -199,21 +207,26 @@ class _GuideModalState extends State<GuideModal> with SingleTickerProviderStateM
                                   curve: Curves.easeOutCubic,
                                 );
                               },
-                              child: const Text('Back', style: TextStyle(fontWeight: FontWeight.w600)),
+                              child: const Text('Back',
+                                  style:
+                                      TextStyle(fontWeight: FontWeight.w600)),
                             )
                           else
                             TextButton(
                               style: TextButton.styleFrom(
                                 foregroundColor: AppColors.textMuted,
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 10),
                               ),
                               onPressed: () async {
                                 HapticFeedback.lightImpact();
                                 await GuideModal.dismissPermanently();
-                                if (context.mounted) Navigator.of(context).pop();
+                                if (context.mounted)
+                                  Navigator.of(context).pop();
                                 widget.onDismiss?.call();
                               },
-                              child: const Text('Skip', style: TextStyle(fontSize: 12)),
+                              child: const Text('Skip',
+                                  style: TextStyle(fontSize: 12)),
                             ),
                           const Spacer(),
                           Container(
@@ -229,17 +242,20 @@ class _GuideModalState extends State<GuideModal> with SingleTickerProviderStateM
                                   HapticFeedback.selectionClick();
                                   if (isLast) {
                                     await GuideModal.dismissPermanently();
-                                    if (context.mounted) Navigator.of(context).pop();
+                                    if (context.mounted)
+                                      Navigator.of(context).pop();
                                     widget.onDismiss?.call();
                                   } else {
                                     _pageController.nextPage(
-                                      duration: const Duration(milliseconds: 250),
+                                      duration:
+                                          const Duration(milliseconds: 250),
                                       curve: Curves.easeOutCubic,
                                     );
                                   }
                                 },
                                 child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 11),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 22, vertical: 11),
                                   child: Text(
                                     isLast ? 'Get Started' : 'Next',
                                     style: const TextStyle(

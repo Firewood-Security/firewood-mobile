@@ -31,35 +31,41 @@ class BackupData {
   });
 
   Map<String, dynamic> toJson() => {
-    'version': version,
-    'exportedAt': exportedAt.toIso8601String(),
-    'exported_at': exportedAt.toIso8601String(),
-    'vaultId': vaultId,
-    'vaultName': vaultName,
-    'salt': salt,
-    'vault': {
-      'id': vaultId,
-      'vaultId': vaultId,
-      'name': vaultName,
-      'vaultName': vaultName,
-      'salt': salt,
-      'createdAt': exportedAt.toIso8601String(),
-      'created_at': exportedAt.toIso8601String(),
-    },
-    'items': items.map((e) => e.toJson()).toList(),
-  };
+        'version': version,
+        'exportedAt': exportedAt.toIso8601String(),
+        'exported_at': exportedAt.toIso8601String(),
+        'vaultId': vaultId,
+        'vaultName': vaultName,
+        'salt': salt,
+        'vault': {
+          'id': vaultId,
+          'vaultId': vaultId,
+          'name': vaultName,
+          'vaultName': vaultName,
+          'salt': salt,
+          'createdAt': exportedAt.toIso8601String(),
+          'created_at': exportedAt.toIso8601String(),
+        },
+        'items': items.map((e) => e.toJson()).toList(),
+      };
 
   factory BackupData.fromJson(Map<String, dynamic> json) {
     final version = (json['version'] as String?) ?? '1.0.0';
 
-    final exportedAtStr = (json['exportedAt'] ?? json['exported_at']) as String?;
+    final exportedAtStr =
+        (json['exportedAt'] ?? json['exported_at']) as String?;
     final exportedAt = exportedAtStr != null
         ? DateTime.parse(exportedAtStr)
         : DateTime.now().toUtc();
 
     final vaultObj = json['vault'] as Map<String, dynamic>?;
-    final vaultId = (json['vaultId'] ?? vaultObj?['id'] ?? vaultObj?['vaultId']) as String? ?? 'default-vault-id';
-    final vaultName = (json['vaultName'] ?? vaultObj?['name'] ?? vaultObj?['vaultName']) as String? ?? 'Imported Vault';
+    final vaultId = (json['vaultId'] ?? vaultObj?['id'] ?? vaultObj?['vaultId'])
+            as String? ??
+        'default-vault-id';
+    final vaultName = (json['vaultName'] ??
+            vaultObj?['name'] ??
+            vaultObj?['vaultName']) as String? ??
+        'Imported Vault';
 
     final rawSalt = json['salt'] ?? vaultObj?['salt'];
     if (rawSalt == null || rawSalt is! List) {
@@ -101,20 +107,20 @@ class BackupItem {
   });
 
   Map<String, dynamic> toJson() => {
-    'itemId': itemId,
-    'id': itemId,
-    'type': type,
-    'item_type': type.toLowerCase().replaceAll(' ', ''),
-    'title': title,
-    'encryptedData': encryptedData,
-    'nonce': nonce,
-    'encrypted_data': {
-      'ciphertext': encryptedData,
-      'nonce': nonce,
-    },
-    'updatedAt': updatedAt.toIso8601String(),
-    'updated_at': updatedAt.toIso8601String(),
-  };
+        'itemId': itemId,
+        'id': itemId,
+        'type': type,
+        'item_type': type.toLowerCase().replaceAll(' ', ''),
+        'title': title,
+        'encryptedData': encryptedData,
+        'nonce': nonce,
+        'encrypted_data': {
+          'ciphertext': encryptedData,
+          'nonce': nonce,
+        },
+        'updatedAt': updatedAt.toIso8601String(),
+        'updated_at': updatedAt.toIso8601String(),
+      };
 
   factory BackupItem.fromJson(Map<String, dynamic> json) {
     final itemId = (json['itemId'] ?? json['id']) as String? ?? '';
@@ -137,7 +143,8 @@ class BackupItem {
           final decodedStr = utf8.decode(bytes);
           final decodedJson = jsonDecode(decodedStr);
           if (decodedJson is Map) {
-            encryptedData = List<int>.from(decodedJson['ciphertext'] as List? ?? []);
+            encryptedData =
+                List<int>.from(decodedJson['ciphertext'] as List? ?? []);
             nonce = List<int>.from(decodedJson['nonce'] as List? ?? []);
           }
         } catch (_) {
@@ -149,13 +156,17 @@ class BackupItem {
       }
     }
 
-    if (encryptedData.isEmpty && json.containsKey('encryptedData') && json['encryptedData'] is List) {
+    if (encryptedData.isEmpty &&
+        json.containsKey('encryptedData') &&
+        json['encryptedData'] is List) {
       encryptedData = List<int>.from(json['encryptedData'] as List);
     }
     if (nonce.isEmpty && json.containsKey('nonce') && json['nonce'] is List) {
       nonce = List<int>.from(json['nonce'] as List);
     }
-    if (encryptedData.isEmpty && json.containsKey('ciphertext') && json['ciphertext'] is List) {
+    if (encryptedData.isEmpty &&
+        json.containsKey('ciphertext') &&
+        json['ciphertext'] is List) {
       encryptedData = List<int>.from(json['ciphertext'] as List);
     }
 
@@ -195,7 +206,8 @@ class BackupService {
     if (vault == null) {
       final salt = _crypto.generateSalt();
       final key = await _crypto.deriveKey(masterPassword, salt);
-      final verifier = await _crypto.encryptString(VaultService.verifierSentinel, key);
+      final verifier =
+          await _crypto.encryptString(VaultService.verifierSentinel, key);
 
       vault = Vault()
         ..vaultId = const Uuid().v4()
@@ -237,11 +249,12 @@ class BackupService {
     final backupItems = <BackupItem>[];
     for (final item in items) {
       // Decrypt with vault key
-      final plaintext = await _crypto.decrypt(item.encryptedData, item.nonce, exportKey);
-      
+      final plaintext =
+          await _crypto.decrypt(item.encryptedData, item.nonce, exportKey);
+
       // Re-encrypt with export key (fresh nonce)
       final encrypted = await _crypto.encrypt(plaintext, exportKey);
-      
+
       backupItems.add(BackupItem(
         itemId: item.itemId,
         type: item.type,
@@ -287,7 +300,8 @@ class BackupService {
       }
     } else {
       final dir = await _getExportDirectory();
-      final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.')[0];
+      final timestamp =
+          DateTime.now().toIso8601String().replaceAll(':', '-').split('.')[0];
       filePath = '${dir.path}/firewood-backup-$timestamp$_fileExtension';
     }
 
@@ -355,7 +369,8 @@ class BackupService {
     try {
       jsonBytes = await _crypto.decrypt(ciphertext, nonce, fileKey);
     } catch (_) {
-      throw BackupException('Incorrect backup password or corrupted backup file.');
+      throw BackupException(
+          'Incorrect backup password or corrupted backup file.');
     }
     final jsonString = utf8.decode(jsonBytes);
 
@@ -377,14 +392,16 @@ class BackupService {
     }
 
     // Derive export key for backup items from masterPassword + backupData.salt
-    final backupItemKey = await _crypto.deriveKey(masterPassword, backupData.salt);
+    final backupItemKey =
+        await _crypto.deriveKey(masterPassword, backupData.salt);
 
     final existingVault = await isar.vaults.where().findFirst();
 
     if (existingVault != null && !overwrite && activeVaultKey != null) {
       // MERGE MODE: Re-encrypt backup items with current active vault key and add to vault
       for (final backupItem in backupData.items) {
-        if (backupItem.encryptedData.isEmpty || backupItem.nonce.isEmpty) continue;
+        if (backupItem.encryptedData.isEmpty || backupItem.nonce.isEmpty)
+          continue;
         // Decrypt plaintext from backup using backup key
         final plaintext = await _crypto.decrypt(
           backupItem.encryptedData,
@@ -396,7 +413,9 @@ class BackupService {
         final reEncrypted = await _crypto.encrypt(plaintext, activeVaultKey);
 
         final item = SecureItem()
-          ..itemId = backupItem.itemId.isNotEmpty ? backupItem.itemId : const Uuid().v4()
+          ..itemId = backupItem.itemId.isNotEmpty
+              ? backupItem.itemId
+              : const Uuid().v4()
           ..vaultId = existingVault.vaultId
           ..encryptedData = reEncrypted.ciphertext
           ..nonce = reEncrypted.nonce
@@ -419,7 +438,8 @@ class BackupService {
       }
 
       // Generate verification token for the new master password
-      final verifier = await _crypto.encryptString(VaultService.verifierSentinel, backupItemKey);
+      final verifier = await _crypto.encryptString(
+          VaultService.verifierSentinel, backupItemKey);
 
       final vault = Vault()
         ..vaultId = backupData.vaultId
@@ -436,7 +456,8 @@ class BackupService {
 
       // Import items
       for (final backupItem in backupData.items) {
-        if (backupItem.encryptedData.isEmpty || backupItem.nonce.isEmpty) continue;
+        if (backupItem.encryptedData.isEmpty || backupItem.nonce.isEmpty)
+          continue;
         final plaintext = await _crypto.decrypt(
           backupItem.encryptedData,
           backupItem.nonce,
@@ -446,7 +467,9 @@ class BackupService {
         final encrypted = await _crypto.encrypt(plaintext, backupItemKey);
 
         final item = SecureItem()
-          ..itemId = backupItem.itemId.isNotEmpty ? backupItem.itemId : const Uuid().v4()
+          ..itemId = backupItem.itemId.isNotEmpty
+              ? backupItem.itemId
+              : const Uuid().v4()
           ..vaultId = backupData.vaultId
           ..encryptedData = encrypted.ciphertext
           ..nonce = encrypted.nonce

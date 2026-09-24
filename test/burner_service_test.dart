@@ -73,8 +73,8 @@ void main() {
 
     test('legacy salt-less rows still verify via static fallback', () async {
       const password = 'LegacyBurner12';
-      final argon2 =
-          Argon2id(memory: 65536, iterations: 3, parallelism: 4, hashLength: 32);
+      final argon2 = Argon2id(
+          memory: 65536, iterations: 3, parallelism: 4, hashLength: 32);
       final hash = await argon2.deriveKeyFromPassword(
           password: password, nonce: BurnerService.legacyStaticSalt);
       final isar = await IsarService().instance;

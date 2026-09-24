@@ -30,7 +30,7 @@ class _FirewoodAppState extends ConsumerState<FirewoodApp>
     super.initState();
     _lockService = ref.read(lockServiceProvider);
     WidgetsBinding.instance.addObserver(this);
-    
+
     // Configure lock service from settings
     final timeout = ref.read(lockTimeoutProvider);
     final enabled = ref.read(autoLockEnabledProvider);
@@ -137,16 +137,21 @@ class _AuthGateState extends ConsumerState<_AuthGate> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    AppIcon(AppIcons.alertCircle, color: Colors.orangeAccent, size: 48),
+                    AppIcon(AppIcons.alertCircle,
+                        color: Colors.orangeAccent, size: 48),
                     const SizedBox(height: 16),
                     const Text(
                       'Failed to initialize vault database',
-                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       '${snapshot.error}',
-                      style: const TextStyle(color: Colors.white70, fontSize: 13),
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 13),
                       textAlign: TextAlign.center,
                     ),
                   ],

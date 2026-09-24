@@ -8,7 +8,6 @@ import 'services/native_security_bridge.dart';
 import 'services/update_service.dart';
 import 'theme/app_icons.dart';
 
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -32,7 +31,10 @@ void main() async {
               const SizedBox(height: 16),
               const Text(
                 'An unexpected error occurred.',
-                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               Text(
@@ -56,8 +58,6 @@ void main() async {
   // Read the deployed build's version (versionName/versionCode) so every
   // version surface follows the actual installed package.
   await AppVersionService.init();
-
-
 
   try {
     UpdateService.initUpdateChecker();

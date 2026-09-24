@@ -39,6 +39,7 @@ class CryptoService {
     );
     return secretBox;
   }
+
   /// Derives a domain-separated subkey from a master key using HKDF-Expand (RFC 5869).
   Future<SecretKey> deriveSubkey(SecretKey masterKey, String infoString) async {
     final hkdf = Hkdf(hmac: Hmac.sha256(), outputLength: 32);
@@ -63,7 +64,10 @@ class CryptoService {
       secretKey: key,
       nonce: nonce,
     );
-    final combinedCiphertext = [...secretBox.cipherText, ...secretBox.mac.bytes];
+    final combinedCiphertext = [
+      ...secretBox.cipherText,
+      ...secretBox.mac.bytes
+    ];
     return (ciphertext: combinedCiphertext, nonce: secretBox.nonce);
   }
 

@@ -26,15 +26,19 @@ class BurnerService {
   }
 
   Future<String> _hashWithSalt(String password, List<int> salt) async {
-    final argon2 = Argon2id(memory: 65536, iterations: 3, parallelism: 4, hashLength: 32);
-    final hash = await argon2.deriveKeyFromPassword(password: password, nonce: salt);
+    final argon2 =
+        Argon2id(memory: 65536, iterations: 3, parallelism: 4, hashLength: 32);
+    final hash =
+        await argon2.deriveKeyFromPassword(password: password, nonce: salt);
     return base64Encode(await hash.extractBytes());
   }
 
   /// Minimum aligned with the master-password policy (ADR-006): a duress code
   /// must not be weaker than the password it destroys.
-  Future<bool> addBurnerPassword(String password, {String label = 'Burner Code'}) async {
-    if (password.length < 8) throw BurnerException('Burner password must be at least 8 characters');
+  Future<bool> addBurnerPassword(String password,
+      {String label = 'Burner Code'}) async {
+    if (password.length < 8)
+      throw BurnerException('Burner password must be at least 8 characters');
 
     final isar = await _isarService.instance;
     final salt = _newSalt();
