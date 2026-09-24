@@ -171,7 +171,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 Navigator.pop(ctx, passwordController.text);
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.pastelDeepOrangeFill, foregroundColor: Colors.white, shadowColor: AppColors.pastelDeepOrangeLip),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.orangeAccent, foregroundColor: Colors.white, shadowColor: AppColors.shade(AppColors.orangeAccent, -0.18)),
             child: const Text('Import & Restore'),
           ),
         ],
@@ -463,7 +463,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             ),
             actions: [
               IconButton(
-                icon: AppIcon(HugeIcons.strokeRoundedLock, color: AppColors.orangeAccent, size: 30),
+                icon: AppIcon(AppIcons.lock3d, color: AppColors.orangeAccent, size: 30),
                 tooltip: 'Lock Vault',
                 onPressed: () {
                   HapticFeedback.mediumImpact();
@@ -516,19 +516,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [
-                            AppColors.shade(AppColors.pastelDeepOrangeFill, 0.05),
-                            AppColors.pastelDeepOrangeFill,
-                            AppColors.shade(AppColors.pastelDeepOrangeFill, -0.05),
+                            AppColors.orangeAccent,
+                            AppColors.shade(AppColors.orangeAccent, -0.08),
                           ],
-                          stops: const [0.0, 0.6, 1.0],
                         ),
                         border: Border.all(
-                          color: AppColors.pastelDeepOrangeBorder,
+                          color: AppColors.orangeDark,
                           width: 1,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.pastelDeepOrangeLip,
+                            color: AppColors.shade(AppColors.orangeAccent, -0.18),
                             offset: Offset(0, 3),
                             blurRadius: 0,
                           ),
