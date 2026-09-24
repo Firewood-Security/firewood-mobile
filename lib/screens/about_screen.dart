@@ -313,14 +313,7 @@ class _DeveloperTile extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppColors.orangeContainer,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: AppIcon(icon, color: AppColors.orangeAccent, size: 20),
-          ),
+          AppIcon(icon, size: 24),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -344,7 +337,7 @@ class _DeveloperTile extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: AppColors.cardZinc,
                             borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: AppColors.orangeAccent.withValues(alpha: 0.4)),
+                            border: Border.all(color: AppColors.borderZinc),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -365,7 +358,7 @@ class _DeveloperTile extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: AppColors.cardZinc,
                             borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: AppColors.orangeAccent.withValues(alpha: 0.4)),
+                            border: Border.all(color: AppColors.borderZinc),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -406,14 +399,7 @@ class _FeatureTile extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppColors.orangeContainer,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: AppIcon(icon, color: AppColors.orangeAccent, size: 18),
-          ),
+          AppIcon(icon, size: 24),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

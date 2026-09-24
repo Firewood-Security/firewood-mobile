@@ -237,15 +237,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               const SizedBox(height: 18),
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: activeAccent.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: activeAccent.withValues(alpha: 0.3)),
-                    ),
-                    child: AppIcon(AppIcons.vault, color: activeAccent, size: 20),
-                  ),
+                  AppIcon(AppIcons.vault, size: 26),
                   const SizedBox(width: 12),
                   const Expanded(
                     child: Column(
@@ -289,14 +281,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       child: Row(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: AppColors.orangeContainer,
-                              shape: BoxShape.circle,
-                            ),
-                            child: AppIcon(AppIcons.add, color: activeAccent, size: 20),
-                          ),
+                          AppIcon(AppIcons.add, size: 28),
                           const SizedBox(width: 14),
                           const Expanded(
                             child: Column(
@@ -609,15 +594,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           children: [
                             Row(
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.all(7),
-                                  decoration: BoxDecoration(
-                                    color: activeAccent.withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(color: activeAccent.withValues(alpha: 0.3)),
-                                  ),
-                                  child: AppIcon(AppIcons.shield, color: activeAccent, size: 18),
-                                ),
+                                AppIcon(AppIcons.shield, size: 28),
                                 const Spacer(),
                                 Text(
                                   '${report.totalItems}',
@@ -663,20 +640,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           children: [
                             Row(
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.all(7),
-                                  decoration: BoxDecoration(
-                                    color: (report.securityScore >= 80 ? const Color(0xFF22C55E) : report.securityScore >= 50 ? const Color(0xFFF59E0B) : const Color(0xFFEF4444)).withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(
-                                      color: (report.securityScore >= 80 ? const Color(0xFF22C55E) : report.securityScore >= 50 ? const Color(0xFFF59E0B) : const Color(0xFFEF4444)).withValues(alpha: 0.3),
-                                    ),
-                                  ),
-                                  child: AppIcon(
-                                    AppIcons.shieldCheck,
-                                    color: report.securityScore >= 80 ? const Color(0xFF22C55E) : report.securityScore >= 50 ? const Color(0xFFF59E0B) : const Color(0xFFEF4444),
-                                    size: 18,
-                                  ),
+                                AppIcon(
+                                  AppIcons.shieldCheck,
+                                  size: 28,
                                 ),
                                 const Spacer(),
                                 Text(
@@ -1693,14 +1659,7 @@ class _CategorySummaryCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(7),
-                    decoration: BoxDecoration(
-                      color: effectiveAccent.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: AppIcon(icon, size: 18, color: effectiveAccent),
-                  ),
+                  AppIcon(icon, size: 26),
                   Text(
                     '$count',
                     style: TextStyle(
@@ -1761,15 +1720,7 @@ class _ItemTile extends StatelessWidget {
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        leading: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: activeAccent.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: activeAccent.withValues(alpha: 0.25), width: 1),
-          ),
-          child: AppIcon(_getTypeIcon(type), color: activeAccent, size: 20),
-        ),
+        leading: AppIcon(_getTypeIcon(type), size: 30),
         title: Text(
           item.title,
           maxLines: 1,

@@ -613,15 +613,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: activeAccent.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: activeAccent.withValues(alpha: 0.3)),
-                        ),
-                        child: AppIcon(categoryIcon, color: activeAccent, size: 22),
-                      ),
+                      AppIcon(categoryIcon, size: 26),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -659,14 +651,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: AppColors.cardZinc,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: AppIcon(item.icon, size: 16, color: activeAccent),
-                            ),
+                            AppIcon(item.icon, size: 24),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(

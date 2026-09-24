@@ -292,18 +292,9 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: AppColors.orangeContainer,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.orangeBorder, width: 1),
-                ),
-                child: AppIcon(
-                  AppIcons.shield,
-                  size: 48,
-                  color: AppColors.orangeAccent,
-                ),
+              AppIcon(
+                AppIcons.shield,
+                size: 64,
               ),
               const SizedBox(height: 24),
               Text(

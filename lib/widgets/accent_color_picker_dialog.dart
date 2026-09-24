@@ -44,18 +44,9 @@ class AccentColorPickerDialog extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceZinc,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: AppColors.borderZinc),
-                          ),
-                          child: AppIcon(
-                            AppIcons.palette,
-                            color: AppColors.offWhite,
-                            size: 20,
-                          ),
+                        AppIcon(
+                          AppIcons.palette,
+                          size: 26,
                         ),
                         const SizedBox(width: 12),
                         const Expanded(

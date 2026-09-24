@@ -98,14 +98,7 @@ class _WelcomeBannerState extends State<WelcomeBanner> {
           const SizedBox(height: 20),
 
           // Icon
-          Container(
-            width: 56, height: 56,
-            decoration: BoxDecoration(
-              color: activeAccent.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Center(child: AppIcon(page.icon, color: activeAccent, size: 26)),
-          ),
+          Center(child: AppIcon(page.icon, size: 48)),
           const SizedBox(height: 14),
 
           // Title

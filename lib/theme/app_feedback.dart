@@ -14,30 +14,18 @@ class AppToast {
     final scaffold = ScaffoldMessenger.of(context);
     scaffold.hideCurrentSnackBar();
 
-    Color accentColor;
     dynamic iconData;
-    Color iconBg;
 
     switch (type) {
       case ToastType.success:
-        accentColor = const Color(0xFF10B981);
         iconData = AppIcons.checkCircle;
-        iconBg = const Color(0xFF10B981).withValues(alpha: 0.15);
         break;
       case ToastType.error:
-        accentColor = const Color(0xFFF43F5E);
-        iconData = AppIcons.alertCircle;
-        iconBg = const Color(0xFFF43F5E).withValues(alpha: 0.15);
-        break;
       case ToastType.warning:
-        accentColor = const Color(0xFFF59E0B);
         iconData = AppIcons.alertCircle;
-        iconBg = const Color(0xFFF59E0B).withValues(alpha: 0.15);
         break;
       case ToastType.info:
-        accentColor = Theme.of(context).colorScheme.primary;
         iconData = AppIcons.info;
-        iconBg = Theme.of(context).colorScheme.primary.withValues(alpha: 0.15);
         break;
     }
 
@@ -61,16 +49,7 @@ class AppToast {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: iconBg,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.borderZinc, width: 1),
-                ),
-                child: Center(child: AppIcon(iconData, color: accentColor, size: 16)),
-              ),
+              AppIcon(iconData, size: 20),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -103,8 +82,6 @@ class AppDialog {
     bool isDanger = false,
     dynamic icon = AppIcons.info,
   }) {
-    final primaryColor = isDanger ? const Color(0xFFEF4444) : Theme.of(context).colorScheme.primary;
-
     return showDialog<bool>(
       context: context,
       barrierDismissible: true,
@@ -123,15 +100,7 @@ class AppDialog {
               children: [
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: primaryColor.withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: primaryColor.withValues(alpha: 0.3), width: 1),
-                      ),
-                      child: Center(child: AppIcon(icon, color: primaryColor, size: 22)),
-                    ),
+                    AppIcon(icon, size: 26),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(

@@ -141,19 +141,7 @@ class _GuideModalState extends State<GuideModal> with SingleTickerProviderStateM
                             return Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Container(
-                                  width: 64,
-                                  height: 64,
-                                  decoration: BoxDecoration(
-                                    color: AppColors.orangeContainer,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: AppColors.orangeBorder,
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: Center(child: AppIcon(page.icon, color: activeAccent, size: 28)),
-                                ),
+                                Center(child: AppIcon(page.icon, size: 44)),
                                 const SizedBox(height: 16),
                                 Text(
                                   page.title,
