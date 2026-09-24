@@ -1,95 +1,34 @@
 // widgets/security_advisor_sheet.dart
-// Bottom sheet listing per-item security issues. Tapping the dashboard
-// Security Advisor card opens this sheet; tapping an issue opens the item.
-// Matte styling: flat fills, thin 1px borders, no glow.
+// Bottom sheet listing per-item security findings from
+// SecurityAdvisorEngine (the single source of truth). Tapping the dashboard
+// Security Advisor card opens this sheet; tapping an issue opens the
+// credential. Matte styling: flat fills, thin 1px borders, no glow.
 
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../models/item_type.dart';
 import '../services/item_service.dart';
+import '../services/mini_ml_advisor.dart';
 import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
 
-class AdvisorIssue {
-  final String group;
-  final DecryptedItem item;
-  final String detail;
-  final Color color;
-
-  const AdvisorIssue({
-    required this.group,
-    required this.item,
-    required this.detail,
-    required this.color,
-  });
-}
-
 class SecurityAdvisorSheet {
-  static const _staleAfter = Duration(days: 120);
+  static Color colorForSeverity(SecuritySeverity severity) => switch (severity) {
+        SecuritySeverity.critical => AppColors.roseAccent,
+        SecuritySeverity.warn => const Color(0xFFF59E0B),
+        SecuritySeverity.info => AppColors.periwinkleAccent,
+      };
 
-  /// Collects per-item issues using the same definitions as
-  /// VaultAnalyticsService (weak = password < 8 chars; reuse = exact match;
-  /// 2FA = totp_secret present; stale = untouched for 120+ days).
-  static List<AdvisorIssue> collectIssues(
-      List<DecryptedItem> items, DateTime now) {
-    final issues = <AdvisorIssue>[];
-    final logins = items
-        .where((i) => ItemTypeExt.fromString(i.type) == ItemType.login)
-        .toList();
-
-    final passwordCounts = <String, int>{};
-    for (final login in logins) {
-      final pwd = login.fields['password']?.toString() ?? '';
-      if (pwd.isNotEmpty) {
-        passwordCounts[pwd] = (passwordCounts[pwd] ?? 0) + 1;
-      }
-    }
-
-    for (final login in logins) {
-      final pwd = login.fields['password']?.toString() ?? '';
-      if (pwd.isNotEmpty && pwd.length < 8) {
-        issues.add(AdvisorIssue(
-          group: 'Weak password',
-          item: login,
-          detail: 'Password is shorter than 8 characters',
-          color: AppColors.roseAccent,
-        ));
-      }
-      if (pwd.isNotEmpty && (passwordCounts[pwd] ?? 0) > 1) {
-        issues.add(AdvisorIssue(
-          group: 'Reused password',
-          item: login,
-          detail:
-              'Same password is used in ${passwordCounts[pwd]} credentials',
-          color: AppColors.periwinkleAccent,
-        ));
-      }
-      final totp = login.fields['totp_secret']?.toString() ?? '';
-      if (totp.trim().isEmpty) {
-        issues.add(AdvisorIssue(
-          group: 'Missing 2FA',
-          item: login,
-          detail: 'No authenticator secret stored',
-          color: AppColors.textMuted,
-        ));
-      }
-    }
-
-    for (final item in items) {
-      if (now.difference(item.updatedAt) > _staleAfter) {
-        final days = now.difference(item.updatedAt).inDays;
-        issues.add(AdvisorIssue(
-          group: 'Stale credential',
-          item: item,
-          detail: 'Not updated in $days days — consider rotation',
-          color: AppColors.textMuted,
-        ));
-      }
-    }
-
-    return issues;
-  }
+  static String _groupLabel(SecurityTipCategory category) => switch (category) {
+        SecurityTipCategory.weakPasswords => 'WEAK PASSWORD',
+        SecurityTipCategory.reusedPasswords => 'REUSED PASSWORD',
+        SecurityTipCategory.missing2FA => 'MISSING 2FA',
+        SecurityTipCategory.staleCredentials => 'STALE CREDENTIAL',
+        SecurityTipCategory.backupDisabled => 'BACKUP',
+        SecurityTipCategory.optimalHealth => 'HEALTH',
+      };
 
   static dynamic _iconFor(DecryptedItem item) {
     switch (ItemTypeExt.fromString(item.type)) {
@@ -114,11 +53,7 @@ class SecurityAdvisorSheet {
         onOpenItem,
   }) {
     HapticFeedback.lightImpact();
-    final issues = collectIssues(items, DateTime.now());
-    final groups = <String, List<AdvisorIssue>>{};
-    for (final issue in issues) {
-      groups.putIfAbsent(issue.group, () => []).add(issue);
-    }
+    final advisory = SecurityAdvisorEngine.analyze(items);
 
     return showModalBottomSheet<void>(
       context: context,
@@ -152,6 +87,7 @@ class SecurityAdvisorSheet {
                 ),
               ),
               const SizedBox(height: 16),
+              // Header: title + score + issue count
               Row(
                 children: [
                   const Expanded(
@@ -168,15 +104,42 @@ class SecurityAdvisorSheet {
                   Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 8, vertical: 2),
+                    margin: const EdgeInsets.only(right: 6),
+                    decoration: BoxDecoration(
+                      color: advisory.securityScore >= 80
+                          ? const Color(0xFF22C55E).withValues(alpha: 0.15)
+                          : const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: advisory.securityScore >= 80
+                            ? const Color(0xFF22C55E).withValues(alpha: 0.4)
+                            : const Color(0xFFF59E0B).withValues(alpha: 0.4),
+                      ),
+                    ),
+                    child: Text(
+                      '${advisory.securityScore}%',
+                      style: TextStyle(
+                        fontFamily: 'Monospace',
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: advisory.securityScore >= 80
+                            ? const Color(0xFF22C55E)
+                            : const Color(0xFFF59E0B),
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: AppColors.cardZinc,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: AppColors.borderZinc),
                     ),
                     child: Text(
-                      issues.isEmpty
+                      advisory.allClear
                           ? 'All clear'
-                          : '${issues.length} issue${issues.length == 1 ? '' : 's'}',
+                          : '${advisory.issueCount} issue${advisory.issueCount == 1 ? '' : 's'}',
                       style: const TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
@@ -186,8 +149,20 @@ class SecurityAdvisorSheet {
                   ),
                 ],
               ),
+              const SizedBox(height: 10),
+              // Compact plain-text metrics (no boxed chips)
+              Wrap(
+                spacing: 14,
+                runSpacing: 4,
+                children: [
+                  _Metric(label: 'Strong', value: advisory.strongCount, color: const Color(0xFF22C55E)),
+                  _Metric(label: 'Weak', value: advisory.weakCount, color: advisory.weakCount > 0 ? AppColors.roseAccent : AppColors.textMuted),
+                  _Metric(label: 'Reused', value: advisory.reusedCount, color: advisory.reusedCount > 0 ? const Color(0xFFF59E0B) : AppColors.textMuted),
+                  _Metric(label: '2FA', value: '${advisory.totpCoveragePercent.round()}%', color: AppColors.orangeAccent),
+                ],
+              ),
               const SizedBox(height: 12),
-              if (issues.isEmpty)
+              if (advisory.allClear)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 24),
                   child: Center(
@@ -204,21 +179,30 @@ class SecurityAdvisorSheet {
                   child: ListView(
                     shrinkWrap: true,
                     children: [
-                      for (final entry in groups.entries) ...[
+                      for (final group in advisory.groups) ...[
                         Padding(
-                          padding:
-                              const EdgeInsets.only(top: 8, bottom: 6),
+                          padding: const EdgeInsets.only(top: 8, bottom: 2),
                           child: Text(
-                            '${entry.key.toUpperCase()} (${entry.value.length})',
-                            style: const TextStyle(
+                            '${_groupLabel(group.category)} (${group.count})',
+                            style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                               letterSpacing: 0.8,
+                              color: colorForSeverity(group.severity),
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Text(
+                            group.advice,
+                            style: const TextStyle(
+                              fontSize: 10.5,
                               color: AppColors.textMuted,
                             ),
                           ),
                         ),
-                        for (final issue in entry.value)
+                        for (final issue in group.issues)
                           Container(
                             margin: const EdgeInsets.only(bottom: 8),
                             decoration: BoxDecoration(
@@ -243,7 +227,8 @@ class SecurityAdvisorSheet {
                                       AppIcon(
                                         _iconFor(issue.item),
                                         size: 26,
-                                        color: issue.color,
+                                        color:
+                                            colorForSeverity(issue.severity),
                                       ),
                                       const SizedBox(width: 12),
                                       Expanded(
@@ -293,6 +278,46 @@ class SecurityAdvisorSheet {
           ),
         );
       },
+    );
+  }
+}
+
+class _Metric extends StatelessWidget {
+  final String label;
+  final dynamic value;
+  final Color color;
+
+  const _Metric({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: '$label ',
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.6,
+              color: AppColors.textMuted,
+            ),
+          ),
+          TextSpan(
+            text: '$value',
+            style: TextStyle(
+              fontFamily: 'Monospace',
+              fontSize: 10.5,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
