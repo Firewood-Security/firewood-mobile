@@ -1695,11 +1695,12 @@ class _PasswordGeneratorSheetState extends State<_PasswordGeneratorSheet> {
                 Navigator.pop(context, _generated);
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: activeAccent,
+                backgroundColor: AppColors.pastelDeepOrangeFill,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 elevation: 2,
+                shadowColor: AppColors.pastelDeepOrangeLip,
               ),
               icon: const AppIcon(HugeIcons.strokeRoundedCheckmarkCircle01, size: 20, color: Colors.white),
               label: const Text(

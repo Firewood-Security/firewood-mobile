@@ -100,7 +100,7 @@ class _UpdateScreenState extends State<UpdateScreen> {
   }
 
   Widget _buildHero(ThemeData theme, Color activeAccent) {
-    late final IconData stateIcon;
+    late final dynamic stateIcon;
     late final String title;
     late final String subtitle;
 
@@ -154,7 +154,7 @@ class _UpdateScreenState extends State<UpdateScreen> {
                   duration: const Duration(milliseconds: 250),
                   child: _state == _CheckState.checking
                       ? RotatingIcon(icon: stateIcon, color: activeAccent, size: 30)
-                      : Icon(
+                      : AppIcon(
                           stateIcon,
                           key: ValueKey(stateIcon),
                           size: 34,
@@ -303,7 +303,7 @@ class _VersionCompareRow extends StatelessWidget {
 }
 
 class RotatingIcon extends StatefulWidget {
-  final IconData icon;
+  final dynamic icon;
   final Color color;
   final double size;
 
@@ -335,7 +335,7 @@ class _RotatingIconState extends State<RotatingIcon>
   Widget build(BuildContext context) {
     return RotationTransition(
       turns: _controller,
-      child: Icon(widget.icon, size: widget.size, color: widget.color),
+      child: AppIcon(widget.icon, size: widget.size, color: widget.color),
     );
   }
 }

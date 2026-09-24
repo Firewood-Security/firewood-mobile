@@ -198,7 +198,7 @@ class AboutScreen extends StatelessWidget {
         actions: [
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.orangeAccent, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.pastelDeepOrangeFill, foregroundColor: Colors.white, shadowColor: AppColors.pastelDeepOrangeLip),
             child: const Text('OK'),
           ),
         ],
@@ -219,7 +219,7 @@ class AboutScreen extends StatelessWidget {
         actions: [
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.orangeAccent, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.pastelDeepOrangeFill, foregroundColor: Colors.white, shadowColor: AppColors.pastelDeepOrangeLip),
             child: const Text('OK'),
           ),
         ],

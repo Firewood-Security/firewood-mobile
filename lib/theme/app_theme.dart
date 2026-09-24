@@ -41,6 +41,20 @@ class AppColors {
     final hsl = HSLColor.fromColor(orangeAccent);
     return hsl.withLightness(0.85).toColor();
   }
+  // Matte pastel deep-orange for 3D button faces: softer (non-neon) orange
+  // derived from the live accent so the accent picker keeps working.
+  static Color get pastelDeepOrangeFill {
+    final hsl = HSLColor.fromColor(orangeAccent);
+    return hsl.withSaturation(0.78).withLightness(0.58).toColor();
+  }
+  static Color get pastelDeepOrangeBorder {
+    final hsl = HSLColor.fromColor(orangeAccent);
+    return hsl.withSaturation(0.78).withLightness(0.44).toColor();
+  }
+  static Color get pastelDeepOrangeLip {
+    final hsl = HSLColor.fromColor(orangeAccent);
+    return hsl.withSaturation(0.80).withLightness(0.32).toColor();
+  }
 
   // Functional Accents
   static const roseAccent = Color(0xFFEF4444);     // Danger
@@ -186,10 +200,10 @@ class AppTheme {
       // --- Matte Flat Button Themes (no elevation, no glow) ---
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: accentColor,
+          backgroundColor: AppColors.pastelDeepOrangeFill,
           foregroundColor: Colors.white,
           elevation: 2,
-          shadowColor: const Color(0xFF7C2D12),
+          shadowColor: AppColors.pastelDeepOrangeLip,
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 22),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -219,10 +233,10 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryContainer,
-          foregroundColor: primaryOnContainer,
+          backgroundColor: AppColors.pastelDeepOrangeFill,
+          foregroundColor: Colors.white,
           elevation: 2,
-          shadowColor: primaryBorder,
+          shadowColor: AppColors.pastelDeepOrangeLip,
           side: BorderSide(color: primaryBorder, width: 1),
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
           shape: RoundedRectangleBorder(

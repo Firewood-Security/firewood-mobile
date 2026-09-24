@@ -170,7 +170,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 Navigator.pop(ctx, passwordController.text);
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.primary, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.pastelDeepOrangeFill, foregroundColor: Colors.white, shadowColor: AppColors.pastelDeepOrangeLip),
             child: const Text('Import & Restore'),
           ),
         ],
@@ -511,11 +511,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       height: 56,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(18),
-                        color: Theme.of(context).colorScheme.primary,
+                        color: AppColors.pastelDeepOrangeFill,
                         border: Border.all(
-                          color: AppColors.orangeDark,
+                          color: AppColors.pastelDeepOrangeBorder,
                           width: 1,
                         ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: AppColors.pastelDeepOrangeLip,
+                            offset: Offset(0, 3),
+                            blurRadius: 0,
+                          ),
+                        ],
                       ),
                       child: Material(
                         color: Colors.transparent,
@@ -1387,11 +1394,12 @@ class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
                           );
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: activeAccent,
+                          backgroundColor: AppColors.pastelDeepOrangeFill,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          elevation: 0,
+                          elevation: 2,
+                          shadowColor: AppColors.pastelDeepOrangeLip,
                         ),
                         child: const AppIcon(HugeIcons.strokeRoundedCopy01, size: 20),
                       ),

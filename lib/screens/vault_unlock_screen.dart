@@ -415,8 +415,33 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
 
     return Scaffold(
       backgroundColor: AppColors.backgroundZinc,
-      body: SafeArea(
-        child: FadeTransition(
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Background: splash wallpaper
+          Image.asset(
+            'assets/wallpapers/splash_background.png',
+            fit: BoxFit.cover,
+            // Transparent on failure -> Scaffold background color shows through.
+            errorBuilder: (_, __, ___) => const SizedBox.expand(),
+          ),
+          // Dark -> transparent overlay, top to bottom
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  const Color(0xFF0C0C0E).withValues(alpha: 0.94),
+                  const Color(0xFF0C0C0E).withValues(alpha: 0.62),
+                  const Color(0xFF0C0C0E).withValues(alpha: 0.18),
+                ],
+                stops: const [0.0, 0.55, 1.0],
+              ),
+            ),
+          ),
+          SafeArea(
+            child: FadeTransition(
           opacity: _fadeAnimation,
           child: Center(
             child: SingleChildScrollView(
@@ -578,9 +603,10 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
                           child: FilledButton(
                             onPressed: _isLoading || _isBurning ? null : _unlock,
                             style: FilledButton.styleFrom(
-                              backgroundColor: AppColors.orangeAccent,
+                              backgroundColor: AppColors.pastelDeepOrangeFill,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              elevation: 0,
+                              elevation: 2,
+                              shadowColor: AppColors.pastelDeepOrangeLip,
                             ),
                             child: _isLoading || _isBurning
                                 ? Row(
@@ -673,6 +699,8 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
             ),
           ),
         ),
+        ),
+        ],
       ),
     );
   }
