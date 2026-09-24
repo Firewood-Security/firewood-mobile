@@ -1837,7 +1837,7 @@ class _AnalyticsMetricChip extends StatelessWidget {
           child: Text(
             label,
             style: const TextStyle(
-              fontSize: 10,
+              fontSize: 9,
               fontWeight: FontWeight.w600,
               color: AppColors.textMuted,
             ),
