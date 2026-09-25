@@ -10,10 +10,12 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 import '../services/backup_service.dart';
 import '../services/ble_p2p_service.dart';
 import '../services/file_crypto_service.dart';
+import '../widgets/airshare_modal.dart';
 
 class P2pSharingScreen extends StatefulWidget {
   const P2pSharingScreen({super.key});
@@ -378,15 +380,116 @@ class _P2pSharingScreenState extends State<P2pSharingScreen> {
             ),
             const SizedBox(height: 24),
 
+            // AirShare (Spark QR & 4-Digit Flame Code) Hero Card
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E1E24),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFE5533D).withOpacity(0.4)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE5533D).withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.bolt, color: Color(0xFFE5533D), size: 20),
+                      ),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'AirShare (Spark & Flame)',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'Spark QR + 4-Digit Flame Code',
+                              style: TextStyle(color: Color(0xFFE5533D), fontSize: 10, fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Over-the-air zero-leak credential transfer. Ephemeral X25519 & ChaCha20-Poly1305 with volatile in-RAM decryption.',
+                    style: TextStyle(color: Color(0xFFA1A1AA), fontSize: 11, height: 1.3),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          icon: const HugeIcon(
+                            icon: HugeIcons.strokeRoundedUpload04,
+                            size: 15,
+                            color: Colors.black,
+                            strokeWidth: 2,
+                          ),
+                          label: const Text('Send Item', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 12)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFE5533D),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                          ),
+                          onPressed: () => AirShareModal.show(context, role: AirShareRole.send),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          icon: const HugeIcon(
+                            icon: HugeIcons.strokeRoundedDownload04,
+                            size: 15,
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                          label: const Text('Receive', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Color(0xFF3F3F46)),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                          ),
+                          onPressed: () => AirShareModal.show(context, role: AirShareRole.receive),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
             // Sender card
             _SharingCard(
-              icon: Icons.upload_rounded,
+              leadingIcon: const HugeIcon(
+                icon: HugeIcons.strokeRoundedUpload04,
+                color: Color(0xFFFF9163),
+                size: 24,
+                strokeWidth: 1.8,
+              ),
               title: 'Sender',
               description: 'Scan for nearby Firewood devices and send an encrypted vault or file.',
               buttons: [
                 _ActionButton(
                   label: 'Send Vault',
-                  icon: Icons.lock_outline,
+                  leadingIcon: const HugeIcon(
+                    icon: HugeIcons.strokeRoundedFolderSecurity,
+                    color: Colors.white,
+                    size: 18,
+                    strokeWidth: 1.8,
+                  ),
                   primary: true,
                   enabled: !busy,
                   onPressed: _prepareVaultAndScan,
@@ -394,7 +497,12 @@ class _P2pSharingScreenState extends State<P2pSharingScreen> {
                 const SizedBox(height: 8),
                 _ActionButton(
                   label: 'Send File',
-                  icon: Icons.attach_file,
+                  leadingIcon: const HugeIcon(
+                    icon: HugeIcons.strokeRoundedFile01,
+                    color: Colors.white70,
+                    size: 18,
+                    strokeWidth: 1.8,
+                  ),
                   enabled: !busy,
                   onPressed: _prepareFileAndScan,
                 ),
@@ -404,13 +512,23 @@ class _P2pSharingScreenState extends State<P2pSharingScreen> {
 
             // Receiver card
             _SharingCard(
-              icon: Icons.download_rounded,
+              leadingIcon: const HugeIcon(
+                icon: HugeIcons.strokeRoundedDownload04,
+                color: Color(0xFFFF9163),
+                size: 24,
+                strokeWidth: 1.8,
+              ),
               title: 'Receiver',
               description: 'Advertise and wait for an incoming transfer from any Firewood device.',
               buttons: [
                 _ActionButton(
-                  label: 'Receive',
-                  icon: Icons.bluetooth_searching,
+                  label: 'Receive Vault',
+                  leadingIcon: const HugeIcon(
+                    icon: HugeIcons.strokeRoundedInbox,
+                    color: Colors.white,
+                    size: 18,
+                    strokeWidth: 1.8,
+                  ),
                   primary: true,
                   enabled: !busy,
                   onPressed: _receive,
@@ -461,13 +579,13 @@ enum _P2pStage { idle, working, done, error }
 // --- Shared widgets (same visual language as desktop) ---
 
 class _SharingCard extends StatelessWidget {
-  final IconData icon;
+  final Widget leadingIcon;
   final String title;
   final String description;
   final List<Widget> buttons;
 
   const _SharingCard({
-    required this.icon,
+    required this.leadingIcon,
     required this.title,
     required this.description,
     required this.buttons,
@@ -493,7 +611,7 @@ class _SharingCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: const Color(0xFFFF5722).withAlpha(89)),
             ),
-            child: Icon(icon, color: const Color(0xFFFF9163), size: 24),
+            child: Center(child: leadingIcon),
           ),
           const SizedBox(height: 16),
           Text(title,
@@ -513,14 +631,14 @@ class _SharingCard extends StatelessWidget {
 
 class _ActionButton extends StatelessWidget {
   final String label;
-  final IconData icon;
+  final Widget leadingIcon;
   final bool primary;
   final bool enabled;
   final VoidCallback onPressed;
 
   const _ActionButton({
     required this.label,
-    required this.icon,
+    required this.leadingIcon,
     required this.onPressed,
     this.primary = false,
     this.enabled = true,
@@ -533,7 +651,7 @@ class _ActionButton extends StatelessWidget {
       height: 44,
       child: ElevatedButton.icon(
         onPressed: enabled ? onPressed : null,
-        icon: Icon(icon, size: 18),
+        icon: leadingIcon,
         label: Text(label),
         style: ElevatedButton.styleFrom(
           backgroundColor:

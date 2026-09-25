@@ -15,6 +15,7 @@ import '../services/native_security_bridge.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
+import '../widgets/airshare_modal.dart';
 import 'item_detail_screen.dart';
 
 class CredentialViewScreen extends ConsumerStatefulWidget {
@@ -278,6 +279,15 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
       appBar: AppBar(
         title: Text(_currentItem.title),
         actions: [
+          IconButton(
+            icon: const AppIcon(HugeIcons.strokeRoundedShare08, size: 20),
+            tooltip: 'AirShare',
+            onPressed: () => AirShareModal.show(
+              context,
+              item: _currentItem,
+              role: AirShareRole.send,
+            ),
+          ),
           IconButton(
             icon: AppIcon(HugeIcons.strokeRoundedEdit01, size: 20),
             tooltip: 'Edit Credential',

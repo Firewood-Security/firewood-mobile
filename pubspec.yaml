@@ -35,6 +35,8 @@ dependencies:
   # project Kotlin Gradle plugin (1.8.22, android/settings.gradle.kts) cannot
   # compile. Bump this together with the Kotlin plugin version, not on its own.
   package_info_plus: ^7.0.0
+  qr_flutter: ^4.1.0
+  mobile_scanner: 5.2.3
 
 dev_dependencies:
   flutter_test:

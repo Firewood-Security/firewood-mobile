@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app.dart';
 import 'services/accent_color_service.dart';
@@ -10,6 +11,9 @@ import 'theme/app_icons.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+  ]);
 
   // Custom error handler to log Flutter framework errors and prevent silent white screens in Release mode
   FlutterError.onError = (FlutterErrorDetails details) {
