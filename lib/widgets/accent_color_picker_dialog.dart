@@ -47,29 +47,17 @@ class AccentColorPickerDialog extends StatelessWidget {
                       children: [
                         AppIcon(
                           AppIcons.palette,
-                          size: 26,
+                          size: 24,
                         ),
                         const SizedBox(width: 12),
                         const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Select Accent Theme',
-                                style: TextStyle(
-                                  color: AppColors.offWhite,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              Text(
-                                'App-wide highlight color',
-                                style: TextStyle(
-                                  color: AppColors.textMuted,
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ],
+                          child: Text(
+                            'Select Accent Theme',
+                            style: TextStyle(
+                              color: AppColors.offWhite,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
                           ),
                         ),
                         IconButton(
@@ -133,31 +121,17 @@ class AccentColorPickerDialog extends StatelessWidget {
                                         ),
                                         const SizedBox(width: 14),
                                         Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                preset.name,
-                                                style: TextStyle(
-                                                  color: isSelected
-                                                      ? Colors.white
-                                                      : AppColors.offWhite,
-                                                  fontWeight: isSelected
-                                                      ? FontWeight.bold
-                                                      : FontWeight.w500,
-                                                  fontSize: 14,
-                                                ),
-                                              ),
-                                              Text(
-                                                preset.hex,
-                                                style: const TextStyle(
-                                                  color: AppColors.textMuted,
-                                                  fontSize: 11,
-                                                  fontFamily: 'Monospace',
-                                                ),
-                                              ),
-                                            ],
+                                          child: Text(
+                                            preset.name,
+                                            style: TextStyle(
+                                              color: isSelected
+                                                  ? Colors.white
+                                                  : AppColors.offWhite,
+                                              fontWeight: isSelected
+                                                  ? FontWeight.bold
+                                                  : FontWeight.w500,
+                                              fontSize: 14,
+                                            ),
                                           ),
                                         ),
                                         Container(
@@ -238,10 +212,6 @@ class AccentColorPickerTile extends StatelessWidget {
                 fontWeight: FontWeight.bold,
                 fontSize: 14),
           ),
-          subtitle: Text(
-            'Current: ${currentPreset.name} (${currentPreset.hex})',
-            style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
-          ),
           trailing: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
@@ -261,7 +231,7 @@ class AccentColorPickerTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 4),
-                AppIcon(AppIcons.chevronDown,
+                const AppIcon(AppIcons.chevronDown,
                     color: AppColors.textMuted, size: 16),
               ],
             ),

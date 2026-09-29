@@ -9,7 +9,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/item_type.dart';
 import '../services/item_service.dart';
+import '../services/bundle_service.dart';
+import '../services/csv_import_service.dart';
 import '../services/lock_service.dart';
+import '../services/reauth_service.dart';
 import '../services/generator_service.dart';
 import '../widgets/password_strength_meter.dart';
 import 'package:hugeicons/hugeicons.dart';
@@ -18,17 +21,23 @@ import '../theme/app_theme.dart';
 import '../theme/app_button.dart';
 import '../theme/app_feedback.dart';
 import '../widgets/category_segmented_bar.dart';
+import '../services/autofill_service.dart';
+import '../services/notification_service.dart';
 
 class ItemDetailScreen extends ConsumerStatefulWidget {
   final SecretKey secretKey;
   final ItemService itemService;
   final DecryptedItem? existingItem;
+  final ItemType? initialCategory;
+  final String? initialBundle;
 
   const ItemDetailScreen({
     super.key,
     required this.secretKey,
     required this.itemService,
     this.existingItem,
+    this.initialCategory,
+    this.initialBundle,
   });
 
   @override
@@ -39,6 +48,8 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
     with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
+  final _bundleController = TextEditingController();
+  List<String> _suggestedBundles = [];
   ItemType _selectedType = ItemType.login;
 
   // Category specific controllers
@@ -96,6 +107,9 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
   @override
   void initState() {
     super.initState();
+    if (widget.initialCategory != null) {
+      _selectedType = widget.initialCategory!;
+    }
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 350),
       vsync: this,
@@ -128,9 +142,31 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
       }
     });
 
-    _passwordController.addListener(_onPasswordChanged);
-
+    if (widget.initialBundle != null) {
+      _bundleController.text = widget.initialBundle!;
+    }
     _loadExistingItemData();
+    _loadSuggestedBundles();
+  }
+
+  Future<void> _loadSuggestedBundles() async {
+    try {
+      final items = await widget.itemService.getAllItems(widget.secretKey);
+      final set = <String>{};
+      for (final item in items) {
+        final b = item.fields['bundle']?.toString().trim();
+        if (b != null && b.isNotEmpty) {
+          set.add(b);
+        }
+      }
+      final registered = await BundleService.getRegisteredBundles();
+      set.addAll(registered);
+      if (mounted) {
+        setState(() {
+          _suggestedBundles = set.toList()..sort();
+        });
+      }
+    } catch (_) {}
   }
 
   void _onPasswordChanged() {
@@ -146,6 +182,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
     _pinFocusNode.dispose();
     _devSecretKeyFocusNode.dispose();
     _titleController.dispose();
+    _bundleController.dispose();
     _usernameController.dispose();
     _passwordController.dispose();
     _urlController.dispose();
@@ -224,8 +261,11 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           break;
       }
 
+      _bundleController.text = fields['bundle']?.toString() ?? '';
+
       // Populate any remaining non-standard fields as custom fields (never include timestamps, dates, or known category keys)
       final ignoredKeys = {
+        'bundle',
         'username',
         'password',
         'url',
@@ -283,10 +323,16 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
 
   Future<void> _pickIdentityImage() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.image,
-        withData: true,
-      );
+      FilePickerResult? result;
+      LockService.beginForegroundFlow();
+      try {
+        result = await FilePicker.platform.pickFiles(
+          type: FileType.image,
+          withData: true,
+        );
+      } finally {
+        LockService.endForegroundFlow();
+      }
 
       if (result != null && result.files.single.bytes != null) {
         final bytes = result.files.single.bytes!;
@@ -302,6 +348,18 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           SnackBar(content: Text('Failed to pick image: $e')),
         );
       }
+    }
+  }
+
+  Future<void> _importFromCsv() async {
+    HapticFeedback.lightImpact();
+    final result = await CsvImportService().pickAndImportCsv(
+      context: context,
+      secretKey: widget.secretKey,
+      targetBundle: widget.initialBundle,
+    );
+    if (result != null && result.importedCount > 0 && mounted) {
+      Navigator.pop(context, true);
     }
   }
 
@@ -414,6 +472,11 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
       }
     }
 
+    final bundleVal = _bundleController.text.trim();
+    if (bundleVal.isNotEmpty) {
+      fields['bundle'] = bundleVal;
+    }
+
     return fields;
   }
 
@@ -435,6 +498,13 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
       final title = _titleController.text.trim();
       final typeStr = _selectedType.label;
 
+      final oldBundle =
+          (widget.existingItem?.fields['bundle'] ?? '').toString().trim();
+      final bundleVal = payload['bundle']?.toString().trim() ?? '';
+      if (bundleVal.isNotEmpty) {
+        await BundleService.registerBundle(bundleVal);
+      }
+
       if (widget.existingItem != null) {
         await widget.itemService.updateItem(
           key: widget.secretKey,
@@ -450,6 +520,38 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
           fields: payload,
         );
       }
+
+      // If bundle name was removed or changed, purge old bundle if no credentials remain in it
+      if (oldBundle.isNotEmpty &&
+          oldBundle.toLowerCase() != bundleVal.toLowerCase()) {
+        final allItems = await widget.itemService.getAllItems(widget.secretKey);
+        final remaining = allItems
+            .where((i) =>
+                (i.fields['bundle'] ?? '').toString().trim().toLowerCase() ==
+                oldBundle.toLowerCase())
+            .length;
+        if (remaining == 0) {
+          await BundleService.deleteBundle(oldBundle);
+        }
+      }
+
+      // Check for security alerts (weak password or incomplete form missing password)
+      final passVal = _passwordController.text.trim();
+      if (_selectedType == ItemType.login) {
+        if (passVal.isEmpty) {
+          NotificationAlertService.notifyMissingPassword(itemTitle: title);
+        } else if (passVal.length < 8) {
+          NotificationAlertService.notifyWeakPassword(
+            itemTitle: title,
+            reason: 'Critically short (< 8 characters)',
+          );
+        }
+      }
+
+      // Offline Autofill sync with fresh credentials
+      widget.itemService.getAllItems(widget.secretKey).then((items) {
+        AutofillService.syncDecryptedItems(items);
+      });
 
       if (mounted) {
         HapticFeedback.lightImpact();
@@ -475,8 +577,32 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
     );
 
     if (confirm == true) {
+      if (!mounted) return;
+      // Auth policy: deleting a credential is a critical action.
+      if (!await ReauthService.confirm(context,
+          reason: 'Authenticate to delete this credential')) {
+        return;
+      }
+      if (!mounted) return;
       try {
+        final oldBundle =
+            (widget.existingItem?.fields['bundle'] ?? '').toString().trim();
         await widget.itemService.deleteItem(widget.existingItem!.itemId);
+        if (oldBundle.isNotEmpty) {
+          final allItems =
+              await widget.itemService.getAllItems(widget.secretKey);
+          final remaining = allItems
+              .where((i) =>
+                  (i.fields['bundle'] ?? '').toString().trim().toLowerCase() ==
+                  oldBundle.toLowerCase())
+              .length;
+          if (remaining == 0) {
+            await BundleService.deleteBundle(oldBundle);
+          }
+        }
+        widget.itemService.getAllItems(widget.secretKey).then((items) {
+          AutofillService.syncDecryptedItems(items);
+        });
         if (mounted) {
           AppToast.show(context,
               message: 'Credential deleted successfully', type: ToastType.info);
@@ -496,14 +622,12 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
     final List<_FieldGuideItem> guideItems;
     final String categoryTitle;
     final String categoryDesc;
-    final dynamic categoryIcon;
 
     switch (_selectedType) {
       case ItemType.login:
         categoryTitle = 'Login Credentials Guide';
         categoryDesc =
             'Security guidelines for web accounts, logins, and 2FA keys';
-        categoryIcon = AppIcons.lock;
         guideItems = const [
           _FieldGuideItem(
             name: 'Title *',
@@ -547,7 +671,6 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
       case ItemType.card:
         categoryTitle = 'Payment Card Guide';
         categoryDesc = 'Sensitive credit, debit, and banking card protection';
-        categoryIcon = AppIcons.categoryCard;
         guideItems = const [
           _FieldGuideItem(
             name: 'Cardholder Name',
@@ -589,7 +712,6 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
         categoryTitle = 'Identity Document Guide';
         categoryDesc =
             'Government-issued IDs, passports, driver licenses, and scanned attachments';
-        categoryIcon = AppIcons.categoryIdentity;
         guideItems = const [
           _FieldGuideItem(
             name: 'Full Legal Name',
@@ -616,7 +738,6 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
         categoryTitle = 'Secure Note Guide';
         categoryDesc =
             'Guidelines for confidential notes, recovery seeds, and memos';
-        categoryIcon = AppIcons.categoryNote;
         guideItems = const [
           _FieldGuideItem(
             name: 'Title *',
@@ -642,7 +763,6 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
         categoryTitle = 'Developer Secret Guide';
         categoryDesc =
             'Guidelines for API keys, SSH credentials, and environment configs';
-        categoryIcon = AppIcons.typeDeveloperSecret;
         guideItems = const [
           _FieldGuideItem(
             name: 'Secret Sub-Type',
@@ -702,30 +822,22 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                     ),
                   ),
                   const SizedBox(height: 16),
-                  Row(
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      AppIcon(categoryIcon, size: 26),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              categoryTitle,
-                              style: const TextStyle(
-                                color: AppColors.offWhite,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            Text(
-                              categoryDesc,
-                              style: const TextStyle(
-                                color: AppColors.textMuted,
-                                fontSize: 11.5,
-                              ),
-                            ),
-                          ],
+                      Text(
+                        categoryTitle,
+                        style: const TextStyle(
+                          color: AppColors.offWhite,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      Text(
+                        categoryDesc,
+                        style: const TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 11.5,
                         ),
                       ),
                     ],
@@ -795,6 +907,13 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
             ? 'Edit ${widget.existingItem!.title}'
             : 'Add Credential'),
         actions: [
+          if (!isEditing)
+            IconButton(
+              icon: AppIcon(AppIcons.upload,
+                  color: AppColors.orangeAccent, size: 20),
+              tooltip: 'Import Credentials via CSV',
+              onPressed: _importFromCsv,
+            ),
           IconButton(
             icon: AppIcon(HugeIcons.strokeRoundedInformationCircle,
                 color: AppColors.orangeAccent, size: 22),
@@ -839,59 +958,171 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
                   ),
                 ),
               Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 140),
-                  children: [
-                    // Category Selection Header Tabs
-                    _buildCategorySelector(),
-                    const SizedBox(height: 24),
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onHorizontalDragEnd: (details) {
+                    final dx = details.velocity.pixelsPerSecond.dx;
+                    if (dx < -400) {
+                      _swipeCategory(1);
+                    } else if (dx > 400) {
+                      _swipeCategory(-1);
+                    }
+                  },
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                    children: [
+                      // Category Selection Header Tabs
+                      _buildCategorySelector(),
+                      const SizedBox(height: 24),
 
-                    // Title Input Field
-                    TextFormField(
-                      controller: _titleController,
-                      decoration: InputDecoration(
-                        labelText: 'Title *',
-                        hintText: _selectedType == ItemType.login
-                            ? 'e.g. Google, GitHub, Netflix'
-                            : _selectedType == ItemType.card
-                                ? 'e.g. Chase Freedom, Amex Platinum'
-                                : _selectedType == ItemType.identity
-                                    ? 'e.g. Passport, Driver License'
-                                    : 'e.g. Recovery Phrase, Server Keys',
-                        prefixIcon: AppIcon(AppInputIcons.title,
-                            color: AppColors.orangeAccent, size: 18),
+                      // Title Input Field
+                      TextFormField(
+                        controller: _titleController,
+                        decoration: InputDecoration(
+                          labelText: 'Title *',
+                          hintText: _selectedType == ItemType.login
+                              ? 'e.g. Google, GitHub, Netflix'
+                              : _selectedType == ItemType.card
+                                  ? 'e.g. Chase Freedom, Amex Platinum'
+                                  : _selectedType == ItemType.identity
+                                      ? 'e.g. Passport, Driver License'
+                                      : 'e.g. Recovery Phrase, Server Keys',
+                          prefixIcon: AppIcon(AppInputIcons.title,
+                              color: AppColors.orangeAccent, size: 18),
+                        ),
+                        validator: (v) => v == null || v.trim().isEmpty
+                            ? 'Title required'
+                            : null,
+                        textInputAction: TextInputAction.next,
                       ),
-                      validator: (v) => v == null || v.trim().isEmpty
-                          ? 'Title required'
-                          : null,
-                      textInputAction: TextInputAction.next,
-                    ),
-                    const SizedBox(height: 20),
+                      const SizedBox(height: 16),
 
-                    // Category Specific Forms
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      child: _buildCategoryForm(),
-                    ),
+                      // Bundle (Heterogeneous Group) Field
+                      TextFormField(
+                        controller: _bundleController,
+                        decoration: InputDecoration(
+                          labelText: 'Bundle (Group)',
+                          hintText: 'e.g. Housework, Mom, Personal, Work',
+                          prefixIcon: AppIcon(HugeIcons.strokeRoundedFolder01,
+                              color: AppColors.orangeAccent, size: 18),
+                          suffixIcon: _suggestedBundles.isEmpty
+                              ? null
+                              : PopupMenuButton<String>(
+                                  tooltip: 'Choose bundle',
+                                  icon: const AppIcon(
+                                      HugeIcons.strokeRoundedArrowDown01,
+                                      size: 18,
+                                      color: AppColors.textMuted),
+                                  color: AppColors.surfaceZinc,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    side: const BorderSide(
+                                        color: AppColors.borderZinc),
+                                  ),
+                                  onSelected: (val) {
+                                    HapticFeedback.selectionClick();
+                                    setState(
+                                        () => _bundleController.text = val);
+                                  },
+                                  itemBuilder: (ctx) => [
+                                    if (_bundleController.text
+                                        .trim()
+                                        .isNotEmpty)
+                                      const PopupMenuItem<String>(
+                                        value: '',
+                                        height: 40,
+                                        child: Text('No bundle',
+                                            style: TextStyle(
+                                                fontSize: 12.5,
+                                                color: AppColors.textMuted)),
+                                      ),
+                                    ..._suggestedBundles.map(
+                                      (b) => PopupMenuItem<String>(
+                                        value: b,
+                                        height: 40,
+                                        child: Row(
+                                          children: [
+                                            AppIcon(
+                                              HugeIcons.strokeRoundedFolder01,
+                                              size: 14,
+                                              color: _bundleController.text
+                                                          .trim()
+                                                          .toLowerCase() ==
+                                                      b.toLowerCase()
+                                                  ? AppColors.orangeAccent
+                                                  : AppColors.textMuted,
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: Text(
+                                                b,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                  fontSize: 12.5,
+                                                  color: _bundleController.text
+                                                              .trim()
+                                                              .toLowerCase() ==
+                                                          b.toLowerCase()
+                                                      ? AppColors.orangeAccent
+                                                      : AppColors.offWhite,
+                                                  fontWeight: _bundleController
+                                                              .text
+                                                              .trim()
+                                                              .toLowerCase() ==
+                                                          b.toLowerCase()
+                                                      ? FontWeight.w600
+                                                      : FontWeight.normal,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ),
+                        textInputAction: TextInputAction.next,
+                      ),
+                      const SizedBox(height: 20),
 
-                    const SizedBox(height: 24),
+                      // Category Specific Forms
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        child: _buildCategoryForm(),
+                      ),
 
-                    // Custom Extra Fields
-                    _buildCustomFieldsSection(),
-                    const SizedBox(height: 32),
+                      const SizedBox(height: 24),
 
-                    // Save Action Button
-                    AppButton(
-                      label: _isLoading
-                          ? 'Saving...'
-                          : (isEditing ? 'Save Changes' : 'Save Credential'),
-                      variant: AppButtonVariant.primary,
-                      isLoading: _isLoading,
-                      fullWidth: true,
-                      height: 52,
-                      onPressed: _isLoading ? null : _save,
-                    ),
-                  ],
+                      // Custom Extra Fields
+                      _buildCustomFieldsSection(),
+                      const SizedBox(height: 32),
+
+                      // Save Action Button
+                      AppButton(
+                        label: _isLoading
+                            ? 'Saving...'
+                            : (isEditing ? 'Save Changes' : 'Save Credential'),
+                        variant: AppButtonVariant.primary,
+                        isLoading: _isLoading,
+                        fullWidth: true,
+                        height: 52,
+                        onPressed: _isLoading ? null : _save,
+                      ),
+                      if (!isEditing) ...[
+                        const SizedBox(height: 12),
+                        AppButton(
+                          label: 'Import Credentials via CSV',
+                          icon: AppIcons.upload,
+                          variant: AppButtonVariant.secondary,
+                          fullWidth: true,
+                          height: 48,
+                          onPressed: _importFromCsv,
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -899,6 +1130,18 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen>
         ),
       ),
     );
+  }
+
+  /// Swipe horizontally across credential category forms
+  /// (Login ↔ Card ↔ Identity ↔ Note ↔ Secret).
+  void _swipeCategory(int direction) {
+    final types = ItemType.values;
+    final next = (_selectedType.index + direction) % types.length;
+    final target = types[next < 0 ? next + types.length : next];
+    if (target == _selectedType) return;
+    HapticFeedback.selectionClick();
+    FocusScope.of(context).unfocus();
+    setState(() => _selectedType = target);
   }
 
   Widget _buildCategorySelector() {

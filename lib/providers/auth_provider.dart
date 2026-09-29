@@ -45,6 +45,10 @@ class BiometricAuthNotifier extends StateNotifier<bool> {
     _load();
   }
 
+  // V-015: legacy-entry cleanup only. Deliberately DEFAULT AndroidOptions —
+  // the legacy entry was written with the plugin's default mode, and a delete
+  // issued with a different mode (e.g. encryptedSharedPreferences=true) can
+  // silently miss it. Nothing is ever written through this path anymore.
   static const _secureStorage = FlutterSecureStorage();
   static const _biometricPasswordKey = 'biometric_master_password';
 

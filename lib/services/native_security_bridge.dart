@@ -25,14 +25,13 @@ class NativeSecurityBridge {
 
   /// Creates an AES-256-GCM wrapping key in Android Keystore bound to biometrics.
   /// Must be called before any [wrapMasterPassword] or [unwrapMasterPassword].
-  static Future<bool> createWrappingKey({
-    bool requireUserAuth = true,
-    bool invalidateOnEnrollment = true,
-  }) async {
-    final result = await _channel.invokeMethod<bool>('createWrappingKey', {
-      'requireUserAuth': requireUserAuth,
-      'invalidateOnEnrollment': invalidateOnEnrollment,
-    });
+  ///
+  /// V-016: the user-auth binding (`userAuthenticationRequired=true`,
+  /// `invalidatedByBiometricEnrollment=true`) is hard-coded **natively** —
+  /// this Dart API deliberately exposes no parameters, so no caller can mint
+  /// an unbound wrapping key.
+  static Future<bool> createWrappingKey() async {
+    final result = await _channel.invokeMethod<bool>('createWrappingKey');
     return result ?? false;
   }
 
@@ -96,11 +95,9 @@ class NativeSecurityBridge {
     return RateLimitState.fromMap(result ?? {});
   }
 
-  /// Resets failed attempt counter (call on successful unlock).
-  static Future<bool> resetFailedAttempts() async {
-    final result = await _channel.invokeMethod<bool>('resetFailedAttempts');
-    return result ?? false;
-  }
+  // V-026: there is deliberately NO Dart-callable `resetFailedAttempts`.
+  // The counter is cleared only inside native code, as a side-effect of a
+  // successful Keystore-authenticated `unwrapMasterPassword`.
 
   // --- Screen Capture Control ---
 
@@ -126,11 +123,19 @@ class NativeSecurityBridge {
     return result ?? false;
   }
 
-  /// Temporarily disables FLAG_SECURE (e.g., for QR code display).
-  /// Re-enable with [enableSecureFlag] as soon as the sensitive screen is dismissed.
+  /// Disables FLAG_SECURE — **gated natively (V-019)**: the platform refuses
+  /// the call unless the user's stored screenshot policy allows capture and
+  /// returns `false` here instead of throwing, so a denied call always
+  /// leaves the flag ON (fail closed).
   static Future<bool> disableSecureFlag() async {
-    final result = await _channel.invokeMethod<bool>('disableSecureFlag');
-    return result ?? false;
+    try {
+      final result = await _channel.invokeMethod<bool>('disableSecureFlag');
+      return result ?? false;
+    } on PlatformException {
+      return false;
+    } on MissingPluginException {
+      return false;
+    }
   }
 
   // --- Environment Integrity ---
@@ -150,6 +155,16 @@ class NativeSecurityBridge {
   }
 
   // --- Secure Clipboard ---
+
+  /// V-017: writes the clip natively so it carries
+  /// `ClipDescription.EXTRA_IS_SENSITIVE` — Android 12+/13+ then masks it in
+  /// the clipboard preview and assistant suggestions. Plain
+  /// `Clipboard.setData` cannot express that flag.
+  static Future<bool> setClipboardText(String text) async {
+    final result =
+        await _channel.invokeMethod<bool>('setClipboard', {'text': text});
+    return result ?? false;
+  }
 
   /// Clears the system clipboard immediately.
   static Future<bool> clearClipboard() async {

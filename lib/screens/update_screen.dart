@@ -1,10 +1,11 @@
 // Update screen: hero status section (live update-check process) with the
-// release changelog below. TLS-only checks (Q-09): no authenticated-update
-// claims are made here — status reflects version comparison only.
+// release changelog below. Manifests are Ed25519-signed (V-013) and the
+// download is fetched in-app with the signed SHA-256 enforced; status
+// reflects version comparison only.
 
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../services/app_version_service.dart';
 import '../services/update_service.dart';
@@ -46,12 +47,46 @@ class _UpdateScreenState extends State<UpdateScreen> {
   }
 
   Future<void> _download() async {
-    final url = _info?.downloadUrl ?? '';
-    if (url.isEmpty) return;
+    final info = _info;
+    if (info == null) return;
+    // V-013: allowlist gate (https on the pinned update host) before any
+    // network access — the manifest URL is never dispatched externally.
+    final uri = UpdateService.resolveDownloadUri(info.downloadUrl);
+    if (uri == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Update download source is not allowed'),
+          backgroundColor: AppColors.roseAccent,
+        ));
+      }
+      return;
+    }
     setState(() => _downloading = true);
     try {
-      final uri = Uri.parse(url);
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+      // In-app download: bytes land in app-private cache, the signed SHA-256
+      // is enforced, and only verified bytes reach the system installer.
+      final tmp = await getTemporaryDirectory();
+      final savePath = '${tmp.path}/update/firewood-update.apk';
+      await UpdateService.downloadArtifact(
+        uri: uri,
+        expectedSha256: info.sha256Hash ?? '',
+        savePath: savePath,
+      );
+      await UpdateService.installVerifiedApk(savePath);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+              'Update verified — confirm the install in the system prompt'),
+          backgroundColor: Color(0xFF1A2E22),
+        ));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Update failed: $e'),
+          backgroundColor: AppColors.roseAccent,
+        ));
+      }
     } finally {
       if (mounted) setState(() => _downloading = false);
     }
@@ -194,7 +229,7 @@ class _UpdateScreenState extends State<UpdateScreen> {
             SizedBox(
               width: double.infinity,
               child: AppButton(
-                label: _downloading ? 'Opening…' : 'Download Update',
+                label: _downloading ? 'Downloading…' : 'Download Update',
                 icon: HugeIcons.strokeRoundedDownload01,
                 variant: AppButtonVariant.primary,
                 fullWidth: true,

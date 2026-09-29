@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  FirewoodAutofillPickerActivity layout.
+
+  Full-screen scrim over the target app; tapping outside the card cancels the
+  fill. The credential list only becomes visible after biometric / device
+  credential authentication succeeds (it is populated from the Kotlin side).
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/autofill_picker_scrim"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    android:clickable="true"
+    android:focusable="true">
+
+    <LinearLayout
+        android:id="@+id/autofill_picker_card"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginStart="20dp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginTop="60dp"
+        android:layout_marginBottom="36dp"
+        android:orientation="vertical"
+        android:background="@drawable/autofill_picker_bg"
+        android:padding="18dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <!-- Header: logo + title only, with a close action -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:src="@mipmap/ic_launcher"
+                android:scaleType="fitCenter"
+                android:importantForAccessibility="no" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Firewood Vault"
+                    android:textColor="#FFFAFAFA"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="1dp"
+                    android:text="Unlock required before any credential is shown"
+                    android:textColor="#FFA1A1AA"
+                    android:textSize="10.5sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/autofill_picker_close"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:gravity="center"
+                android:text="✕"
+                android:textColor="#FFA1A1AA"
+                android:textSize="16sp"
+                android:background="?attr/selectableItemBackgroundBorderless" />
+        </LinearLayout>
+
+        <!-- Form context (domain or app) this fill was triggered for -->
+        <TextView
+            android:id="@+id/autofill_picker_context"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Matching this form"
+            android:textColor="#FFFF5722"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.06"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <!-- Credential list: populated only after successful authentication -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/autofill_picker_list"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="10dp"
+            android:clipToPadding="false"
+            android:paddingBottom="4dp"
+            android:scrollbars="vertical" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Selecting an entry fills the form directly. Credentials never appear in the system autofill dropdown."
+            android:textColor="#FF71717A"
+            android:textSize="10sp"
+            android:lineSpacingExtra="2dp" />
+    </LinearLayout>
+</FrameLayout>

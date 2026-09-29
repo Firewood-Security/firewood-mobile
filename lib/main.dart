@@ -86,6 +86,9 @@ void main() async {
     overrides: [
       lockTimeoutProvider.overrideWith((ref) => lockSettings.timeout),
       autoLockEnabledProvider.overrideWith((ref) => lockSettings.enabled),
+      sessionTimeoutProvider.overrideWith((ref) => lockSettings.session),
+      lockOnBackgroundProvider
+          .overrideWith((ref) => lockSettings.lockOnBackground),
     ],
     child: const FirewoodApp(),
   ));

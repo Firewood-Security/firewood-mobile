@@ -26,6 +26,14 @@ object SecurePreferences {
     private const val KEY_LAST_FAILED_ATTEMPT_TIME = "last_failed_attempt_epoch_ms"
     private const val KEY_LOCKOUT_UNTIL_TIME = "lockout_until_epoch_ms"
 
+    // V-026: the attempt counter decays after 24 h without any failure.
+    // Proof-based reset (native unwrap) only clears it on biometric unlock;
+    // password-only devices would otherwise accumulate a lifetime count and
+    // every future typo would jump straight to the 300 s lockout. Security-
+    // neutral: an active attacker is already capped by the 300 s lockout
+    // (≤ ~288 guesses/day), which decay neither shortens nor bypasses.
+    private const val IDLE_DECAY_MS = 24L * 60 * 60 * 1000
+
     /**
      * Returns an EncryptedSharedPreferences instance.
      * The MasterKey is AES-256 in Android Keystore (hardware backing is
@@ -89,16 +97,26 @@ object SecurePreferences {
      */
     fun recordFailedAttempt(context: Context): Int {
         val prefs = getInstance(context)
-        val count = prefs.getInt(KEY_FAILED_ATTEMPT_COUNT, 0) + 1
+        val now = System.currentTimeMillis()
+        var base = prefs.getInt(KEY_FAILED_ATTEMPT_COUNT, 0)
+
+        // V-026: idle decay (see IDLE_DECAY_MS) — restart the count when the
+        // last failure is older than 24 h.
+        val lastFailure = prefs.getLong(KEY_LAST_FAILED_ATTEMPT_TIME, 0L)
+        if (lastFailure > 0L && now - lastFailure > IDLE_DECAY_MS) {
+            base = 0
+        }
+
+        val count = base + 1
         prefs.edit()
             .putInt(KEY_FAILED_ATTEMPT_COUNT, count)
-            .putLong(KEY_LAST_FAILED_ATTEMPT_TIME, System.currentTimeMillis())
+            .putLong(KEY_LAST_FAILED_ATTEMPT_TIME, now)
             .apply()
 
         // Calculate exponential backoff lockout
         if (count >= 5) {
             val delaySeconds = calculateBackoffSeconds(count)
-            val lockoutUntil = System.currentTimeMillis() + delaySeconds * 1000L
+            val lockoutUntil = now + delaySeconds * 1000L
             prefs.edit()
                 .putLong(KEY_LOCKOUT_UNTIL_TIME, lockoutUntil)
                 .apply()

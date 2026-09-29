@@ -21,7 +21,7 @@ fun signingProp(name: String): String? =
 
 android {
     namespace = "net.firewood.app"
-    compileSdk = 35
+    compileSdk = 36
     ndkVersion = "27.0.12077973"
 
     compileOptions {
@@ -64,21 +64,37 @@ android {
 
     buildTypes {
         release {
-            // Play uploads must be signed with the upload key: pass
-            // -PrequireReleaseSigning=true in CI/release builds to fail hard
-            // when no keystore is configured instead of silently using debug.
-            val requireReleaseSigning =
-                (project.findProperty("requireReleaseSigning") as String?)?.toBoolean() ?: false
+            // V-030: fail closed BY DEFAULT. A release artifact must never
+            // silently fall back to the debug keystore — anyone holding that
+            // key can push same-signature "updates" to every install. The
+            // requirement activates whenever a release build is actually
+            // requested (or when -PrequireReleaseSigning=true is passed
+            // explicitly); opting out requires the equally explicit
+            // -PrequireReleaseSigning=false (env form for scripts:
+            // ORG_GRADLE_PROJECT_requireReleaseSigning=false) — see ADR-002
+            // for the QA-class debug-signing escape hatch.
+            val explicit =
+                (project.findProperty("requireReleaseSigning") as String?)?.toBoolean()
+            val releaseRequested = gradle.startParameter.taskNames
+                .any { it.contains("release", ignoreCase = true) }
+            val requireReleaseSigning = explicit ?: releaseRequested
             if (requireReleaseSigning && signingProp("store_file") == null) {
                 throw GradleException(
-                    "FIREWOOD: requireReleaseSigning=true but no release keystore is configured. " +
-                        "Create android/key.properties (see key.properties.template) or set FIREWOOD_STORE_FILE/FIREWOOD_STORE_PASSWORD/FIREWOOD_KEY_ALIAS/FIREWOOD_KEY_PASSWORD."
+                    "FIREWOOD (V-030): release build requested but no release keystore is " +
+                        "configured — failing closed. Create android/key.properties (see " +
+                        "key.properties.template) or set FIREWOOD_STORE_FILE/FIREWOOD_STORE_PASSWORD/" +
+                        "FIREWOOD_KEY_ALIAS/FIREWOOD_KEY_PASSWORD. For an intentionally " +
+                        "debug-signed local QA artifact, opt out explicitly with " +
+                        "-PrequireReleaseSigning=false (ADR-002)."
                 )
             }
             signingConfig = if (signingProp("store_file") != null) {
                 signingConfigs.getByName("release")
             } else {
-                logger.warn("FIREWOOD: no release keystore configured — QA-class debug signing in effect (see ADR-002).")
+                logger.warn(
+                    "FIREWOOD: no release keystore — DEBUG-SIGNED QA artifact, explicitly " +
+                        "opted out via -PrequireReleaseSigning=false (ADR-002 / V-030)."
+                )
                 signingConfigs.getByName("debug")
             }
             isMinifyEnabled = true
@@ -97,6 +113,13 @@ dependencies {
 
     // Kotlin coroutines for async clipboard clear and auto-lock scheduling
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+
+    // Secure autofill picker activity (FirewoodAutofillPickerActivity):
+    // biometric gate + credential list. Explicit versions so the autofill
+    // flow does not depend on transitive plugin classpaths.
+    implementation("androidx.biometric:biometric:1.1.0")
+    implementation("androidx.appcompat:appcompat:1.7.0")
+    implementation("androidx.recyclerview:recyclerview:1.3.2")
 }
 
 flutter {

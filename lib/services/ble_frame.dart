@@ -54,7 +54,8 @@ class BleFrame {
       throw BleFrameException('Frame is truncated');
     }
     return (
-      fileName: utf8.decode(frame.sublist(headerLength, headerLength + nameLength)),
+      fileName:
+          utf8.decode(frame.sublist(headerLength, headerLength + nameLength)),
       payload: Uint8List.sublistView(
         frame,
         headerLength + nameLength,
@@ -75,7 +76,8 @@ class BleFrame {
   /// Exposed so tests can prove chunked delivery reassembles identically.
   static List<Uint8List> split(Uint8List frame, int chunkSize) {
     if (chunkSize < 20) {
-      throw BleFrameException('chunkSize must be at least 20 bytes (ATT_MTU 23)');
+      throw BleFrameException(
+          'chunkSize must be at least 20 bytes (ATT_MTU 23)');
     }
     final chunks = <Uint8List>[];
     for (var offset = 0; offset < frame.length; offset += chunkSize) {

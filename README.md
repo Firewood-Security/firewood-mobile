@@ -180,9 +180,10 @@ not field contents.
 - **Version source of truth:** `pubspec.yaml` `version: X.Y.Z+N` — Gradle reads
   this to set `versionName` and `versionCode`.
 - **Release signing:** `android/key.properties` (copy `key.properties.template`
-  and fill in your keystore path and credentials). Building with
-  `-PrequireReleaseSigning=true` fails hard if the file is absent, preventing an
-  accidental debug-signed release upload.
+  and fill in your keystore path and credentials). Release builds **fail closed
+  by default** when the file is absent (V-030) — there is no silent
+  debug-signed fallback. Pass `-PrequireReleaseSigning=false` explicitly for a
+  local debug-signed QA artifact (ADR-002).
 - **R8:** minification and resource shrinking are enabled. ProGuard rules are in
   `android/app/proguard-rules.pro`.
 - **Declared permissions:** `USE_BIOMETRIC`, `INTERNET`. File import/export uses
@@ -210,7 +211,13 @@ cd android
 ### Release APK (requires `android/key.properties`)
 
 ```bash
-flutter build apk --release -PrequireReleaseSigning=true
+flutter build apk --release
+```
+
+Fails closed without a keystore (V-030). Local debug-signed QA artifact:
+
+```bash
+flutter build apk --release -PrequireReleaseSigning=false
 ```
 
 ---

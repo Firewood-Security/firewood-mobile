@@ -23,6 +23,7 @@ class VaultSetupScreen extends ConsumerStatefulWidget {
 class _VaultSetupScreenState extends ConsumerState<VaultSetupScreen>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
+  final _vaultNameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
 
@@ -55,6 +56,7 @@ class _VaultSetupScreenState extends ConsumerState<VaultSetupScreen>
   @override
   void dispose() {
     _fadeController.dispose();
+    _vaultNameController.dispose();
     _passwordController.dispose();
     _confirmController.dispose();
     super.dispose();
@@ -289,7 +291,7 @@ class _VaultSetupScreenState extends ConsumerState<VaultSetupScreen>
     try {
       await _vaultService.createVault(
         _passwordController.text,
-        vaultName: 'Primary Vault',
+        vaultName: _vaultNameController.text.trim(),
       );
 
       // Auto-unlock - authProvider state update triggers _AuthGate to transition to HomeScreen
@@ -361,6 +363,37 @@ class _VaultSetupScreenState extends ConsumerState<VaultSetupScreen>
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          // Vault Name Input (required)
+                          TextFormField(
+                            controller: _vaultNameController,
+                            style: const TextStyle(
+                                color: AppColors.offWhite, fontSize: 14),
+                            decoration: const InputDecoration(
+                              isDense: true,
+                              contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 12),
+                              labelText: 'Vault Name *',
+                              hintText: 'e.g. Personal, Work, Family',
+                              prefixIconConstraints:
+                                  BoxConstraints(minWidth: 42, minHeight: 42),
+                              prefixIcon: Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 12),
+                                child: AppIcon(AppInputIcons.lock,
+                                    size: 18, color: AppColors.textMuted),
+                              ),
+                              fillColor: AppColors.surfaceZinc,
+                            ),
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) {
+                                return 'Vault name is required';
+                              }
+                              return null;
+                            },
+                            textInputAction: TextInputAction.next,
+                          ),
+
+                          const SizedBox(height: 12),
+
                           // Master Password Input
                           TextFormField(
                             controller: _passwordController,

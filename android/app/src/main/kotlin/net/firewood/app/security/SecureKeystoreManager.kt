@@ -59,6 +59,9 @@ class SecureKeystoreManager {
      * Creates a new AES-256-GCM key inside Android Keystore, bound to
      * biometric + device credential authentication.
      *
+     * V-016: the auth binding is hard-coded — this function takes NO
+     * parameters, so no caller can mint an unbound wrapping key.
+     *
      * The key is invalidated when:
      *  - New biometrics are enrolled (KEYPROMISE_INVALIDATED_BY_NEW_ENROLLMENT)
      *  - Device credentials change
@@ -66,10 +69,7 @@ class SecureKeystoreManager {
      * This ensures that adding a new fingerprint does not allow an attacker
      * to bypass the vault unlock.
      */
-    fun createWrappingKey(
-        userAuthenticationRequired: Boolean = true,
-        invalidatedByBiometricEnrollment: Boolean = true
-    ) {
+    fun createWrappingKey() {
         val keyGenerator = KeyGenerator.getInstance(
             KeyProperties.KEY_ALGORITHM_AES,
             KEYSTORE_PROVIDER
@@ -84,16 +84,12 @@ class SecureKeystoreManager {
             setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
             setRandomizedEncryptionRequired(true)
 
-            if (userAuthenticationRequired) {
-                setUserAuthenticationRequired(true)
-                setUserAuthenticationParameters(
-                    60, // timeout seconds – user must authenticate within 60s
-                    KeyProperties.AUTH_BIOMETRIC_STRONG or KeyProperties.AUTH_DEVICE_CREDENTIAL
-                )
-                if (invalidatedByBiometricEnrollment) {
-                    setInvalidatedByBiometricEnrollment(true)
-                }
-            }
+            setUserAuthenticationRequired(true)
+            setUserAuthenticationParameters(
+                60, // timeout seconds – user must authenticate within 60s
+                KeyProperties.AUTH_BIOMETRIC_STRONG or KeyProperties.AUTH_DEVICE_CREDENTIAL
+            )
+            setInvalidatedByBiometricEnrollment(true)
         }
 
         keyGenerator.init(specBuilder.build())

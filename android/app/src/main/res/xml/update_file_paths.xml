@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  V-013: the only path exposed through the app's FileProvider is
+  <cache>/update/, where the in-app updater stores the SHA-256-verified APK
+  before handing it to the system installer. Nothing else in the app is
+  shared out of process.
+-->
+<paths>
+    <cache-path name="verified_updates" path="update/" />
+</paths>

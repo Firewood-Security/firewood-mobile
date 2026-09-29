@@ -3,6 +3,7 @@
 
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
+import 'lock_service.dart';
 
 class BiometricAuthService {
   static final LocalAuthentication _localAuth = LocalAuthentication();
@@ -14,17 +15,30 @@ class BiometricAuthService {
       final isSupported = await _localAuth.isDeviceSupported();
 
       if (!canCheck && !isSupported) {
-        // Biometrics or passcode not available on device, proceed
-        return true;
+        // V-026: fail closed — with no biometric or passcode mechanism there
+        // is no authenticated proof, so the sensitive action is refused
+        // instead of proceeding unauthenticated.
+        return false;
       }
 
-      final didAuthenticate = await _localAuth.authenticate(
-        localizedReason: reason,
-        options: const AuthenticationOptions(
-          stickyAuth: true,
-          biometricOnly: false, // Allows fallback to Device PIN / Passcode
-        ),
-      );
+      // Some OEMs surface the device-credential fallback as a system
+      // activity (or hold top-resumed state) — that pauses us. Opening the
+      // flow keeps the in-progress verification from locking the vault out
+      // from under itself; a genuinely long pause still locks via the
+      // idle timer.
+      LockService.beginForegroundFlow();
+      bool didAuthenticate;
+      try {
+        didAuthenticate = await _localAuth.authenticate(
+          localizedReason: reason,
+          options: const AuthenticationOptions(
+            stickyAuth: true,
+            biometricOnly: false, // Allows fallback to Device PIN / Passcode
+          ),
+        );
+      } finally {
+        LockService.endForegroundFlow();
+      }
 
       return didAuthenticate;
     } on PlatformException catch (_) {

@@ -100,7 +100,9 @@ class AirShareService {
       info: utf8.encode('firewood-flame-code-v1'),
     );
     final bytes = await derived.extractBytes();
-    final val = ((bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3]).abs();
+    final val =
+        ((bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3])
+            .abs();
     final code = (val % 9000 + 1000).toString();
     return code;
   }
@@ -150,38 +152,76 @@ class AirShareService {
       secretKey: sessionKey,
     );
 
-    final decodedJson = jsonDecode(utf8.decode(decryptedBytes)) as Map<String, dynamic>;
+    final decodedJson =
+        jsonDecode(utf8.decode(decryptedBytes)) as Map<String, dynamic>;
     return AirSharePayload.fromJson(decodedJson);
   }
 
   /// Creates a Spark URI for QR code generation.
-  /// Format: firewood://spark?pk=[b64]&nonce=[nonce]&name=[name]
+  /// Format: firewood://spark?pk=[b64]&nonce=[nonce]&name=[name]&host=[ips]&port=[port]&tkn=[token]
+  ///
+  /// [host] may carry several comma-separated candidate addresses (e.g. the
+  /// device's Wi-Fi IP *and* its hotspot IP). The sender tries them in order,
+  /// which avoids EHOSTUNREACH (errno 113) when the first advertised address
+  /// happens to sit on an interface the peer cannot route to.
+  ///
+  /// [token] is the receiver's per-session transfer token (V-005): the sender
+  /// must present it as the `x-firewood-token` header on every POST.
   String createSparkUri({
     required SimplePublicKey publicKey,
     required String nonce,
     required String deviceName,
+    String? host,
+    int? port,
+    String? token,
   }) {
     final pkBase64 = base64UrlEncode(publicKey.bytes);
-    final query = Uri(queryParameters: {
+    final params = <String, String>{
       'pk': pkBase64,
       'nonce': nonce,
       'name': deviceName,
-    }).query;
+    };
+    if (host != null && host.isNotEmpty) params['host'] = host;
+    if (port != null) params['port'] = port.toString();
+    if (token != null && token.isNotEmpty) params['tkn'] = token;
+
+    final query = Uri(queryParameters: params).query;
     return 'firewood://spark?$query';
   }
 
   /// Parses a Spark URI from a QR scan or manual input.
-  ({SimplePublicKey publicKey, String nonce, String deviceName}) parseSparkUri(
-      String rawUri) {
+  ///
+  /// [hosts] holds every advertised receiver address in encoded order.
+  /// Loopback entries are dropped — they are never routable from a peer
+  /// device, and dialing them only produces confusing socket errors.
+  ({
+    SimplePublicKey publicKey,
+    String nonce,
+    String deviceName,
+    String? host,
+    List<String> hosts,
+    int? port,
+    String? token
+  }) parseSparkUri(String rawUri) {
     final trimmed = rawUri.trim();
     final uri = Uri.parse(trimmed);
     if (uri.scheme != 'firewood' || uri.host != 'spark') {
-      throw const FormatException('Invalid Spark URI format. Expected firewood://spark?...');
+      throw const FormatException(
+          'Invalid Spark URI format. Expected firewood://spark?...');
     }
 
     final pkStr = uri.queryParameters['pk'];
     final nonce = uri.queryParameters['nonce'] ?? '';
     final name = uri.queryParameters['name'] ?? 'Firewood Peer';
+    final hostParam = uri.queryParameters['host'];
+    final token = uri.queryParameters['tkn'];
+    final hosts = (hostParam ?? '')
+        .split(',')
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty && s != 'localhost' && !s.startsWith('127.'))
+        .toList();
+    final portStr = uri.queryParameters['port'];
+    final port = portStr != null ? int.tryParse(portStr) : null;
 
     if (pkStr == null || pkStr.isEmpty) {
       throw const FormatException('Spark URI missing public key parameter');
@@ -190,6 +230,14 @@ class AirShareService {
     final pkBytes = base64Url.decode(pkStr);
     final publicKey = SimplePublicKey(pkBytes, type: KeyPairType.x25519);
 
-    return (publicKey: publicKey, nonce: nonce, deviceName: name);
+    return (
+      publicKey: publicKey,
+      nonce: nonce,
+      deviceName: name,
+      host: hosts.isNotEmpty ? hosts.first : hostParam,
+      hosts: hosts,
+      port: port,
+      token: (token == null || token.isEmpty) ? null : token,
+    );
   }
 }

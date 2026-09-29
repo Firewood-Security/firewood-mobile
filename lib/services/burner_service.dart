@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:isar/isar.dart';
 import '../database/isar_service.dart';
 import '../database/schemas.dart';
+import '../debug/crypto_debug.dart';
 import 'vault_service.dart';
 
 class BurnerService {
@@ -44,10 +45,20 @@ class BurnerService {
     final salt = _newSalt();
     final hashBase64 = await _hashWithSalt(password, salt);
 
-    // Check duplicate (in-memory filter)
+    // Check duplicate: re-derive the hash with each existing row's salt to
+    // compare correctly. The old code compared `hashBase64` directly, but
+    // since each row has a unique random salt, the same password produces
+    // different hashes — the duplicate check never matched.
     final all = await isar.burnerHashs.where().findAll();
-    if (all.any((b) => b.passwordHash == hashBase64)) {
-      throw BurnerException('This burner password is already registered');
+    for (final b in all) {
+      final saltsToTry = (b.salt != null && b.salt!.isNotEmpty)
+          ? [b.salt!]
+          : [legacyStaticSalt];
+      for (final s in saltsToTry) {
+        if (await _hashWithSalt(password, s) == b.passwordHash) {
+          throw BurnerException('This burner password is already registered');
+        }
+      }
     }
 
     final burner = BurnerHash()
@@ -60,21 +71,23 @@ class BurnerService {
   }
 
   Future<bool> isBurnerPassword(String password) async {
-    final isar = await _isarService.instance;
-    final burners = await isar.burnerHashs.where().findAll();
-    if (burners.isEmpty) return false;
+    return CryptoDebug.trace('burner.isBurnerPassword', () async {
+      final isar = await _isarService.instance;
+      final burners = await isar.burnerHashs.where().findAll();
+      if (burners.isEmpty) return false;
 
-    for (final b in burners) {
-      // New rows: per-entry salt. Legacy rows (salt == null/empty): static
-      // fallback until replaced (ADR-006 migration window).
-      final saltsToTry = (b.salt != null && b.salt!.isNotEmpty)
-          ? [b.salt!]
-          : [legacyStaticSalt];
-      for (final s in saltsToTry) {
-        if (await _hashWithSalt(password, s) == b.passwordHash) return true;
+      for (final b in burners) {
+        // New rows: per-entry salt. Legacy rows (salt == null/empty): static
+        // fallback until replaced (ADR-006 migration window).
+        final saltsToTry = (b.salt != null && b.salt!.isNotEmpty)
+            ? [b.salt!]
+            : [legacyStaticSalt];
+        for (final s in saltsToTry) {
+          if (await _hashWithSalt(password, s) == b.passwordHash) return true;
+        }
       }
-    }
-    return false;
+      return false;
+    }, meta: {'rows': 'auto'});
   }
 
   Future<bool> executeBurn() async {

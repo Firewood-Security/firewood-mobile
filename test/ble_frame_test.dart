@@ -45,7 +45,8 @@ void main() {
     });
 
     test('handles a multi-byte UTF-8 name', () {
-      final frame = BleFrame.encode(fileName: '🔥vault.firewood', payload: [1, 2, 3]);
+      final frame =
+          BleFrame.encode(fileName: '🔥vault.firewood', payload: [1, 2, 3]);
       final decoded = BleFrame.decode(frame);
       expect(decoded.fileName, '🔥vault.firewood');
       expect(decoded.payload, [1, 2, 3]);
@@ -87,7 +88,8 @@ void main() {
     // chunks and let the receiver buffer until the declared length is met.
     test('a chunked transfer rebuilds the original frame', () {
       final payload = List<int>.generate(4096, (i) => i % 256);
-      final frame = BleFrame.encode(fileName: 'vault.firewood', payload: payload);
+      final frame =
+          BleFrame.encode(fileName: 'vault.firewood', payload: payload);
 
       for (final chunkSize in [20, 100, 244, 509]) {
         final chunks = BleFrame.split(frame, chunkSize);
@@ -105,8 +107,10 @@ void main() {
           }
         }
 
-        expect(completed, isNotNull, reason: 'frame never completed at $chunkSize');
-        expect(completed, orderedEquals(frame), reason: 'mismatch at chunk $chunkSize');
+        expect(completed, isNotNull,
+            reason: 'frame never completed at $chunkSize');
+        expect(completed, orderedEquals(frame),
+            reason: 'mismatch at chunk $chunkSize');
       }
     });
 

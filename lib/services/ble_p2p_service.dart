@@ -32,14 +32,16 @@ class BleP2pService {
   StreamSubscription? _dataSub;
 
   final _discoveredDevicesController = StreamController<BleDevice>.broadcast();
-  final _connectionController = StreamController<BleConnectionEvent>.broadcast();
+  final _connectionController =
+      StreamController<BleConnectionEvent>.broadcast();
   final _transferController = StreamController<BleTransferEvent>.broadcast();
 
   /// Stream of discovered Firewood peers during scanning.
   Stream<BleDevice> get onDeviceFound => _discoveredDevicesController.stream;
 
   /// Stream of connection events (connected / disconnected / failed).
-  Stream<BleConnectionEvent> get onConnectionEvent => _connectionController.stream;
+  Stream<BleConnectionEvent> get onConnectionEvent =>
+      _connectionController.stream;
 
   /// Stream of transfer events (progress / complete / failed / received).
   Stream<BleTransferEvent> get onTransferEvent => _transferController.stream;
@@ -102,7 +104,8 @@ class BleP2pService {
     }, onError: (_) {});
 
     _connectionSub?.cancel();
-    _connectionSub = _connectionChannel.receiveBroadcastStream().listen((event) {
+    _connectionSub =
+        _connectionChannel.receiveBroadcastStream().listen((event) {
       final map = Map<String, dynamic>.from(event as Map);
       final kind = map['event']?.toString() ?? '';
       _connectionController.add(BleConnectionEvent(
@@ -182,18 +185,21 @@ class BleP2pService {
   }
 
   /// Connects to a discovered peer and waits until the GATT service is ready.
-  Future<void> connect(String address, {Duration timeout = const Duration(seconds: 20)}) async {
+  Future<void> connect(String address,
+      {Duration timeout = const Duration(seconds: 20)}) async {
     final connected = onConnectionEvent
         .where((e) => e.address == address && e.connected)
         .first
-        .timeout(timeout, onTimeout: () => throw BleException(
-          'Timed out connecting to $address',
-        ));
+        .timeout(timeout,
+            onTimeout: () => throw BleException(
+                  'Timed out connecting to $address',
+                ));
 
     final started = await _method.invokeMethod<bool>(
           'bleConnectDevice',
-      <String, dynamic>{'deviceAddress': address},
-    ) ?? false;
+          <String, dynamic>{'deviceAddress': address},
+        ) ??
+        false;
     if (!started) {
       throw BleException('Could not start BLE connection to $address');
     }
@@ -223,9 +229,10 @@ class BleP2pService {
             e.kind == BleTransferEventKind.sendComplete ||
             e.kind == BleTransferEventKind.sendFailed)
         .first
-        .timeout(timeout, onTimeout: () => throw BleException(
-          'Timed out sending $fileName',
-        ));
+        .timeout(timeout,
+            onTimeout: () => throw BleException(
+                  'Timed out sending $fileName',
+                ));
 
     final progressSub = onTransferEvent.listen((e) {
       if (e.kind == BleTransferEventKind.progress && e.total > 0) {
@@ -234,14 +241,24 @@ class BleP2pService {
     });
 
     try {
-      final queued = await _method.invokeMethod<bool>(
-        'bleSendData',
-        <String, dynamic>{
-          'deviceAddress': address,
-          'data': frame,
-        },
-      ) ?? false;
+      final bool queued;
+      try {
+        queued = await _method.invokeMethod<bool>(
+              'bleSendData',
+              <String, dynamic>{
+                'deviceAddress': address,
+                'data': frame,
+              },
+            ) ??
+            false;
+      } on PlatformException catch (e) {
+        // V-012: the native layer fails closed until the link is bonded —
+        // surface its pairing message rather than a generic write failure.
+        completion.ignore();
+        throw BleException(e.message ?? 'BLE write could not be started');
+      }
       if (!queued) {
+        completion.ignore();
         throw const BleException('BLE write could not be started');
       }
 
@@ -265,9 +282,10 @@ class BleP2pService {
     final event = onTransferEvent
         .where((e) => e.kind == BleTransferEventKind.received)
         .first
-        .timeout(timeout, onTimeout: () => throw const BleException(
-          'Timed out waiting for an incoming transfer',
-        ));
+        .timeout(timeout,
+            onTimeout: () => throw const BleException(
+                  'Timed out waiting for an incoming transfer',
+                ));
     final received = await event;
     final frame = received.frame;
     if (frame == null) {
@@ -329,7 +347,8 @@ class BleDevice {
   final String address;
   final String name;
   final int rssi;
-  const BleDevice({required this.address, required this.name, required this.rssi});
+  const BleDevice(
+      {required this.address, required this.name, required this.rssi});
 }
 
 class BleConnectionEvent {

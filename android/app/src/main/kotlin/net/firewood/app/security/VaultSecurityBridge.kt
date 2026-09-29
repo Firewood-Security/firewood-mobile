@@ -59,10 +59,7 @@ class VaultSecurityBridge(
         return runCatching {
             // 1. Create Keystore wrapping key (hardware backing is
             // device-dependent and UNVERIFIED per-device — see ADR-003)
-            keystoreManager.createWrappingKey(
-                userAuthenticationRequired = true,
-                invalidatedByBiometricEnrollment = true
-            )
+            keystoreManager.createWrappingKey()
 
             // 2. Wrap master password
             val passwordBytes = masterPassword.toByteArray(Charsets.UTF_8)

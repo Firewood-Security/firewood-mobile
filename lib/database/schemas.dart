@@ -22,6 +22,15 @@ class Vault {
   List<int>? verifierToken;
   List<int>? verifierNonce;
 
+  // Envelope encryption (V2): random Master Encryption Key wrapped by KWK.
+  // Null on V1 legacy vaults — unlock() auto-migrates them to V2.
+  List<int>? wrappedMekToken;
+  List<int>? wrappedMekNonce;
+
+  // Schema version: 1 = legacy direct key (KWK = encrypt key), 2 = envelope
+  // MEK (KWK wraps MEK, MEK encrypts items via HKDF subkeys).
+  int version = 1;
+
   // Whether this vault is the "default" (last used) for quick unlock
   late bool isDefault;
 
@@ -45,10 +54,12 @@ class SecureItem {
   // 24-byte nonce (NOT secret, stored alongside ciphertext)
   late List<int> nonce;
 
-  // Item type: login, card, note, identity, developerSecret
+  // V-009: legacy metadata columns — always written as EMPTY strings.
+  // Title/type live inside `encryptedData` as `__title`/`__type`; these
+  // columns remain only as a read-fallback for rows not yet migrated
+  // (migration runs on every verified unlock in VaultService.unlock).
   late String type;
 
-  // Plaintext title for search/display without decryption
   late String title;
 
   late DateTime updatedAt;

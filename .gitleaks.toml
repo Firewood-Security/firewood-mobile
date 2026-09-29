@@ -1,0 +1,43 @@
+# gitleaks configuration — firewood-mobile
+# Loaded automatically when gitleaks scans this repo:
+#   gitleaks git . --redact --no-banner
+#
+# Policy: every finding fails the build. Allowlisting is reserved for values
+# that are public by design, with a recorded justification. Never allowlist
+# a private key, token, or password.
+#
+# CRITICAL: `[extend] useDefault = true` is mandatory — a config without it
+# REPLACES the default ruleset and the scan becomes vacuously green (proven
+# against gitleaks 8.30.1, 2026-09-29).
+#
+# Triaged 2026-09-29 against gitleaks 8.30.1 (git + dir modes) with default
+# rules active: repo scans clean with this config; without it the burner
+# fixture and build artifacts reappear.
+
+title = "firewood-mobile gitleaks configuration"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = """
+1) Build outputs (justified exception, 2026-09-29): .dart_tool/ and build/
+   contain compiled Dart kernels (app.dill, *.dill.track.dill) where
+   committed test fixtures string-match key-shaped patterns. Both are
+   gitignored — history scans never see them — and excluded here so
+   working-tree (dir mode) scans stay meaningful.
+2) LegacyBurner12 (justified exception, 2026-09-29): constant in
+   test/burner_service_test.dart used to assert legacy hash verification —
+   a fake value committed to the public repo, not a credential.
+
+NOTE android/key.properties holds the REAL upload keystore passwords: it is
+0600 + gitignored (android/.gitignore:12) and is deliberately NOT
+allowlisted — a dir-mode scan must keep flagging it if it ever leaks.
+"""
+paths = [
+  '''(^|/)\.dart_tool/''',
+  '''(^|/)build/''',
+]
+stopwords = [
+  '''LegacyBurner12''',
+]

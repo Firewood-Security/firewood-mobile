@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Firewood autofill service config.
+
+  Note: an `android:compatibilityPackages` list (Chrome/Firefox/...) used to
+  be declared here, but that attribute is not part of the public Android
+  resource table (absent from android.jar on API 30–36), so AAPT rejects it.
+  Autofill works for browsers regardless — the framework detects web forms
+  from the AssistStructure's webDomain.
+-->
+<autofill-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:settingsActivity="net.firewood.app.MainActivity" />

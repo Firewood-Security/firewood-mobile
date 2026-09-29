@@ -12,8 +12,9 @@ extension WorkspaceDensityX on WorkspaceDensity {
   String get label =>
       this == WorkspaceDensity.compact ? 'Compact' : 'Comfortable';
 
-  WorkspaceDensity get toggled =>
-      this == WorkspaceDensity.compact ? WorkspaceDensity.comfortable : WorkspaceDensity.compact;
+  WorkspaceDensity get toggled => this == WorkspaceDensity.compact
+      ? WorkspaceDensity.comfortable
+      : WorkspaceDensity.compact;
 }
 
 /// Active workspace section. 0 Dashboard, 1 Vault, 2 Generator, 3 Settings.

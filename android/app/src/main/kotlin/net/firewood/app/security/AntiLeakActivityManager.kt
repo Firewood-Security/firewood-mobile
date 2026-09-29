@@ -51,19 +51,57 @@ object AntiLeakActivityManager {
     }
 
     /**
-     * Lazily removes FLAG_SECURE when the user needs to take a screenshot
-     * of a non-sensitive screen (e.g., QR code for P2P sharing).
-     * Call for specific screens only; re-enable FLAG_SECURE when leaving.
+     * Clears FLAG_SECURE so a screenshot/recording can be taken.
+     *
+     * V-019: only ever reachable through the method channel when the user's
+     * stored screenshot policy allows capture (see the `disableSecureFlag`
+     * gate in SecureMethodChannel) — never call this to make a QR or any
+     * other on-screen content "shareable": the flag is window-wide and a QR
+     * scans fine while it is set.
      */
     fun temporarilyAllowScreenshots(activity: Activity) {
         activity.window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
     }
 
     /**
-     * Re-applies FLAG_SECURE after [temporarilyAllowScreenshots].
+     * Reads the user's stored screenshot policy — Flutter writes the
+     * `allow_screenshots` key into `FlutterSharedPreferences`. Absent/false
+     * means FLAG_SECURE is required (fail closed). The map is the Android
+     * SharedPreferences singleton, so Dart-side writes are visible here
+     * immediately (same process, same file-backed instance).
+     */
+    private fun captureAllowed(activity: Activity): Boolean {
+        return try {
+            val prefs = activity.getSharedPreferences(
+                "FlutterSharedPreferences",
+                Context.MODE_PRIVATE
+            )
+            when (val v = prefs.all["flutter.allow_screenshots"]) {
+                is Boolean -> v
+                is String -> v.equals("true", ignoreCase = true)
+                else -> false
+            }
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /**
+     * Applies the stored screenshot policy: FLAG_SECURE when capture is not
+     * allowed, cleared when the user opted in via Settings → Allow
+     * Screenshots.
+     *
+     * Policy-aware on purpose: this runs on EVERY Activity resume (and from
+     * the `enableSecureFlag` channel call) — an unconditional re-apply used
+     * to silently kill the user's choice the first time they backgrounded
+     * the app, making the Settings toggle appear broken.
      */
     fun reapplySecureFlags(activity: Activity) {
-        activity.window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        if (captureAllowed(activity)) {
+            activity.window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        } else {
+            activity.window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
     }
 
     /**
@@ -120,13 +158,17 @@ object AntiLeakActivityManager {
 
     /**
      * Clears the activity's window content to a blank view when the app
-     * goes to background (additional layer beyond FLAG_SECURE).
+     * goes to background (additional layer beyond FLAG_SECURE). Honors the
+     * stored screenshot policy — a user who allowed capture keeps that
+     * choice across backgrounding.
      */
     fun onAppBackgrounded(activity: Activity) {
         // When combined with FLAG_SECURE, this provides defense-in-depth
         // against app switcher thumbnail leaks on buggy OEM implementations
         try {
-            activity.window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            if (!captureAllowed(activity)) {
+                activity.window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            }
         } catch (_: Exception) {
             // Non-critical – FLAG_SECURE was likely already set
         }

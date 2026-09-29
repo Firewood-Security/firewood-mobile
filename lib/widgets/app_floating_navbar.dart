@@ -1,7 +1,8 @@
 // widgets/app_floating_navbar.dart
-// Flat floating bottom navigation bar with sliding selection indicator.
+// Flat floating bottom navigation bar with integrated Add action button and sliding selection indicator.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../services/update_service.dart';
 import '../theme/app_icons.dart';
@@ -10,26 +11,26 @@ import '../theme/app_theme.dart';
 class AppFloatingNavBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
+  final VoidCallback onAddTap;
 
   const AppFloatingNavBar({
     super.key,
     required this.currentIndex,
     required this.onTap,
+    required this.onAddTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final activeAccent = Theme.of(context).colorScheme.primary;
-
     return ValueListenableBuilder<bool>(
       valueListenable: UpdateService.hasUpdateAvailable,
       builder: (context, hasUpdate, _) {
         return Container(
-          height: 66,
-          padding: const EdgeInsets.all(6),
+          height: 76,
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: const Color(0xFF141418),
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(26),
             border: Border.all(
               color: AppColors.borderZinc,
               width: 1,
@@ -41,29 +42,35 @@ class AppFloatingNavBar extends StatelessWidget {
               final itemWidth = constraints.maxWidth / itemCount;
               final itemHeight = constraints.maxHeight;
 
+              // Compute target slot for indicator:
+              // Index 0 -> Slot 0 (Home)
+              // Index 1 -> Slot 1 (Vault)
+              // Index 2 -> Slot 3 (Settings)
+              final targetSlot = currentIndex >= 2 ? 3 : currentIndex;
+
               return Stack(
                 children: [
                   // Smooth Sliding Active Indicator Pill
                   AnimatedPositioned(
                     duration: const Duration(milliseconds: 280),
                     curve: Curves.easeOutCubic,
-                    left: currentIndex * itemWidth,
+                    left: targetSlot * itemWidth,
                     top: 0,
                     width: itemWidth,
                     height: itemHeight,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: activeAccent,
+                        color: AppColors.surfaceZinc,
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: AppColors.orangeDark,
+                          color: AppColors.offWhite.withValues(alpha: 0.10),
                           width: 1,
                         ),
                       ),
                     ),
                   ),
 
-                  // Navigation Items Row
+                  // Navigation Items Row: Home | Vault | Add (+) | Settings
                   Row(
                     children: [
                       _NavItem(
@@ -73,23 +80,20 @@ class AppFloatingNavBar extends StatelessWidget {
                         onTap: () => onTap(0),
                       ),
                       _NavItem(
-                        icon: HugeIcons.strokeRoundedSafeBox,
+                        icon: HugeIcons.strokeRoundedSearch01,
                         label: 'Vault',
                         isSelected: currentIndex == 1,
                         onTap: () => onTap(1),
                       ),
-                      _NavItem(
-                        icon: HugeIcons.strokeRoundedPasswordValidation,
-                        label: 'Generate',
-                        isSelected: currentIndex == 2,
-                        onTap: () => onTap(2),
+                      _AddNavItem(
+                        onTap: onAddTap,
                       ),
                       _NavItem(
                         icon: HugeIcons.strokeRoundedSettings01,
                         label: 'Settings',
-                        isSelected: currentIndex == 3,
+                        isSelected: currentIndex == 2,
                         hasBadge: hasUpdate,
-                        onTap: () => onTap(3),
+                        onTap: () => onTap(2),
                       ),
                     ],
                   ),
@@ -135,20 +139,17 @@ class _NavItem extends StatelessWidget {
                   duration: const Duration(milliseconds: 250),
                   curve: Curves.easeOutBack,
                   scale: isSelected ? 1.06 : 1.0,
-                  // The active tab sits on a solid accent pill, so the glyph is
-                  // white with a touch more stroke weight; inactive tabs stay
-                  // muted, making the active screen unmistakable.
                   child: AppIcon(
                     icon,
-                    size: 27,
-                    strokeWidth: isSelected ? 1.9 : 1.6,
+                    size: 30,
+                    strokeWidth: isSelected ? 1.8 : 1.5,
                     color: isSelected ? Colors.white : AppColors.textMuted,
                   ),
                 ),
                 if (hasBadge)
                   Positioned(
-                    right: -5,
-                    top: -2,
+                    right: 8,
+                    top: 6,
                     child: Container(
                       width: 7,
                       height: 7,
@@ -161,6 +162,54 @@ class _NavItem extends StatelessWidget {
                     ),
                   ),
               ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AddNavItem extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _AddNavItem({
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          HapticFeedback.lightImpact();
+          onTap();
+        },
+        child: SizedBox.expand(
+          child: Tooltip(
+            message: 'Add Item',
+            child: Center(
+              child: Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  color: AppColors.orangeAccent,
+                  borderRadius: BorderRadius.circular(17),
+                  border: Border.all(
+                    color: AppColors.orangeDark,
+                    width: 1,
+                  ),
+                ),
+                child: const Center(
+                  child: AppIcon(
+                    HugeIcons.strokeRoundedAddCircle,
+                    size: 28,
+                    strokeWidth: 2.0,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
             ),
           ),
         ),

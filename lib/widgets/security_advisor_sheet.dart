@@ -60,14 +60,15 @@ class SecurityAdvisorSheet {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
+      useSafeArea: true,
       builder: (ctx) {
         return Container(
           constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(ctx).size.height * 0.75,
+            maxHeight: MediaQuery.of(ctx).size.height * 0.8,
           ),
           decoration: BoxDecoration(
             color: AppColors.surfaceZinc,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             border: Border.all(color: AppColors.borderZinc, width: 1),
           ),
           padding: EdgeInsets.fromLTRB(
@@ -91,14 +92,27 @@ class SecurityAdvisorSheet {
               Row(
                 children: [
                   const Expanded(
-                    child: Text(
-                      'SECURITY ADVISOR',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.1,
-                        color: AppColors.offWhite,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Security advisor',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.2,
+                            color: AppColors.offWhite,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'On-device vault health review',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   Container(
@@ -149,35 +163,36 @@ class SecurityAdvisorSheet {
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
-              // Compact plain-text metrics (no boxed chips)
-              Wrap(
-                spacing: 14,
-                runSpacing: 4,
+              const SizedBox(height: 14),
+              // Compact stat cards
+              Row(
                 children: [
-                  _Metric(
+                  _StatCard(
                       label: 'Strong',
-                      value: advisory.strongCount,
+                      value: '${advisory.strongCount}',
                       color: const Color(0xFF22C55E)),
-                  _Metric(
+                  const SizedBox(width: 8),
+                  _StatCard(
                       label: 'Weak',
-                      value: advisory.weakCount,
+                      value: '${advisory.weakCount}',
                       color: advisory.weakCount > 0
                           ? AppColors.roseAccent
                           : AppColors.textMuted),
-                  _Metric(
+                  const SizedBox(width: 8),
+                  _StatCard(
                       label: 'Reused',
-                      value: advisory.reusedCount,
+                      value: '${advisory.reusedCount}',
                       color: advisory.reusedCount > 0
                           ? const Color(0xFFF59E0B)
                           : AppColors.textMuted),
-                  _Metric(
+                  const SizedBox(width: 8),
+                  _StatCard(
                       label: '2FA',
                       value: '${advisory.totpCoveragePercent.round()}%',
                       color: AppColors.orangeAccent),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               if (advisory.allClear)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 24),
@@ -197,23 +212,45 @@ class SecurityAdvisorSheet {
                     children: [
                       for (final group in advisory.groups) ...[
                         Padding(
-                          padding: const EdgeInsets.only(top: 8, bottom: 2),
-                          child: Text(
-                            '${_groupLabel(group.category)} (${group.count})',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.8,
-                              color: colorForSeverity(group.severity),
-                            ),
+                          padding: const EdgeInsets.only(top: 10, bottom: 6),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 7,
+                                height: 7,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: colorForSeverity(group.severity),
+                                ),
+                              ),
+                              const SizedBox(width: 7),
+                              Text(
+                                '${_groupLabel(group.category)} (${group.count})',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.6,
+                                  color: AppColors.offWhite,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: AppColors.cardZinc,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppColors.borderZinc),
+                          ),
                           child: Text(
                             group.advice,
                             style: const TextStyle(
-                              fontSize: 10.5,
+                              fontSize: 11,
+                              height: 1.4,
                               color: AppColors.textMuted,
                             ),
                           ),
@@ -294,12 +331,12 @@ class SecurityAdvisorSheet {
   }
 }
 
-class _Metric extends StatelessWidget {
+class _StatCard extends StatelessWidget {
   final String label;
-  final dynamic value;
+  final String value;
   final Color color;
 
-  const _Metric({
+  const _StatCard({
     required this.label,
     required this.value,
     required this.color,
@@ -307,28 +344,36 @@ class _Metric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text.rich(
-      TextSpan(
-        children: [
-          TextSpan(
-            text: '$label ',
-            style: const TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.6,
-              color: AppColors.textMuted,
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: AppColors.cardZinc,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.borderZinc),
+        ),
+        child: Column(
+          children: [
+            Text(
+              value,
+              style: TextStyle(
+                fontFamily: 'Monospace',
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
             ),
-          ),
-          TextSpan(
-            text: '$value',
-            style: TextStyle(
-              fontFamily: 'Monospace',
-              fontSize: 10.5,
-              fontWeight: FontWeight.bold,
-              color: color,
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textMuted,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

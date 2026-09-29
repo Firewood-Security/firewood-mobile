@@ -1,11 +1,32 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Firewood keeps everything local: biometric unlock + TLS update checks
-         are the only capabilities it needs. No storage permissions (exports
-         go through the Storage Access Framework), no location, no Bluetooth,
-         no telemetry. -->
+    <!-- Firewood keeps everything local: biometric unlock, camera QR
+         scanning, Bluetooth LE transfer, and TLS update checks are the
+         capabilities it needs. No storage permissions (exports go through
+         the Storage Access Framework), no telemetry. V-029: BLE scanning
+         never derives location — Android 12+ scans run with
+         neverForLocation, and the legacy location permission is capped to
+         the API ≤ 30 path where Android tied scanning to it. -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.CAMERA"/>
+    <!-- Legacy BLE stack (pre-Android 12); Android 12+ uses the three
+         BLUETOOTH_* runtime permissions below. -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30"/>
+    <!-- Pre-Android-12 BLE scans required a location grant; capped at API 30
+         so modern devices are never asked for location (V-029). -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30"/>
+    <!-- Android 12+ BLE. neverForLocation asserts scans are never used to
+         derive physical location (V-029: closes the tracking exposure). -->
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" android:usesPermissionFlags="neverForLocation"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- V-013: in-app self-update — only to hand the hash-verified APK to the
+         system installer (REQUEST_INSTALL_PACKAGES gates that dialog). -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>
     <application
@@ -15,6 +36,7 @@
         android:allowBackup="false"
         android:fullBackupContent="@xml/backup_rules"
         android:dataExtractionRules="@xml/data_extraction_rules"
+        android:networkSecurityConfig="@xml/network_security_config"
         android:usesCleartextTraffic="false"
         android:extractNativeLibs="true"
         android:enableOnBackInvokedCallback="true">
@@ -41,6 +63,50 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+
+        <!-- Secure Offline Autofill Service for Browser & App Forms -->
+        <service
+            android:name=".autofill.FirewoodAutofillService"
+            android:permission="android.permission.BIND_AUTOFILL_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.autofill.AutofillService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.autofill"
+                android:resource="@xml/autofill_service_config" />
+        </service>
+
+        <!--
+          Authenticated credential picker: launched by the autofill framework
+          via PendingIntent when the user taps "Open Firewood Vault". Handles
+          biometric / device-credential unlock, then returns the chosen
+          dataset. Pure native (no Flutter engine) for instant launch, and
+          never exported — only our own PendingIntent starts it.
+        -->
+        <activity
+            android:name=".autofill.FirewoodAutofillPickerActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:theme="@style/FirewoodAutofillPickerTheme" />
+
+        <!--
+          V-013: shares exactly one file — the SHA-256-verified update APK in
+          <cache>/update/ — with the system installer via a content:// URI.
+          Path scope lives in res/xml/update_file_paths.xml; the native
+          installUpdate handler re-checks containment before resolving.
+        -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/update_file_paths" />
+        </provider>
+
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

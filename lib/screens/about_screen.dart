@@ -1,8 +1,13 @@
 // screens/about_screen.dart
 // Dedicated About Screen with App Specs, Zero-Knowledge Architecture & Developer Information
 
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../theme/app_button.dart';
 import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
 
@@ -24,7 +29,7 @@ class AboutScreen extends StatelessWidget {
         iconTheme: const IconThemeData(color: AppColors.offWhite),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 140),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
         children: [
           // App Logo & Header
           // App Logo & Header (Minimalist, No Glows)
@@ -48,21 +53,20 @@ class AboutScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceZinc,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.borderZinc),
-                  ),
-                  child: Text(
-                    'Version 1.0.0 • Zero-Knowledge Vault',
-                    style: TextStyle(
-                        fontSize: 11,
-                        color: AppColors.orangeAccent,
-                        fontWeight: FontWeight.w600),
-                  ),
+                Text(
+                  'Version 1.0.0',
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textMuted,
+                      fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 2),
+                const Text(
+                  'Zero-Knowledge Vault',
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textMuted,
+                      fontWeight: FontWeight.w400),
                 ),
               ],
             ),
@@ -150,7 +154,6 @@ class AboutScreen extends StatelessWidget {
                 name: 'Yahya',
                 role: 'Cloud Engineer',
                 icon: AppIcons.cloud,
-                details: 'Cloud Infrastructure & Security Architecture.',
                 githubUrl: 'https://github.com/yahyaoncloud',
                 websiteUrl: 'https://yahyaoncloud.vercel.app',
               ),
@@ -159,7 +162,33 @@ class AboutScreen extends StatelessWidget {
                 name: 'Firas Rasheed',
                 role: 'Backend Engineer',
                 icon: AppIcons.typeDeveloperSecret,
-                details: 'Backend Architecture & Database Optimization.',
+                githubUrl: 'https://github.com/Firewood-Security',
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+
+          // Support & Bug Reports Section
+          const _AboutSectionTitle(title: 'SUPPORT & BUG REPORTS'),
+          _AboutCard(
+            children: [
+              const Text(
+                'Encountered an issue, need assistance, or have feedback? Submit a support ticket directly to the Firewood engineering team.',
+                style: TextStyle(
+                  color: AppColors.offWhite,
+                  fontSize: 13,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 14),
+              AppButton(
+                label: 'Email Support Ticket',
+                icon: HugeIcons.strokeRoundedMail01,
+                variant: AppButtonVariant.primary,
+                fullWidth: true,
+                height: 44,
+                onPressed: () => _sendSupportEmail(context),
               ),
             ],
           ),
@@ -269,6 +298,41 @@ class AboutScreen extends StatelessWidget {
       ),
     );
   }
+
+  static Future<void> _sendSupportEmail(BuildContext context) async {
+    final os = Platform.operatingSystem;
+    final osVersion = Platform.operatingSystemVersion;
+    final subject = Uri.encodeComponent('[Firewood Support] Issue Report');
+    final body = Uri.encodeComponent(
+      'Device & App Details:\n'
+      '• App Version: 1.0.0\n'
+      '• OS: $os ($osVersion)\n\n'
+      'Description of Issue / Feedback:\n'
+      '[Please describe your issue or question here]\n\n'
+      'Steps to Reproduce (if applicable):\n'
+      '1. \n'
+      '2. \n',
+    );
+    final emailUri = Uri.parse(
+        'mailto:support@firewoodsecurity.com?subject=$subject&body=$body');
+    try {
+      if (await canLaunchUrl(emailUri)) {
+        await launchUrl(emailUri);
+      } else {
+        throw 'Cannot launch mailto';
+      }
+    } catch (_) {
+      if (context.mounted) {
+        Clipboard.setData(
+            const ClipboardData(text: 'support@firewoodsecurity.com'));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Support email copied: support@firewoodsecurity.com'),
+          ),
+        );
+      }
+    }
+  }
 }
 
 class _AboutSectionTitle extends StatelessWidget {
@@ -281,8 +345,8 @@ class _AboutSectionTitle extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         title,
-        style: const TextStyle(
-          fontSize: 11,
+        style: GoogleFonts.syncopate(
+          fontSize: 10,
           fontWeight: FontWeight.bold,
           letterSpacing: 1.2,
           color: AppColors.textMuted,
@@ -318,7 +382,6 @@ class _DeveloperTile extends StatelessWidget {
   final String name;
   final String role;
   final dynamic icon;
-  final String details;
   final String? githubUrl;
   final String? websiteUrl;
 
@@ -326,7 +389,6 @@ class _DeveloperTile extends StatelessWidget {
     required this.name,
     required this.role,
     required this.icon,
-    required this.details,
     this.githubUrl,
     this.websiteUrl,
   });
@@ -341,94 +403,67 @@ class _DeveloperTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AppIcon(icon, size: 24),
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: AppColors.cardZinc,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.borderZinc),
+            ),
+            child: Center(
+              child: AppIcon(icon, size: 20, color: AppColors.orangeAccent),
+            ),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(name,
-                    style: const TextStyle(
-                        color: AppColors.offWhite,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13)),
-                Text(role,
-                    style: TextStyle(
-                        color: AppColors.orangeAccent,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600)),
-                const SizedBox(height: 4),
-                Text(details,
-                    style: const TextStyle(
-                        color: AppColors.textMuted, fontSize: 11, height: 1.4)),
-                if (githubUrl != null || websiteUrl != null)
-                  const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: [
-                    if (githubUrl != null)
-                      InkWell(
-                        onTap: () => _openUrl(githubUrl!),
-                        borderRadius: BorderRadius.circular(6),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: AppColors.cardZinc,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: AppColors.borderZinc),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              AppIcon(AppIcons.typeDeveloperSecret,
-                                  size: 12, color: AppColors.orangeAccent),
-                              const SizedBox(width: 4),
-                              Text('github.com/yahyaoncloud',
-                                  style: TextStyle(
-                                      fontSize: 10,
-                                      color: AppColors.orangeAccent,
-                                      fontWeight: FontWeight.bold)),
-                            ],
-                          ),
-                        ),
-                      ),
-                    if (websiteUrl != null)
-                      InkWell(
-                        onTap: () => _openUrl(websiteUrl!),
-                        borderRadius: BorderRadius.circular(6),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: AppColors.cardZinc,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: AppColors.borderZinc),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              AppIcon(AppIcons.globe,
-                                  size: 12, color: AppColors.orangeAccent),
-                              const SizedBox(width: 4),
-                              Text('yahyaoncloud.vercel.app',
-                                  style: TextStyle(
-                                      fontSize: 10,
-                                      color: AppColors.orangeAccent,
-                                      fontWeight: FontWeight.bold)),
-                            ],
-                          ),
-                        ),
-                      ),
-                  ],
+                Text(
+                  name,
+                  style: const TextStyle(
+                    color: AppColors.offWhite,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  role,
+                  style: TextStyle(
+                    color: AppColors.orangeAccent,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (githubUrl != null)
+                IconButton(
+                  icon: const AppIcon(AppIcons.github,
+                      size: 20, color: AppColors.offWhite),
+                  tooltip: 'GitHub',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => _openUrl(githubUrl!),
+                ),
+              if (websiteUrl != null)
+                IconButton(
+                  icon: AppIcon(AppIcons.globe,
+                      size: 20, color: AppColors.orangeAccent),
+                  tooltip: 'Website',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => _openUrl(websiteUrl!),
+                ),
+            ],
           ),
         ],
       ),

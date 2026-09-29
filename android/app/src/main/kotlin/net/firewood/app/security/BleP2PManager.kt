@@ -27,7 +27,9 @@ import java.util.concurrent.ConcurrentHashMap
  *  1. Receiver calls startAdvertise() – BLE starts advertising the Firewood service
  *  2. Sender calls startScan() – BLE scans for Firewood service UUID
  *  3. On discovery, sender calls connectToDevice()
- *  4. GATT connection established; both sides notified via EventChannel/onConnected
+ *  4. GATT connection established → LE **bonding** is started immediately
+ *     (V-012): the characteristic only accepts writes on an encrypted link,
+ *     so transfers wait for the pairing handshake to complete
  *  5. Dart layer performs X25519 handshake through this BLE pipe
  *  6. Encrypted wire packets flow over the BLE GATT characteristic
  *  7. On completion, both sides call disconnect()
@@ -53,16 +55,31 @@ class BleP2PManager(
         const val EVENT_BLE_DATA = "com.firewood.ble/data"
     }
 
-    private val bluetoothManager: BluetoothManager =
-        context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-    private val bluetoothAdapter: BluetoothAdapter? = bluetoothManager.adapter
+    private val bluetoothManager: BluetoothManager? by lazy {
+        try {
+            context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
+        } catch (_: Exception) {
+            null
+        }
+    }
+    private val bluetoothAdapter: BluetoothAdapter?
+        get() = try {
+            bluetoothManager?.adapter
+        } catch (_: Exception) {
+            null
+        }
 
     // --- BLE Server (Advertiser / Receiver role) ---
     private var gattServer: BluetoothGattServer? = null
     private var isAdvertising = false
 
     // --- BLE Client (Scanner / Sender role) ---
-    private var bleScanner: BluetoothLeScanner? = bluetoothAdapter?.bluetoothLeScanner
+    private var bleScanner: BluetoothLeScanner? = null
+        get() = field ?: try {
+            bluetoothAdapter?.bluetoothLeScanner
+        } catch (_: Exception) {
+            null
+        }
     private var scanCallback: ScanCallback? = null
     private var isScanning = false
 
@@ -96,10 +113,20 @@ class BleP2PManager(
         if (!adapter.isEnabled) return false
 
         try {
-            val server = bluetoothManager.openGattServer(context, object : BluetoothGattServerCallback() {
+            val manager = bluetoothManager ?: return false
+            val server = manager.openGattServer(context, object : BluetoothGattServerCallback() {
                 override fun onConnectionStateChange(device: BluetoothDevice, status: Int, newState: Int) {
                     when (newState) {
                         BluetoothProfile.STATE_CONNECTED -> {
+                            // V-012: require LE bonding. The characteristic's
+                            // PERMISSION_*_ENCRYPTED only passes on an encrypted
+                            // link, so pairing starts the moment a peer attaches.
+                            if (device.bondState == BluetoothDevice.BOND_NONE) {
+                                try {
+                                    device.createBond()
+                                } catch (_: SecurityException) {
+                                }
+                            }
                             connectionSink?.success(mapOf(
                                 "event" to "connected",
                                 "deviceId" to device.address,
@@ -139,33 +166,29 @@ class BleP2PManager(
                     }
                 }
 
-                override fun onCharacteristicReadRequest(
-                    device: BluetoothDevice,
-                    requestId: Int,
-                    offset: Int,
-                    characteristic: BluetoothGattCharacteristic
-                ) {
-                    if (characteristic.uuid == FIREWOOD_CHAR_UUID && responseNeeded(requestId)) {
-                        gattServer?.sendResponse(
-                            device, requestId, BluetoothGatt.GATT_SUCCESS, offset,
-                            characteristic.value
-                        )
-                    }
-                }
+                // V-012: no onCharacteristicReadRequest handler exists — reads
+                // are not part of the protocol. The characteristic declares no
+                // PROPERTY_READ/PERMISSION_READ, so the stack rejects them
+                // outright; the old handler returned the last app-layer frame
+                // to any peer that asked.
 
                 override fun onNotificationSent(device: BluetoothDevice, status: Int) {
                     // Ignored for now – notifications are fire-and-forget
                 }
             })
 
-            // Build the GATT service
+            // Build the GATT service.
+            // V-012: writes require an ENCRYPTED (bonded) link
+            // (PERMISSION_WRITE_ENCRYPTED) — an unbonded peer cannot inject
+            // frames into the parser at all. Reads are dropped entirely
+            // (no PROPERTY_READ/PERMISSION_READ): the protocol is write +
+            // notify only, and the old readable characteristic leaked the
+            // last frame to anyone in range.
             val char = BluetoothGattCharacteristic(
                 FIREWOOD_CHAR_UUID,
                 BluetoothGattCharacteristic.PROPERTY_WRITE or
-                BluetoothGattCharacteristic.PROPERTY_READ or
                 BluetoothGattCharacteristic.PROPERTY_NOTIFY,
-                BluetoothGattCharacteristic.PERMISSION_WRITE or
-                BluetoothGattCharacteristic.PERMISSION_READ
+                BluetoothGattCharacteristic.PERMISSION_WRITE_ENCRYPTED
             )
 
             val service = BluetoothGattService(
@@ -306,6 +329,15 @@ class BleP2PManager(
                     when (newState) {
                         BluetoothProfile.STATE_CONNECTED -> {
                             if (status == BluetoothGatt.GATT_SUCCESS) {
+                                // V-012: bond before any transfer — the remote
+                                // characteristic rejects writes until the link
+                                // is encrypted.
+                                if (gatt.device.bondState == BluetoothDevice.BOND_NONE) {
+                                    try {
+                                        gatt.device.createBond()
+                                    } catch (_: SecurityException) {
+                                    }
+                                }
                                 // Request MTU upgrade for larger payloads
                                 gatt.requestMtu(512)
                             }
@@ -396,6 +428,27 @@ class BleP2PManager(
      */
     @SuppressLint("MissingPermission")
     fun sendData(deviceAddress: String, data: ByteArray): Boolean {
+        // V-012: fail closed — no frame moves over an unbonded link. The
+        // client-write branch is double-covered by PERMISSION_WRITE_ENCRYPTED
+        // on the characteristic; notifications are NOT permission-checked by
+        // ATT, so the server/notify branch needs this gate explicitly.
+        // Throws so the method channel can surface the reason to Dart.
+        val peer = try {
+            activeGattConnections[deviceAddress]?.device
+                ?: bluetoothAdapter?.getRemoteDevice(deviceAddress)
+        } catch (_: Exception) {
+            null
+        }
+        if (peer == null) {
+            dataSink?.error("GATT_ERROR", "No connection to $deviceAddress", null)
+            return false
+        }
+        if (peer.bondState != BluetoothDevice.BOND_BONDED) {
+            throw IllegalStateException(
+                "Pairing required — accept the pairing request on both devices, then retry the transfer"
+            )
+        }
+
         // Check if we are the GATT client (connected to a server device)
         val gattClient = activeGattConnections[deviceAddress]
         if (gattClient != null) {
@@ -463,6 +516,4 @@ class BleP2PManager(
         }
         activeGattConnections.clear()
     }
-
-    private fun responseNeeded(requestId: Int): Boolean = true
 }

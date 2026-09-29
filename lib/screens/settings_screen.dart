@@ -8,8 +8,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../services/update_service.dart';
 import '../services/accent_color_service.dart';
@@ -17,19 +19,28 @@ import '../widgets/accent_color_picker_dialog.dart';
 
 import '../providers/auth_provider.dart';
 import '../services/backup_service.dart';
+import '../services/csv_import_service.dart';
 import '../services/item_service.dart';
 import '../services/lock_service.dart';
+import '../services/reauth_service.dart';
 import '../services/vault_service.dart';
 import '../services/burner_service.dart';
 import '../database/schemas.dart';
 import '../services/native_security_bridge.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../theme/app_icons.dart';
+import '../theme/app_feedback.dart';
 import '../theme/app_theme.dart';
 import 'about_screen.dart';
 import 'p2p_sharing_screen.dart';
 import 'update_screen.dart';
+import 'password_generator_screen.dart';
 import '../services/app_version_service.dart';
+import '../widgets/vault_components.dart';
+import '../widgets/app_loader.dart';
+import '../theme/app_button.dart';
+import '../services/autofill_service.dart';
+import '../services/notification_service.dart';
 
 // Providers for Backup & Profile settings
 final autoBackupEnabledProvider = StateProvider<bool>((ref) => true);
@@ -45,15 +56,36 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _screenshotsAllowed = false;
+  bool _notificationsAllowed = true;
+  bool _autofillActive = false;
+
+  // Flicker fix: cache futures so rebuilds don't re-fetch and flash loading states.
+  Future<List<DecryptedItem>>? _devSecretsFuture;
+  Future<List<BurnerHash>>? _burnersFuture;
 
   @override
   void initState() {
     super.initState();
     AccentColorService.currentColor.addListener(_onAccentColorChanged);
     SharedPreferences.getInstance().then((prefs) {
-      if (mounted)
-        setState(() =>
-            _screenshotsAllowed = prefs.getBool('allow_screenshots') ?? false);
+      if (mounted) {
+        setState(() {
+          _screenshotsAllowed = prefs.getBool('allow_screenshots') ?? false;
+        });
+        // Restore the backup prefs into their providers — they start at the
+        // declared defaults on every launch, so without this a user's stored
+        // "off"/custom interval bounced back to on/120-days visually.
+        ref.read(autoBackupEnabledProvider.notifier).state =
+            prefs.getBool('auto_backup_enabled') ?? true;
+        ref.read(autoBackupIntervalDaysProvider.notifier).state =
+            prefs.getInt('auto_backup_interval_days') ?? 120;
+      }
+    });
+    NotificationAlertService.isNotificationsEnabled().then((v) {
+      if (mounted) setState(() => _notificationsAllowed = v);
+    });
+    AutofillService.isEnabled().then((v) {
+      if (mounted) setState(() => _autofillActive = v);
     });
   }
 
@@ -79,10 +111,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     super.dispose();
   }
 
+  Future<void> _openDonate() async {
+    final uri = Uri.parse('https://firewood-web.web.app/donate');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final autoLockEnabled = ref.watch(autoLockEnabledProvider);
     final lockTimeout = ref.watch(lockTimeoutProvider);
+    final sessionTimeout = ref.watch(sessionTimeoutProvider);
+    final lockOnBackground = ref.watch(lockOnBackgroundProvider);
     final lockService = ref.watch(lockServiceProvider);
     final biometricEnabled = ref.watch(biometricAuthEnabledProvider);
 
@@ -95,9 +136,134 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       builder: (context, accentColor, _) {
         return Scaffold(
           backgroundColor: AppColors.backgroundZinc,
+          appBar: VaultAppBar(
+            leading: IconButton(
+              icon: const AppIcon(AppIcons.arrowLeft,
+                  color: AppColors.offWhite, size: 22),
+              onPressed: () => Navigator.pop(context),
+            ),
+            title: 'Settings & Tools',
+          ),
           body: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 140),
+            padding: const EdgeInsets.only(bottom: 24),
             children: [
+              // Hero Header with Logo, Version and App Subtitle (100% full width, no outer padding)
+              VaultHeroHeader(
+                accentColor: accentColor,
+                titleContent: Row(
+                  children: [
+                    Image.asset(
+                      'assets/FWS.png',
+                      width: 42,
+                      height: 42,
+                      fit: BoxFit.contain,
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Text(
+                        'Firewood Vault',
+                        style: GoogleFonts.syncopate(
+                          color: AppColors.offWhite,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          letterSpacing: 0.5,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                child: GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: 4,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  childAspectRatio: 0.82,
+                  children: [
+                    // Tool 1: Password Generator
+                    VaultToolButton(
+                      label: 'Generator',
+                      icon: 'assets/icons/cutouts/password-generator.png',
+                      accentColor: accentColor,
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const PasswordGeneratorScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    // Tool 2: P2P Share
+                    VaultToolButton(
+                      label: 'AirShare',
+                      icon: 'assets/icons/cutouts/share.png',
+                      accentColor: accentColor,
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const P2pSharingScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    // Tool 3: Export Vault
+                    VaultToolButton(
+                      label: 'Export',
+                      icon: 'assets/icons/cutouts/download.png',
+                      accentColor: accentColor,
+                      onTap: () => _exportVault(context, ref),
+                    ),
+                    // Tool 4: Import Vault / Credentials
+                    VaultToolButton(
+                      label: 'Import',
+                      icon: 'assets/icons/cutouts/upload.png',
+                      accentColor: accentColor,
+                      onTap: () => _showImportOptions(context, ref),
+                    ),
+                    // Tool 5: Check Update
+                    VaultToolButton(
+                      label: 'Updates',
+                      icon: 'assets/icons/cutouts/refresh.png',
+                      accentColor: accentColor,
+                      onTap: () => _checkForUpdates(context),
+                    ),
+                    // Tool 6: About
+                    VaultToolButton(
+                      label: 'About',
+                      icon: 'assets/icons/cutouts/info.png',
+                      accentColor: accentColor,
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const AboutScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    // Tool 7: Donate / Support
+                    VaultToolButton(
+                      label: 'Donate',
+                      icon: 'assets/icons/cutouts/globe-network.png',
+                      accentColor: accentColor,
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        _openDonate();
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
               // Appearance Section
               const _SectionHeader(title: 'APPEARANCE & ACCENT COLOR'),
               const _SettingsCard(
@@ -117,13 +283,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             color: AppColors.offWhite,
                             fontWeight: FontWeight.bold,
                             fontSize: 14)),
-                    subtitle: const Text(
-                        'Unlock vault with fingerprint or face recognition',
-                        style: TextStyle(
-                            fontSize: 11, color: AppColors.textMuted)),
                     value: biometricEnabled,
                     secondary: AppIcon(AppIcons.fingerprint,
-                        color: AppColors.orangeAccent, size: 34),
+                        color: AppColors.orangeAccent, size: 22),
                     activeColor: AppColors.orangeAccent,
                     onChanged: (val) => _toggleBiometricAuth(context, ref, val),
                   ),
@@ -133,13 +295,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             color: AppColors.offWhite,
                             fontWeight: FontWeight.bold,
                             fontSize: 14)),
-                    subtitle: const Text(
-                        'Lock vault when idle or app backgrounded',
-                        style: TextStyle(
-                            fontSize: 11, color: AppColors.textMuted)),
                     value: autoLockEnabled,
                     secondary: AppIcon(AppIcons.lockClock,
-                        color: AppColors.orangeAccent, size: 34),
+                        color: AppColors.orangeAccent, size: 22),
                     activeColor: AppColors.orangeAccent,
                     onChanged: (val) {
                       ref.read(autoLockEnabledProvider.notifier).state = val;
@@ -152,27 +310,71 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       title: const Text('Auto-Lock Timeout',
                           style: TextStyle(
                               color: AppColors.offWhite, fontSize: 14)),
-                      subtitle: Text(_formatDuration(lockTimeout),
-                          style: const TextStyle(
-                              fontSize: 11, color: AppColors.textMuted)),
                       leading: AppIcon(AppIcons.timer,
-                          color: AppColors.orangeAccent, size: 34),
-                      trailing: AppIcon(AppIcons.chevronRight,
-                          color: AppColors.textMuted, size: 26),
+                          color: AppColors.orangeAccent, size: 20),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(_formatDuration(lockTimeout),
+                              style: const TextStyle(
+                                  fontSize: 12, color: AppColors.textMuted)),
+                          const SizedBox(width: 4),
+                          AppIcon(AppIcons.chevronRight,
+                              color: AppColors.textMuted, size: 18),
+                        ],
+                      ),
                       onTap: () => _showTimeoutPicker(context, ref),
                     ),
+                  ListTile(
+                    title: const Text('Session Timeout',
+                        style:
+                            TextStyle(color: AppColors.offWhite, fontSize: 14)),
+                    leading: AppIcon(AppIcons.timer,
+                        color: AppColors.orangeAccent, size: 20),
+                    subtitle: const Text(
+                        'Logout after this much logged-in time',
+                        style: TextStyle(
+                            fontSize: 11, color: AppColors.textMuted)),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(_formatDuration(sessionTimeout),
+                            style: const TextStyle(
+                                fontSize: 12, color: AppColors.textMuted)),
+                        const SizedBox(width: 4),
+                        const AppIcon(AppIcons.chevronRight,
+                            color: AppColors.textMuted, size: 18),
+                      ],
+                    ),
+                    onTap: () => _showSessionTimeoutPicker(context, ref),
+                  ),
+                  SwitchListTile(
+                    title: const Text('Lock in Recent Apps',
+                        style: TextStyle(
+                            color: AppColors.offWhite,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14)),
+                    subtitle: const Text(
+                        'Lock when the app leaves the screen (recents tray, home, screen off)',
+                        style: TextStyle(
+                            fontSize: 11, color: AppColors.textMuted)),
+                    value: lockOnBackground,
+                    secondary: AppIcon(AppIcons.lock,
+                        color: AppColors.orangeAccent, size: 22),
+                    activeColor: AppColors.orangeAccent,
+                    onChanged: (val) {
+                      ref.read(lockOnBackgroundProvider.notifier).state = val;
+                      LockService.persistLockOnBackground(val);
+                    },
+                  ),
                   ListTile(
                     title: const Text('Lock Vault Now',
                         style: TextStyle(
                             color: AppColors.offWhite,
                             fontWeight: FontWeight.bold,
                             fontSize: 14)),
-                    subtitle: const Text(
-                        'Immediately clear secret key from memory',
-                        style: TextStyle(
-                            fontSize: 11, color: AppColors.textMuted)),
                     leading: AppIcon(AppIcons.lock,
-                        color: AppColors.orangeAccent, size: 34),
+                        color: AppColors.orangeAccent, size: 20),
                     onTap: () => _lockNow(context, ref),
                   ),
                   SwitchListTile(
@@ -181,16 +383,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             color: AppColors.offWhite,
                             fontWeight: FontWeight.bold,
                             fontSize: 14)),
-                    subtitle: const Text(
-                        'Disable to prevent screen capture in app switcher',
-                        style: TextStyle(
-                            fontSize: 11, color: AppColors.textMuted)),
                     value: _screenshotsAllowed,
                     activeColor: AppColors.orangeAccent,
                     secondary: AppIcon(
                         _screenshotsAllowed ? AppIcons.eye : AppIcons.eyeOff,
                         color: AppColors.orangeAccent,
-                        size: 34),
+                        size: 22),
                     onChanged: (val) async {
                       final prefs = await SharedPreferences.getInstance();
                       await prefs.setBool('allow_screenshots', val);
@@ -206,10 +404,173 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
               const SizedBox(height: 20),
 
+              // Fast Fill & Autofill Provider (Offline Browser & App Forms)
+              const _SectionHeader(title: 'BROWSER & APP FAST FILL (AUTOFILL)'),
+              _SettingsCard(
+                children: [
+                  InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () async {
+                      HapticFeedback.lightImpact();
+                      await AutofillService.openSettings();
+                      Future.delayed(const Duration(seconds: 1), () async {
+                        final active = await AutofillService.isEnabled();
+                        if (mounted) setState(() => _autofillActive = active);
+                      });
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
+                      child: Row(
+                        children: [
+                          AppIcon(HugeIcons.strokeRoundedFlash,
+                              color: AppColors.orangeAccent, size: 22),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Android System Autofill',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                      color: AppColors.offWhite,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'System-level fast fill for apps & browsers',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                      color: AppColors.textMuted,
+                                      fontSize: 11.5),
+                                ),
+                              ],
+                            ),
+                          ),
+                          _GuideButton(
+                              onTap: () => _showAutofillGuide(context)),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: _autofillActive
+                                  ? AppColors.orangeAccent
+                                      .withValues(alpha: 0.15)
+                                  : AppColors.cardZinc,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: _autofillActive
+                                    ? AppColors.orangeAccent
+                                        .withValues(alpha: 0.4)
+                                    : AppColors.borderZinc,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 6,
+                                  height: 6,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: _autofillActive
+                                        ? AppColors.orangeAccent
+                                        : AppColors.textMuted,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  _autofillActive ? 'Active' : 'Enable',
+                                  style: TextStyle(
+                                    color: _autofillActive
+                                        ? AppColors.orangeAccent
+                                        : AppColors.offWhite,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // Notification & Security Alerts (Throttled, Offline Only)
+              const _SectionHeader(title: 'SECURITY ALERTS & NOTIFICATIONS'),
+              _SettingsCard(
+                children: [
+                  ListTile(
+                    leading: AppIcon(HugeIcons.strokeRoundedNotification02,
+                        color: AppColors.orangeAccent, size: 22),
+                    title: const Text('Allow Notifications',
+                        style: TextStyle(
+                            color: AppColors.offWhite,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14)),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _GuideButton(
+                            onTap: () => _showNotificationGuide(context)),
+                        const SizedBox(width: 4),
+                        Switch(
+                          value: _notificationsAllowed,
+                          activeColor: AppColors.orangeAccent,
+                          onChanged: (val) async {
+                            HapticFeedback.lightImpact();
+                            await NotificationAlertService
+                                .setNotificationsEnabled(val);
+                            if (val) {
+                              // API 33+: the pref alone shows nothing — ask
+                              // the OS for POST_NOTIFICATIONS and wait for
+                              // the real answer (the switch previously never
+                              // requested it, leaving alerts silently dead).
+                              LockService.beginForegroundFlow();
+                              bool granted;
+                              try {
+                                granted = await NotificationAlertService
+                                    .requestPermission();
+                              } finally {
+                                LockService.endForegroundFlow();
+                              }
+                              if (!granted && context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Notification permission denied by Android — '
+                                      'security alerts stay off until granted in system settings.',
+                                    ),
+                                  ),
+                                );
+                              }
+                            }
+                            if (mounted) {
+                              setState(() => _notificationsAllowed = val);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
               // Developer Secrets .env Exporter (Visible only when API keys / Dev secrets > 2)
               if (authKey != null)
                 FutureBuilder<List<DecryptedItem>>(
-                  future: ItemService().getAllItems(authKey),
+                  future: _devSecretsFuture ??=
+                      ItemService().getAllItems(authKey),
                   builder: (context, snapshot) {
                     final allItems = snapshot.data ?? [];
                     final devSecrets = allItems
@@ -230,15 +591,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                       color: AppColors.offWhite,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14)),
-                              subtitle: Text(
-                                  'Format and export ${devSecrets.length} developer secrets to a .env file',
-                                  style: const TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.textMuted)),
                               leading: AppIcon(AppIcons.typeDeveloperSecret,
-                                  color: AppColors.orangeAccent, size: 34),
+                                  color: AppColors.orangeAccent, size: 20),
                               trailing: AppIcon(AppIcons.chevronRight,
-                                  color: AppColors.textMuted, size: 26),
+                                  color: AppColors.textMuted, size: 18),
                               onTap: () =>
                                   _showEnvExportDialog(context, devSecrets),
                             ),
@@ -255,7 +611,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _SettingsCard(
                 children: [
                   FutureBuilder<List<BurnerHash>>(
-                    future: BurnerService().listBurners(),
+                    future: _burnersFuture ??= BurnerService().listBurners(),
                     builder: (context, snapshot) {
                       final burners = snapshot.data ?? [];
                       return Column(
@@ -263,27 +619,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           if (burners.isEmpty)
                             const Padding(
                                 padding: EdgeInsets.all(16),
-                                child: Text(
-                                    'No burner passwords configured. Add one for emergency vault destruction.',
+                                child: Text('No burner passwords configured.',
                                     style: TextStyle(
                                         color: AppColors.textMuted,
                                         fontSize: 12))),
                           ...burners.map((b) => ListTile(
                                 leading: AppIcon(AppIcons.fire,
-                                    color: AppColors.roseAccent, size: 34),
+                                    color: AppColors.roseAccent, size: 20),
                                 title: Text(b.label,
                                     style: const TextStyle(
                                         color: AppColors.offWhite,
                                         fontWeight: FontWeight.bold,
                                         fontSize: 13)),
-                                subtitle: Text(
-                                    'Created ${DateTime.now().difference(b.createdAt).inDays}d ago',
-                                    style: const TextStyle(
-                                        fontSize: 11,
-                                        color: AppColors.textMuted)),
                                 trailing: IconButton(
                                   icon: AppIcon(HugeIcons.strokeRoundedDelete02,
-                                      color: AppColors.roseAccent, size: 22),
+                                      color: AppColors.roseAccent, size: 20),
                                   onPressed: () async {
                                     await BurnerService().removeBurner(b.id);
                                     if (mounted) setState(() {});
@@ -292,16 +642,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               )),
                           ListTile(
                             leading: AppIcon(AppIcons.add,
-                                color: AppColors.roseAccent, size: 34),
+                                color: AppColors.roseAccent, size: 20),
                             title: const Text('Add Burner Password',
                                 style: TextStyle(
                                     color: AppColors.roseAccent,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 14)),
-                            subtitle: const Text(
-                                'Entering this password on unlock destroys ALL vaults',
-                                style: TextStyle(
-                                    fontSize: 11, color: AppColors.textMuted)),
                             onTap: () => _addBurnerPasswordDialog(context),
                           ),
                         ],
@@ -312,8 +658,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Automatic Scheduled Backup Section
-              const _SectionHeader(title: 'AUTOMATED BACKUP & RECOVERY'),
+              // Automatic Scheduled Backup Schedule Settings
+              const _SectionHeader(title: 'AUTOMATED BACKUP SCHEDULE'),
               _SettingsCard(
                 children: [
                   SwitchListTile(
@@ -322,13 +668,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             color: AppColors.offWhite,
                             fontWeight: FontWeight.bold,
                             fontSize: 14)),
-                    subtitle: const Text(
-                        'Save encrypted backups to /Firewood/downloads',
-                        style: TextStyle(
-                            fontSize: 11, color: AppColors.textMuted)),
                     value: autoBackupEnabled,
                     secondary: AppIcon(AppIcons.cloudUpload,
-                        color: AppColors.orangeAccent, size: 34),
+                        color: AppColors.orangeAccent, size: 22),
                     activeColor: AppColors.orangeAccent,
                     onChanged: (val) => _saveAutoBackup(val),
                   ),
@@ -337,142 +679,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       title: const Text('Backup Frequency',
                           style: TextStyle(
                               color: AppColors.offWhite, fontSize: 14)),
-                      subtitle: Text(_formatIntervalLabel(autoBackupInterval),
+                      subtitle: Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          _formatIntervalLabel(autoBackupInterval),
                           style: TextStyle(
-                              fontSize: 11, color: AppColors.orangeAccent)),
+                            fontSize: 12,
+                            color: AppColors.orangeAccent,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
                       leading: AppIcon(AppIcons.timer,
-                          color: AppColors.orangeAccent, size: 34),
-                      trailing: AppIcon(AppIcons.chevronRight,
-                          color: AppColors.textMuted, size: 26),
+                          color: AppColors.orangeAccent, size: 20),
+                      trailing: const AppIcon(AppIcons.chevronRight,
+                          color: AppColors.textMuted, size: 18),
                       onTap: () => _showBackupIntervalPicker(context),
                     ),
-                  ListTile(
-                    title: const Text('Export Encrypted Vault Backup',
-                        style:
-                            TextStyle(color: AppColors.offWhite, fontSize: 14)),
-                    subtitle: const Text(
-                        'Save .firewood encrypted file to Downloads',
-                        style: TextStyle(
-                            fontSize: 11, color: AppColors.textMuted)),
-                    leading: AppIcon(AppIcons.download,
-                        color: AppColors.orangeAccent, size: 34),
-                    onTap: () => _exportVault(context, ref),
-                  ),
-                  ListTile(
-                    title: const Text('Import Vault Backup File',
-                        style:
-                            TextStyle(color: AppColors.offWhite, fontSize: 14)),
-                    subtitle: const Text('Restore database from .firewood file',
-                        style: TextStyle(
-                            fontSize: 11, color: AppColors.textMuted)),
-                    leading: AppIcon(AppIcons.upload,
-                        color: AppColors.orangeAccent, size: 34),
-                    onTap: () => _importVault(context, ref),
-                  ),
-                  ListTile(
-                    title: const Text('Bluetooth P2P Sharing',
-                        style:
-                            TextStyle(color: AppColors.offWhite, fontSize: 14)),
-                    subtitle: const Text(
-                        'Send/receive .firewood files with nearby devices',
-                        style: TextStyle(
-                            fontSize: 11, color: AppColors.textMuted)),
-                    leading: AppIcon(AppIcons.share,
-                        color: AppColors.orangeAccent, size: 34),
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (_) => const P2pSharingScreen()),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              // App Info & Updates
-              const _SectionHeader(title: 'APP INFO & UPDATES'),
-              _SettingsCard(
-                children: [
-                  ValueListenableBuilder<bool>(
-                    valueListenable: UpdateService.hasUpdateAvailable,
-                    builder: (context, hasUpdate, _) {
-                      return ListTile(
-                        title: Row(
-                          children: [
-                            const Text('Check for Updates',
-                                style: TextStyle(
-                                    color: AppColors.offWhite,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14)),
-                            if (hasUpdate) ...[
-                              const SizedBox(width: 8),
-                              Container(
-                                width: 8,
-                                height: 8,
-                                decoration: const BoxDecoration(
-                                  color: Colors.redAccent,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                        subtitle: Text(
-                          hasUpdate
-                              ? 'New update available!'
-                              : 'Check if a newer version of Firewood is available',
-                          style: TextStyle(
-                              fontSize: 11,
-                              color: hasUpdate
-                                  ? AppColors.orangeAccent
-                                  : AppColors.textMuted),
-                        ),
-                        leading: Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            AppIcon(AppIcons.refresh,
-                                color: AppColors.orangeAccent, size: 34),
-                            if (hasUpdate)
-                              Positioned(
-                                right: -2,
-                                top: -2,
-                                child: Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: const BoxDecoration(
-                                    color: Colors.redAccent,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                        trailing: AppIcon(AppIcons.chevronRight,
-                            color: AppColors.textMuted, size: 26),
-                        onTap: () => _checkForUpdates(context),
-                      );
-                    },
-                  ),
-                  ListTile(
-                    title: const Text('About Firewood & Developers',
-                        style: TextStyle(
-                            color: AppColors.offWhite,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14)),
-                    subtitle: const Text(
-                        'App specs, zero-knowledge architecture & developer info',
-                        style: TextStyle(
-                            fontSize: 11, color: AppColors.textMuted)),
-                    leading: AppIcon(AppIcons.info,
-                        color: AppColors.orangeAccent, size: 34),
-                    trailing: AppIcon(AppIcons.chevronRight,
-                        color: AppColors.textMuted, size: 26),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const AboutScreen()),
-                      );
-                    },
-                  ),
                 ],
               ),
               const SizedBox(height: 20),
@@ -487,12 +710,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             color: Colors.redAccent,
                             fontWeight: FontWeight.bold,
                             fontSize: 14)),
-                    subtitle: const Text(
-                        'Permanently wipe local database and reset vault',
-                        style: TextStyle(
-                            fontSize: 11, color: AppColors.textMuted)),
                     leading: AppIcon(AppIcons.trash,
-                        color: Colors.redAccent, size: 34),
+                        color: Colors.redAccent, size: 20),
                     onTap: () => _confirmDeleteVault(context, ref),
                   ),
                 ],
@@ -551,6 +770,48 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       default:
         return 'Every $days Days';
     }
+  }
+
+  void _showSessionTimeoutPicker(BuildContext context, WidgetRef ref) {
+    final current = ref.read(sessionTimeoutProvider);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surfaceZinc,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Session Timeout',
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.offWhite)),
+            const Text('The vault logs out after this much logged-in time',
+                style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+            const SizedBox(height: 12),
+            ...LockService.sessionTimeoutOptions.map(
+              (option) => RadioListTile<Duration>(
+                title: Text(_formatDuration(option),
+                    style: const TextStyle(color: AppColors.offWhite)),
+                value: option,
+                groupValue: current,
+                activeColor: AppColors.orangeAccent,
+                onChanged: (val) {
+                  if (val != null) {
+                    ref.read(sessionTimeoutProvider.notifier).state = val;
+                    LockService.persistSessionTimeout(val);
+                    Navigator.pop(context);
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showTimeoutPicker(BuildContext context, WidgetRef ref) {
@@ -640,12 +901,216 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  void _showAutofillGuide(BuildContext context) {
+    _showFeatureGuideSheet(
+      context,
+      title: 'Android Autofill Guide',
+      icon: HugeIcons.strokeRoundedFlash,
+      steps: [
+        (
+          step: '1',
+          heading: 'Enable Provider',
+          body:
+              'Tap "ENABLE" to open Android System Settings and select Firewood as your Autofill service.',
+        ),
+        (
+          step: '2',
+          heading: 'Fast Fill Prompt',
+          body:
+              'When you tap any username or password field in apps or browsers, Android shows "Open Firewood Vault".',
+        ),
+        (
+          step: '3',
+          heading: 'Unlock & Select',
+          body:
+              'Authenticate with your fingerprint, face, or PIN. Select the matching credential to fill the form.',
+        ),
+        (
+          step: '4',
+          heading: '100% Offline & Private',
+          body:
+              'Credentials are encrypted on your device and never exposed to system dropdowns or third-party servers.',
+        ),
+      ],
+    );
+  }
+
+  void _showNotificationGuide(BuildContext context) {
+    _showFeatureGuideSheet(
+      context,
+      title: 'Security Alerts Guide',
+      icon: HugeIcons.strokeRoundedNotification02,
+      steps: [
+        (
+          step: '1',
+          heading: 'Password Hygiene',
+          body:
+              'Receive local alerts when stored credentials have weak, reused, or compromised passwords.',
+        ),
+        (
+          step: '2',
+          heading: 'Incomplete Credentials',
+          body:
+              'Helpful reminders if you generated a password or started a form without finishing.',
+        ),
+        (
+          step: '3',
+          heading: 'Security & App Updates',
+          body:
+              'Get notified when new versions or critical security fixes are available.',
+        ),
+        (
+          step: '4',
+          heading: 'Local & Offline',
+          body:
+              'All checks run on-device with zero network trackers. Toggle this switch off anytime to stop all alerts.',
+        ),
+      ],
+    );
+  }
+
+  void _showFeatureGuideSheet(
+    BuildContext context, {
+    required String title,
+    required dynamic icon,
+    required List<({String step, String heading, String body})> steps,
+  }) {
+    HapticFeedback.lightImpact();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: AppColors.surfaceZinc,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom +
+              MediaQuery.of(ctx).viewPadding.bottom,
+        ),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  title,
+                  style: GoogleFonts.syncopate(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                    color: AppColors.offWhite,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ...steps.map((s) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 22,
+                            height: 22,
+                            decoration: BoxDecoration(
+                              color: AppColors.orangeAccent
+                                  .withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppColors.orangeAccent
+                                    .withValues(alpha: 0.4),
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                s.step,
+                                style: TextStyle(
+                                  color: AppColors.orangeAccent,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  s.heading,
+                                  style: const TextStyle(
+                                    color: AppColors.offWhite,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  s.body,
+                                  style: const TextStyle(
+                                    color: AppColors.textMuted,
+                                    fontSize: 12,
+                                    height: 1.35,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    )),
+                const SizedBox(height: 8),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.orangeAccent,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text(
+                    'Got It',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _lockNow(BuildContext context, WidgetRef ref) {
     ref.read(authProvider.notifier).state = null;
     Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   void _exportVault(BuildContext context, WidgetRef ref) async {
+    // Auth policy: exporting writes the whole vault to a file — critical.
+    if (!await ReauthService.confirm(context,
+        reason: 'Authenticate to export the vault')) {
+      return;
+    }
+    if (!context.mounted) return;
     if (!context.mounted) return;
 
     final passwordController = TextEditingController();
@@ -779,7 +1244,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   // --- Developer Secrets .env Exporter Dialog ---
 
   void _showEnvExportDialog(
-      BuildContext context, List<DecryptedItem> devSecrets) {
+      BuildContext context, List<DecryptedItem> devSecrets) async {
+    // Auth policy: the .env dump carries live secrets in plaintext.
+    if (!await ReauthService.confirm(context,
+        reason: 'Authenticate to export API keys (.env)')) {
+      return;
+    }
+    if (!context.mounted) return;
     final selectedItemIds = devSecrets.map((d) => d.itemId).toSet();
 
     showModalBottomSheet(
@@ -1048,12 +1519,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                         // permission required (Play policy).
                                         final now = DateTime.now()
                                             .millisecondsSinceEpoch;
-                                        final saved =
-                                            await FilePicker.platform.saveFile(
-                                          fileName: 'firewood_secrets_$now.env',
-                                          bytes: Uint8List.fromList(
-                                              utf8.encode(envContent)),
-                                        );
+                                        String? saved;
+                                        LockService.beginForegroundFlow();
+                                        try {
+                                          saved = await FilePicker.platform
+                                              .saveFile(
+                                            fileName:
+                                                'firewood_secrets_$now.env',
+                                            bytes: Uint8List.fromList(
+                                                utf8.encode(envContent)),
+                                          );
+                                        } finally {
+                                          LockService.endForegroundFlow();
+                                        }
                                         if (saved == null) return;
                                         HapticFeedback.heavyImpact();
                                         if (ctx.mounted) Navigator.pop(ctx);
@@ -1127,11 +1605,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         return;
       }
 
-      final authenticated = await localAuth.authenticate(
-        localizedReason: 'Authenticate to enable biometric vault unlock',
-        options:
-            const AuthenticationOptions(stickyAuth: true, biometricOnly: true),
-      );
+      LockService.beginForegroundFlow();
+      bool authenticated;
+      try {
+        authenticated = await localAuth.authenticate(
+          localizedReason: 'Authenticate to enable biometric vault unlock',
+          options: const AuthenticationOptions(
+              stickyAuth: true, biometricOnly: true),
+        );
+      } finally {
+        LockService.endForegroundFlow();
+      }
 
       if (!authenticated) return;
     } catch (e) {
@@ -1202,6 +1686,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         throw Exception('Keystore wrapping failed on this device');
       }
       // Migration complete: remove any legacy raw-password entry.
+      // V-015: default AndroidOptions on purpose — must match the mode the
+      // legacy entry was written with or the delete silently misses it.
       try {
         await const FlutterSecureStorage()
             .delete(key: 'biometric_master_password');
@@ -1229,13 +1715,214 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
+  void _showImportOptions(BuildContext context, WidgetRef ref) {
+    HapticFeedback.lightImpact();
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (ctx) => Container(
+        decoration: BoxDecoration(
+          color: AppColors.surfaceZinc,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          border: Border.all(color: AppColors.borderZinc, width: 1),
+        ),
+        padding: EdgeInsets.fromLTRB(
+          20,
+          12,
+          20,
+          MediaQuery.of(ctx).padding.bottom + 20,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.borderZinc,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Import into vault',
+              style: GoogleFonts.syncopate(
+                color: AppColors.offWhite,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Bring credentials from another manager or restore an encrypted backup.',
+              style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+            ),
+            const SizedBox(height: 16),
+            InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () {
+                Navigator.pop(ctx);
+                _importCsvVault(context, ref);
+              },
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.cardZinc,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                      color: AppColors.borderZinc.withValues(alpha: 0.5)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.orangeAccent.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: AppIcon(
+                        HugeIcons.strokeRoundedFileImport,
+                        color: AppColors.orangeAccent,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Bulk Import Credentials (CSV)',
+                            style: TextStyle(
+                              color: AppColors.offWhite,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13.5,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Chrome, Bitwarden, 1Password, LastPass, or custom CSV',
+                            style: TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 11.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const AppIcon(AppIcons.chevronRight,
+                        color: AppColors.textMuted, size: 18),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () {
+                Navigator.pop(ctx);
+                _importVault(context, ref);
+              },
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.cardZinc,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                      color: AppColors.borderZinc.withValues(alpha: 0.5)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.orangeAccent.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: AppIcon(
+                        HugeIcons.strokeRoundedLockKey,
+                        color: AppColors.orangeAccent,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Encrypted Backup (.firewood)',
+                            style: TextStyle(
+                              color: AppColors.offWhite,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13.5,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Restore complete encrypted vault backup',
+                            style: TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 11.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const AppIcon(AppIcons.chevronRight,
+                        color: AppColors.textMuted, size: 18),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _importCsvVault(BuildContext context, WidgetRef ref) async {
+    final currentKey = ref.read(authProvider);
+    if (currentKey == null) {
+      if (context.mounted) {
+        AppToast.show(context,
+            message: 'Vault must be unlocked to import credentials',
+            type: ToastType.error);
+      }
+      return;
+    }
+    await CsvImportService().pickAndImportCsv(
+      context: context,
+      secretKey: currentKey,
+    );
+  }
+
   void _importVault(BuildContext context, WidgetRef ref) async {
     if (!context.mounted) return;
 
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['firewood', 'json'],
-    );
+    // Auth policy: importing overrides credentials in the vault.
+    if (!await ReauthService.confirm(context,
+        reason: 'Authenticate to import a vault backup')) {
+      return;
+    }
+    if (!context.mounted) return;
+
+    LockService.beginForegroundFlow();
+    FilePickerResult? result;
+    try {
+      result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['firewood', 'json'],
+      );
+    } finally {
+      LockService.endForegroundFlow();
+    }
 
     if (result == null || result.files.single.path == null || !context.mounted)
       return;
@@ -1327,11 +2014,216 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  void _checkForUpdates(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const UpdateScreen()),
-    );
+  Future<void> _checkForUpdates(BuildContext context) async {
+    HapticFeedback.lightImpact();
+    AppLoader.show(context, message: 'Checking for app updates...');
+
+    AppUpdateInfo? info;
+    try {
+      info = await UpdateService().checkAppUpdate();
+    } catch (_) {}
+
+    if (!context.mounted) return;
+    AppLoader.hide(context);
+
+    if (info != null && info.hasUpdate) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppColors.surfaceZinc,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: AppColors.borderZinc),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.orangeAccent,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  '1',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text(
+                  'Update Available',
+                  style: TextStyle(
+                    color: AppColors.offWhite,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Version ${info!.version} (Build ${info.buildNumber}) is now available.',
+                style: const TextStyle(
+                  color: AppColors.offWhite,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (info.releaseNotes.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.cardZinc,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.borderZinc),
+                  ),
+                  child: Text(
+                    info.releaseNotes,
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 12,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Later',
+                  style: TextStyle(color: AppColors.textMuted)),
+            ),
+            AppButton(
+              label: 'View Update',
+              variant: AppButtonVariant.primary,
+              height: 38,
+              fontSize: 13,
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const UpdateScreen()),
+                );
+              },
+            ),
+          ],
+        ),
+      );
+    } else {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppColors.surfaceZinc,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+            side: const BorderSide(color: AppColors.borderZinc),
+          ),
+          titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+          contentPadding: const EdgeInsets.fromLTRB(24, 14, 24, 0),
+          actionsPadding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'VAULT IS CURRENT',
+                style: GoogleFonts.syncopate(
+                  color: AppColors.offWhite,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.orangeAccent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: AppColors.orangeAccent.withValues(alpha: 0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  AppVersionService.fullVersionString,
+                  style: TextStyle(
+                    color: AppColors.orangeAccent,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: const Text(
+            'You\'re running the latest release of Firewood. All security patches and features are up to date — no action needed.',
+            style: TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 13,
+              height: 1.55,
+            ),
+          ),
+          actions: [
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(ctx),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.orangeAccent,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shadowColor: Colors.transparent,
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ).copyWith(
+                  elevation: WidgetStateProperty.all(0),
+                  overlayColor: WidgetStateProperty.all(
+                    Colors.white.withValues(alpha: 0.08),
+                  ),
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.orangeAccent.withValues(alpha: 0.55),
+                        offset: const Offset(0, 4),
+                        blurRadius: 14,
+                        spreadRadius: -2,
+                      ),
+                    ],
+                  ),
+                  child: const Text(
+                    'Got It',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   void _confirmDeleteVault(BuildContext context, WidgetRef ref) async {
@@ -1371,12 +2263,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         final localAuth = LocalAuthentication();
         if (await localAuth.canCheckBiometrics &&
             await localAuth.isDeviceSupported()) {
-          verified = await localAuth.authenticate(
-            localizedReason:
-                'Authenticate biometrically to authorize vault deletion',
-            options: const AuthenticationOptions(
-                stickyAuth: true, biometricOnly: true),
-          );
+          LockService.beginForegroundFlow();
+          try {
+            verified = await localAuth.authenticate(
+              localizedReason:
+                  'Authenticate biometrically to authorize vault deletion',
+              options: const AuthenticationOptions(
+                  stickyAuth: true, biometricOnly: true),
+            );
+          } finally {
+            LockService.endForegroundFlow();
+          }
         }
       } catch (_) {}
     }
@@ -1446,6 +2343,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     if (!verified) return;
 
+    // V-015: default-options delete of the legacy raw-password entry (mode
+    // must match the legacy write mode) — dies with the vault data too.
     await const FlutterSecureStorage().delete(key: 'biometric_master_password');
     await VaultService().burnAllVaults();
     ref.read(authProvider.notifier).state = null;
@@ -1501,6 +2400,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         Text('Burner password must be at least 8 characters')));
                 return;
               }
+              // Auth policy: creating a duress/overriding credential is a
+              // critical action — same verification bar as edits, deletes
+              // and imports.
+              if (!await ReauthService.confirm(ctx,
+                  reason: 'Authenticate to add a burner password')) {
+                return;
+              }
               try {
                 await BurnerService().addBurnerPassword(pwCtrl.text,
                     label: labelCtrl.text.trim().isEmpty
@@ -1532,9 +2438,9 @@ class _SectionHeader extends StatelessWidget {
   const _SectionHeader({required this.title});
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(4, 16, 4, 8),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
         child: Text(title,
-            style: const TextStyle(
+            style: GoogleFonts.syncopate(
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 1.2,
@@ -1547,6 +2453,7 @@ class _SettingsCard extends StatelessWidget {
   const _SettingsCard({required this.children});
   @override
   Widget build(BuildContext context) => Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
             color: AppColors.surfaceZinc,
             borderRadius: BorderRadius.circular(16),
@@ -1554,4 +2461,49 @@ class _SettingsCard extends StatelessWidget {
                 Border.all(color: AppColors.borderZinc.withValues(alpha: 0.5))),
         child: Column(children: children),
       );
+}
+
+class _GuideButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _GuideButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: AppColors.cardZinc,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.borderZinc),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            HugeIcon(
+              icon: HugeIcons.strokeRoundedInformationCircle,
+              size: 14,
+              color: AppColors.orangeAccent,
+              strokeWidth: 2,
+            ),
+            const SizedBox(width: 5),
+            const Text(
+              'How it works',
+              style: TextStyle(
+                color: AppColors.offWhite,
+                fontWeight: FontWeight.w600,
+                fontSize: 11,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

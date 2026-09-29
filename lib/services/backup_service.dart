@@ -13,6 +13,7 @@ import '../database/schemas.dart';
 import '../database/isar_service.dart';
 import '../security/crypto_service.dart';
 import '../models/item_type.dart';
+import 'lock_service.dart';
 import 'vault_service.dart';
 
 class BackupData {
@@ -225,18 +226,49 @@ class BackupService {
       });
     }
 
-    // Verify master password against existing vault first
-    final SecretKey exportKey;
+    // Verify master password and obtain the correct encryption key.
+    // V2 vaults: unwrap the MEK from the KWK. V1 vaults: use the KWK directly.
+    final SecretKey vaultKey; // MEK for V2, KWK for V1
+    final SecretKey
+        exportKey; // KWK for backup re-encryption (same as vault.salt derivation)
     try {
       exportKey = await _crypto.deriveKey(masterPassword, vault.salt);
-      if (vault.verifierToken != null && vault.verifierNonce != null) {
-        final verifyStr = await _crypto.decryptString(
-          vault.verifierToken!,
-          vault.verifierNonce!,
+
+      if (vault.wrappedMekToken != null && vault.wrappedMekNonce != null) {
+        // V2: unwrap MEK
+        final mekBytes = await _crypto.decryptBoundOrLegacy(
+          vault.wrappedMekToken!,
+          vault.wrappedMekNonce!,
           exportKey,
+          purpose: CryptoService.purposeMekWrap,
         );
-        if (verifyStr != VaultService.verifierSentinel) {
-          throw BackupException('Incorrect master password');
+        vaultKey = SecretKey(mekBytes);
+
+        // Verify password against MEK's verifier subkey
+        if (vault.verifierToken != null && vault.verifierNonce != null) {
+          final verifyStr = await _crypto.decryptStringBoundOrLegacy(
+            vault.verifierToken!,
+            vault.verifierNonce!,
+            vaultKey,
+            purpose: CryptoService.purposeVerifier,
+          );
+          if (verifyStr != VaultService.verifierSentinel) {
+            throw BackupException('Incorrect master password');
+          }
+        }
+      } else {
+        // V1: KWK is the encryption key
+        vaultKey = exportKey;
+        if (vault.verifierToken != null && vault.verifierNonce != null) {
+          final verifyStr = await _crypto.decryptStringBoundOrLegacy(
+            vault.verifierToken!,
+            vault.verifierNonce!,
+            vaultKey,
+            purpose: CryptoService.purposeVerifier,
+          );
+          if (verifyStr != VaultService.verifierSentinel) {
+            throw BackupException('Incorrect master password');
+          }
         }
       }
     } catch (e) {
@@ -250,17 +282,35 @@ class BackupService {
     // Convert to backup items (re-encrypt with export key)
     final backupItems = <BackupItem>[];
     for (final item in items) {
-      // Decrypt with vault key
-      final plaintext =
-          await _crypto.decrypt(item.encryptedData, item.nonce, exportKey);
+      // V-028: decrypt with legacy fallback — handles both V2 subkey+AAD
+      // items and pre-V-028 raw-key items.
+      final plaintext = await _crypto.decryptBoundOrLegacy(
+        item.encryptedData,
+        item.nonce,
+        vaultKey,
+        purpose: CryptoService.purposeItems,
+        aad: CryptoService.itemAad(item.itemId),
+      );
 
-      // Re-encrypt with export key (fresh nonce)
+      // V-009: titles/types live inside the ciphertext — read them from the
+      // decrypted payload, falling back to the legacy plaintext column.
+      final payload =
+          jsonDecode(utf8.decode(plaintext)) as Map<String, dynamic>;
+      final title = (payload['__title'] ??
+              (item.title.isNotEmpty ? item.title : 'Untitled'))
+          .toString();
+      final type =
+          (payload['__type'] ?? (item.type.isNotEmpty ? item.type : 'login'))
+              .toString();
+
+      // Re-encrypt with export key (fresh nonce) — the backup has its own
+      // encryption layer separate from the vault.
       final encrypted = await _crypto.encrypt(plaintext, exportKey);
 
       backupItems.add(BackupItem(
         itemId: item.itemId,
-        type: item.type,
-        title: item.title,
+        type: type,
+        title: title,
         encryptedData: encrypted.ciphertext,
         nonce: encrypted.nonce,
         updatedAt: item.updatedAt,
@@ -301,10 +351,16 @@ class BackupService {
     final defaultName = 'firewood-backup-$timestamp$_fileExtension';
 
     if (customPath == null && Platform.isAndroid) {
-      final saved = await FilePicker.platform.saveFile(
-        fileName: defaultName,
-        bytes: Uint8List.fromList(output),
-      );
+      String? saved;
+      LockService.beginForegroundFlow();
+      try {
+        saved = await FilePicker.platform.saveFile(
+          fileName: defaultName,
+          bytes: Uint8List.fromList(output),
+        );
+      } finally {
+        LockService.endForegroundFlow();
+      }
       if (saved == null) {
         throw BackupException('Export cancelled');
       }
@@ -409,6 +465,9 @@ class BackupService {
 
     if (existingVault != null && !overwrite && activeVaultKey != null) {
       // MERGE MODE: Re-encrypt backup items with current active vault key and add to vault
+      // V-028: use items subkey + AAD binding for the active vault key.
+      final activeItemKey = await _crypto.deriveSubkey(
+          activeVaultKey, CryptoService.purposeItems);
       for (final backupItem in backupData.items) {
         if (backupItem.encryptedData.isEmpty || backupItem.nonce.isEmpty)
           continue;
@@ -419,18 +478,32 @@ class BackupService {
           backupItemKey,
         );
 
-        // Re-encrypt with active vault key
-        final reEncrypted = await _crypto.encrypt(plaintext, activeVaultKey);
+        // V-009: fold metadata into the payload before re-encrypting so the
+        // plaintext columns never carry titles/types again.
+        final payload =
+            jsonDecode(utf8.decode(plaintext)) as Map<String, dynamic>;
+        payload.putIfAbsent('__title',
+            () => backupItem.title.isNotEmpty ? backupItem.title : 'Untitled');
+        payload.putIfAbsent(
+            '__type', () => ItemTypeExt.fromString(backupItem.type).label);
+
+        // V-028: re-encrypt with active vault key's items subkey + AAD
+        final newId = backupItem.itemId.isNotEmpty
+            ? backupItem.itemId
+            : const Uuid().v4();
+        final reEncrypted = await _crypto.encrypt(
+          utf8.encode(jsonEncode(payload)),
+          activeItemKey,
+          aad: CryptoService.itemAad(newId),
+        );
 
         final item = SecureItem()
-          ..itemId = backupItem.itemId.isNotEmpty
-              ? backupItem.itemId
-              : const Uuid().v4()
+          ..itemId = newId
           ..vaultId = existingVault.vaultId
           ..encryptedData = reEncrypted.ciphertext
           ..nonce = reEncrypted.nonce
-          ..type = ItemTypeExt.fromString(backupItem.type).label
-          ..title = backupItem.title
+          ..type = '' // V-009: Zero-Knowledge metadata
+          ..title = '' // V-009: Zero-Knowledge metadata
           ..updatedAt = backupItem.updatedAt;
 
         await isar.writeTxn(() async {
@@ -439,7 +512,7 @@ class BackupService {
       }
       return '${backupData.vaultName} (${backupData.items.length} items merged)';
     } else {
-      // FULL RESTORE MODE: Replace or initialize vault
+      // FULL RESTORE MODE: Replace or initialize vault with V2 envelope encryption
       if (overwrite || existingVault != null) {
         await isar.writeTxn(() async {
           await isar.vaults.where().deleteAll();
@@ -447,9 +520,18 @@ class BackupService {
         });
       }
 
-      // Generate verification token for the new master password
+      // V-028: create V2 envelope vault.
+      // backupItemKey acts as the KWK (derived from master password + backup salt).
+      final mekBytes = _crypto.generateRandomBytes(32);
+      final mekKey = SecretKey(mekBytes);
+      final wrapKey = await _crypto.deriveSubkey(
+          backupItemKey, CryptoService.purposeMekWrap);
+      final wrappedMek = await _crypto.encrypt(mekBytes, wrapKey);
+
+      final verifierKey =
+          await _crypto.deriveSubkey(mekKey, CryptoService.purposeVerifier);
       final verifier = await _crypto.encryptString(
-          VaultService.verifierSentinel, backupItemKey);
+          VaultService.verifierSentinel, verifierKey);
 
       final vault = Vault()
         ..vaultId = backupData.vaultId
@@ -457,6 +539,9 @@ class BackupService {
         ..salt = backupData.salt
         ..verifierToken = verifier.ciphertext
         ..verifierNonce = verifier.nonce
+        ..wrappedMekToken = wrappedMek.ciphertext
+        ..wrappedMekNonce = wrappedMek.nonce
+        ..version = 2
         ..createdAt = backupData.exportedAt
         ..isDefault = true;
 
@@ -464,7 +549,9 @@ class BackupService {
         await isar.vaults.put(vault);
       });
 
-      // Import items
+      // Import items with V-028 subkey + AAD
+      final itemKey =
+          await _crypto.deriveSubkey(mekKey, CryptoService.purposeItems);
       for (final backupItem in backupData.items) {
         if (backupItem.encryptedData.isEmpty || backupItem.nonce.isEmpty)
           continue;
@@ -474,17 +561,32 @@ class BackupService {
           backupItemKey,
         );
 
-        final encrypted = await _crypto.encrypt(plaintext, backupItemKey);
+        // V-009: fold metadata into the payload before re-encrypting so the
+        // plaintext columns never carry titles/types again.
+        final payload =
+            jsonDecode(utf8.decode(plaintext)) as Map<String, dynamic>;
+        payload.putIfAbsent('__title',
+            () => backupItem.title.isNotEmpty ? backupItem.title : 'Untitled');
+        payload.putIfAbsent(
+            '__type', () => ItemTypeExt.fromString(backupItem.type).label);
+
+        // V-028: re-encrypt with items subkey + AAD
+        final newId = backupItem.itemId.isNotEmpty
+            ? backupItem.itemId
+            : const Uuid().v4();
+        final encrypted = await _crypto.encrypt(
+          utf8.encode(jsonEncode(payload)),
+          itemKey,
+          aad: CryptoService.itemAad(newId),
+        );
 
         final item = SecureItem()
-          ..itemId = backupItem.itemId.isNotEmpty
-              ? backupItem.itemId
-              : const Uuid().v4()
+          ..itemId = newId
           ..vaultId = backupData.vaultId
           ..encryptedData = encrypted.ciphertext
           ..nonce = encrypted.nonce
-          ..type = ItemTypeExt.fromString(backupItem.type).label
-          ..title = backupItem.title
+          ..type = '' // V-009: Zero-Knowledge metadata
+          ..title = '' // V-009: Zero-Knowledge metadata
           ..updatedAt = backupItem.updatedAt;
 
         await isar.writeTxn(() async {

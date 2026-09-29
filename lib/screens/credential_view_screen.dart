@@ -1,21 +1,27 @@
 // screens/credential_view_screen.dart
-// Protected screen to view credentials with Biometric / Master Password verification and Identity document support
+// Credential detail page inside an unlocked session.
+//
+// Auth policy: opening this page NEVER re-prompts — the vault unlock at
+// login is the session's one authentication and browsing is free. Only
+// critical actions re-verify via ReauthService: revealing or copying a
+// sensitive field (masked password reads) and entering edit (overriding
+// the credential). One verification covers the rest of the visit.
 
 import 'dart:convert';
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:local_auth/local_auth.dart';
 import '../models/item_type.dart';
 import '../services/item_service.dart';
 import '../services/lock_service.dart';
-import '../services/vault_service.dart';
-import '../services/native_security_bridge.dart';
+import '../services/reauth_service.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
 import '../widgets/airshare_modal.dart';
+import '../widgets/vault_components.dart';
+import '../theme/app_button.dart';
 import 'item_detail_screen.dart';
 
 class CredentialViewScreen extends ConsumerStatefulWidget {
@@ -37,15 +43,11 @@ class CredentialViewScreen extends ConsumerStatefulWidget {
 
 class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
     with SingleTickerProviderStateMixin {
-  final LocalAuthentication _localAuth = LocalAuthentication();
-  final VaultService _vaultService = VaultService();
-  final _passwordController = TextEditingController();
-
   late DecryptedItem _currentItem;
-  bool _isUnlocked = false;
-  bool _isAuthenticating = false;
-  String? _authError;
-  bool _canCheckBiometrics = false;
+
+  // One re-verification covers every critical action of this visit
+  // (reveal, sensitive copy, edit) — browsing never re-prompts.
+  bool _reauthedThisVisit = false;
 
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -63,156 +65,29 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
       parent: _animationController,
       curve: Curves.easeOutCubic,
     );
-    _checkBiometricsSupport();
+    _animationController.forward();
   }
 
   @override
   void dispose() {
     _animationController.dispose();
-    _passwordController.dispose();
     super.dispose();
   }
 
-  Future<void> _checkBiometricsSupport() async {
-    try {
-      final canCheck = await _localAuth.canCheckBiometrics;
-      final isDeviceSupported = await _localAuth.isDeviceSupported();
-      if (mounted) {
-        setState(() {
-          _canCheckBiometrics = canCheck && isDeviceSupported;
-        });
-      }
-      if (_canCheckBiometrics) {
-        _authenticateBiometric();
-      }
-    } catch (_) {
-      if (mounted) setState(() => _canCheckBiometrics = false);
-    }
-  }
-
-  Future<void> _authenticateBiometric() async {
-    setState(() {
-      _isAuthenticating = true;
-      _authError = null;
-    });
-
-    try {
-      final didAuthenticate = await _localAuth.authenticate(
-        localizedReason:
-            'Scan biometrics to view ${_currentItem.title} credentials',
-        options: const AuthenticationOptions(
-          stickyAuth: true,
-          biometricOnly: true,
-        ),
-      );
-
-      if (didAuthenticate && mounted) {
-        HapticFeedback.mediumImpact();
-        setState(() {
-          _isUnlocked = true;
-          _isAuthenticating = false;
-        });
-        _animationController.forward();
-      } else {
-        if (mounted) {
-          setState(() {
-            _isAuthenticating = false;
-            _authError = 'Biometric authentication canceled or failed';
-          });
-        }
-      }
-    } on PlatformException catch (e) {
-      if (mounted) {
-        setState(() {
-          _isAuthenticating = false;
-          _authError = 'Biometric error: ${e.message ?? e.code}';
-        });
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _isAuthenticating = false;
-          _authError = 'Authentication failed';
-        });
-      }
-    }
-  }
-
-  Future<void> _authenticatePassword() async {
-    final password = _passwordController.text.trim();
-    if (password.isEmpty) return;
-
-    // Rate limiting covers every authN entry point (REQ-AUTH-02), not just
-    // the unlock screen.
-    try {
-      final lockout = await NativeSecurityBridge.getLockoutStatus();
-      if (lockout.isLockedOut && mounted) {
-        setState(() {
-          _isAuthenticating = false;
-          _authError =
-              'Too many failed attempts. Wait ${lockout.lockoutRemainingMs ~/ 1000}s.';
-        });
-        return;
-      }
-    } catch (_) {}
-
-    setState(() {
-      _isAuthenticating = true;
-      _authError = null;
-    });
-
-    try {
-      await _vaultService.unlock(password);
-      try {
-        await NativeSecurityBridge.resetFailedAttempts();
-      } catch (_) {}
-      if (mounted) {
-        HapticFeedback.mediumImpact();
-        setState(() {
-          _isUnlocked = true;
-          _isAuthenticating = false;
-        });
-        _animationController.forward();
-      }
-    } on VaultException catch (e) {
-      try {
-        await NativeSecurityBridge.recordFailedUnlockAttempt();
-      } catch (_) {}
-      if (mounted) {
-        HapticFeedback.heavyImpact();
-        setState(() {
-          _isAuthenticating = false;
-          _authError = e.message;
-        });
-      }
-    } catch (_) {
-      if (mounted) {
-        HapticFeedback.heavyImpact();
-        setState(() {
-          _isAuthenticating = false;
-          _authError = 'Invalid master password';
-        });
-      }
-    }
+  /// Critical-action gate: re-verify once per visit via ReauthService.
+  Future<bool> _confirmCritical(String reason) async {
+    if (_reauthedThisVisit) return true;
+    final ok = await ReauthService.confirm(context, reason: reason);
+    if (ok && mounted) _reauthedThisVisit = true;
+    return ok && mounted;
   }
 
   Future<void> _openEditScreen() async {
-    final nav = Navigator.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-
-    if (!_isUnlocked) {
-      if (_canCheckBiometrics) {
-        await _authenticateBiometric();
-      } else {
-        messenger.showSnackBar(
-          const SnackBar(
-              content: Text('Please unlock credential first to edit')),
-        );
-        return;
-      }
+    if (!await _confirmCritical('Authenticate to edit this credential')) {
+      return;
     }
-
-    if (!_isUnlocked) return;
+    if (!mounted) return;
+    final nav = Navigator.of(context);
 
     await nav.push(
       MaterialPageRoute(
@@ -239,25 +114,29 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
     } catch (_) {}
   }
 
-  void _copyToClipboard(String label, String value) {
-    if (value.isNotEmpty) {
-      ref.read(lockServiceProvider).copySecret(value);
-      HapticFeedback.selectionClick();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              AppIcon(AppIcons.checkCircle,
-                  color: Colors.greenAccent, size: 18),
-              const SizedBox(width: 8),
-              Expanded(child: Text('Copied $label (clears in 30s)')),
-            ],
-          ),
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+  Future<void> _copyToClipboard(String label, String value,
+      {bool sensitive = false}) async {
+    if (value.isEmpty) return;
+    if (sensitive && !await _confirmCritical('Authenticate to copy $label')) {
+      return;
     }
+    if (!mounted) return;
+    ref.read(lockServiceProvider).copySecret(value);
+    HapticFeedback.selectionClick();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const AppIcon(AppIcons.checkCircle,
+                color: Colors.greenAccent, size: 18),
+            const SizedBox(width: 8),
+            Expanded(child: Text('Copied $label (clears in 30s)')),
+          ],
+        ),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   void _showImageDialog(String base64Image) {
@@ -276,8 +155,8 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
 
     return Scaffold(
       backgroundColor: AppColors.backgroundZinc,
-      appBar: AppBar(
-        title: Text(_currentItem.title),
+      appBar: VaultAppBar(
+        title: _currentItem.title,
         actions: [
           IconButton(
             icon: const AppIcon(HugeIcons.strokeRoundedShare08, size: 20),
@@ -289,148 +168,20 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
             ),
           ),
           IconButton(
-            icon: AppIcon(HugeIcons.strokeRoundedEdit01, size: 20),
+            icon: const AppIcon(HugeIcons.strokeRoundedEdit01, size: 20),
             tooltip: 'Edit Credential',
             onPressed: _openEditScreen,
           ),
         ],
       ),
-      body: _isUnlocked
-          ? _buildCredentialDetails(itemType)
-          : _buildLockPrompt(itemType),
-    );
-  }
-
-  Widget _buildLockPrompt(ItemType itemType) {
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 400),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              AppIcon(
-                AppIcons.shield,
-                size: 64,
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Protected Credential',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.offWhite,
-                    ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Verify your identity to unlock and view saved details for "${_currentItem.title}"',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: AppColors.textMuted,
-                    ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 32),
-              if (_authError != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.red.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                    border:
-                        Border.all(color: Colors.red.withValues(alpha: 0.3)),
-                  ),
-                  child: Row(
-                    children: [
-                      AppIcon(AppIcons.alertCircle,
-                          color: Colors.redAccent, size: 20),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          _authError!,
-                          style: const TextStyle(
-                              color: Colors.redAccent, fontSize: 13),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-              ],
-              if (_canCheckBiometrics) ...[
-                SizedBox(
-                  width: double.infinity,
-                  height: 54,
-                  child: FilledButton.icon(
-                    onPressed:
-                        _isAuthenticating ? null : _authenticateBiometric,
-                    icon: _isAuthenticating
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
-                          )
-                        : AppIcon(HugeIcons.strokeRoundedFingerPrint, size: 22),
-                    label: const Text('Scan Biometrics to Unlock'),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Row(
-                  children: [
-                    Expanded(child: Divider(color: AppColors.borderZinc)),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 12),
-                      child: Text('OR USE PASSWORD',
-                          style: TextStyle(
-                              color: AppColors.textMuted,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold)),
-                    ),
-                    Expanded(child: Divider(color: AppColors.borderZinc)),
-                  ],
-                ),
-                const SizedBox(height: 16),
-              ],
-              TextField(
-                controller: _passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Master Password',
-                  prefixIcon: AppIcon(AppInputIcons.lock, size: 16),
-                ),
-                onSubmitted: (_) => _authenticatePassword(),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: OutlinedButton.icon(
-                  onPressed: _isAuthenticating ? null : _authenticatePassword,
-                  icon: AppIcon(HugeIcons.strokeRoundedLockPassword,
-                      color: AppColors.orangeAccent, size: 20),
-                  label: const Text('Unlock with Master Password',
-                      style: TextStyle(
-                          color: AppColors.offWhite,
-                          fontWeight: FontWeight.w600)),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: AppColors.borderZinc),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      body: _buildCredentialDetails(itemType),
     );
   }
 
   Widget _buildCredentialDetails(ItemType itemType) {
     final fields = Map<String, dynamic>.from(_currentItem.fields);
     final String? idImage = fields.remove('id_image')?.toString();
+    final String? bundleName = fields.remove('bundle')?.toString().trim();
     // Exclude metadata timestamps since they are shown exclusively in the Metadata section
     fields.removeWhere((k, _) {
       final clean = k.toLowerCase().replaceAll(' ', '').replaceAll('_', '');
@@ -439,339 +190,390 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
           clean == 'timestamp';
     });
 
+    final activeAccent = Theme.of(context).colorScheme.primary;
+
     return FadeTransition(
       opacity: _fadeAnimation,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 140),
+      child: Column(
         children: [
-          // Header Card
-          Card(
-            color: AppColors.surfaceZinc,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: const BorderSide(color: AppColors.borderZinc),
+          // Refined 100% Full-Width Header with transparent 3D icon & value-only metric badge
+          Container(
+            width: double.infinity,
+            margin: EdgeInsets.zero,
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceZinc,
+              border: Border(
+                bottom: BorderSide(
+                  color: AppColors.borderZinc.withValues(alpha: 0.5),
+                  width: 1,
+                ),
+              ),
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColors.orangeContainer,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppColors.orangeBorder),
-                    ),
-                    child: AppIcon(
-                      _getTypeIcon(itemType),
-                      size: 32,
-                      color: AppColors.orangeAccent,
-                    ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Transparent 3D Cutout Icon (No background color container)
+                Image.asset(
+                  _getItemCutoutPath(itemType),
+                  width: 52,
+                  height: 52,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => AppIcon(
+                    _getTypeIcon(itemType),
+                    size: 38,
+                    color: activeAccent,
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _currentItem.title,
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineSmall
-                              ?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.offWhite,
-                              ),
+                ),
+                const SizedBox(width: 14),
+                // Item details (Title + Category/Bundle value-only metric badges)
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _currentItem.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.offWhite,
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
                         ),
-                        const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.cardZinc,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: AppColors.borderZinc),
-                          ),
-                          child: Text(
-                            itemType.label.toUpperCase(),
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.orangeAccent,
-                              letterSpacing: 1,
+                      ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: activeAccent.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: activeAccent.withValues(alpha: 0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: Text(
+                              itemType.label.toUpperCase(),
+                              style: TextStyle(
+                                color: activeAccent,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.5,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
+                          if (bundleName != null && bundleName.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: AppColors.cardZinc,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: AppColors.borderZinc
+                                      .withValues(alpha: 0.6),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const HugeIcon(
+                                    icon: HugeIcons.strokeRoundedFolder01,
+                                    size: 11,
+                                    color: AppColors.textMuted,
+                                    strokeWidth: 2,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    bundleName.toUpperCase(),
+                                    style: const TextStyle(
+                                      color: AppColors.textMuted,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-          // Quick Action Bar
-          Row(
-            children: [
-              if (fields.containsKey('username')) ...[
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _copyToClipboard(
-                        'Username', fields['username'].toString()),
-                    icon: AppIcon(HugeIcons.strokeRoundedUser,
-                        size: 16, color: AppColors.orangeAccent),
-                    label: const Text('User',
-                        style:
-                            TextStyle(fontSize: 12, color: AppColors.offWhite)),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      side: const BorderSide(color: AppColors.borderZinc),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-              ],
-              if (fields.containsKey('password')) ...[
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _copyToClipboard(
-                        'Password', fields['password'].toString()),
-                    icon: AppIcon(HugeIcons.strokeRoundedKey01,
-                        size: 16, color: AppColors.orangeAccent),
-                    label: const Text('Pass',
-                        style:
-                            TextStyle(fontSize: 12, color: AppColors.offWhite)),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      side: const BorderSide(color: AppColors.borderZinc),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-              ],
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: _openEditScreen,
-                  icon: AppIcon(HugeIcons.strokeRoundedEdit01, size: 16),
-                  label: const Text('Edit', style: TextStyle(fontSize: 12)),
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
 
-          // ID Document Image preview if present
-          if (idImage != null) ...[
-            Text(
-              'IDENTITY DOCUMENT ATTACHMENT',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+          // Scrollable fields below header
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              children: [
+                // Quick Action Bar (minimalist: only Copy Username & Copy Password if available — no duplicate Edit button)
+                if (fields.containsKey('username') ||
+                    fields.containsKey('password')) ...[
+                  Row(
+                    children: [
+                      if (fields.containsKey('username'))
+                        Expanded(
+                          child: AppButton(
+                            onPressed: () => _copyToClipboard(
+                                'Username', fields['username'].toString()),
+                            icon: HugeIcons.strokeRoundedUser,
+                            label: 'Copy User',
+                            variant: AppButtonVariant.secondary,
+                            height: 38,
+                            fontSize: 12,
+                          ),
+                        ),
+                      if (fields.containsKey('username') &&
+                          fields.containsKey('password'))
+                        const SizedBox(width: 10),
+                      if (fields.containsKey('password'))
+                        Expanded(
+                          child: AppButton(
+                            onPressed: () => _copyToClipboard(
+                                'Password', fields['password'].toString(),
+                                sensitive: true),
+                            icon: HugeIcons.strokeRoundedCopy01,
+                            label: 'Copy Password',
+                            variant: AppButtonVariant.primary,
+                            height: 38,
+                            fontSize: 12,
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                // ID Document Image preview if present
+                if (idImage != null) ...[
+                  Text(
+                    'IDENTITY DOCUMENT ATTACHMENT',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: AppColors.textMuted,
+                          letterSpacing: 1.2,
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 12),
+                  GestureDetector(
+                    onTap: () => _showImageDialog(idImage),
+                    child: Container(
+                      clipBehavior: Clip.antiAlias,
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceZinc,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.borderZinc),
+                      ),
+                      child: Stack(
+                        alignment: Alignment.bottomRight,
+                        children: [
+                          Image.memory(
+                            base64Decode(idImage),
+                            height: 200,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          ),
+                          Container(
+                            margin: const EdgeInsets.all(12),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.7),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                AppIcon(AppIcons.search,
+                                    color: Colors.white, size: 14),
+                                SizedBox(width: 6),
+                                Text('Tap to expand',
+                                    style: TextStyle(
+                                        color: Colors.white, fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+
+                const Text(
+                  'DECRYPTED CREDENTIALS',
+                  style: TextStyle(
+                    fontSize: 11,
                     color: AppColors.textMuted,
                     letterSpacing: 1.2,
                     fontWeight: FontWeight.bold,
                   ),
-            ),
-            const SizedBox(height: 12),
-            GestureDetector(
-              onTap: () => _showImageDialog(idImage),
-              child: Card(
-                color: AppColors.surfaceZinc,
-                clipBehavior: Clip.antiAlias,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: const BorderSide(color: AppColors.borderZinc),
                 ),
-                child: Stack(
-                  alignment: Alignment.bottomRight,
-                  children: [
-                    Image.memory(
-                      base64Decode(idImage),
-                      height: 200,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                    ),
-                    Container(
-                      margin: const EdgeInsets.all(12),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.7),
-                        borderRadius: BorderRadius.circular(20),
+                const SizedBox(height: 12),
+
+                // Stored fields
+                ...fields.entries.map((entry) {
+                  final key = entry.key;
+                  final val = entry.value.toString();
+                  final isSensitive = key.toLowerCase().contains('password') ||
+                      key.toLowerCase().contains('cvv') ||
+                      key.toLowerCase().contains('pin') ||
+                      key.toLowerCase().contains('secret') ||
+                      key.toLowerCase().contains('id_number');
+                  final isRevealed = _revealedFields.contains(key);
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceZinc,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppColors.borderZinc.withValues(alpha: 0.5),
+                        width: 1,
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          AppIcon(AppIcons.search,
-                              color: Colors.white, size: 14),
-                          const SizedBox(width: 6),
-                          const Text('Tap to expand',
-                              style:
-                                  TextStyle(color: Colors.white, fontSize: 12)),
+                          Row(
+                            children: [
+                              Text(
+                                key.replaceAll('_', ' ').toUpperCase(),
+                                style: const TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textMuted,
+                                  letterSpacing: 1.1,
+                                ),
+                              ),
+                              const Spacer(),
+                              if (isSensitive)
+                                IconButton(
+                                  icon: AppIcon(
+                                    isRevealed
+                                        ? AppInputIcons.eyeOff
+                                        : AppInputIcons.eye,
+                                    size: 18,
+                                    color: AppColors.textMuted,
+                                  ),
+                                  visualDensity: VisualDensity.compact,
+                                  onPressed: () async {
+                                    if (!isRevealed &&
+                                        !await _confirmCritical(
+                                            'Authenticate to reveal $key')) {
+                                      return;
+                                    }
+                                    if (!mounted) return;
+                                    setState(() {
+                                      if (isRevealed) {
+                                        _revealedFields.remove(key);
+                                      } else {
+                                        _revealedFields.add(key);
+                                      }
+                                    });
+                                  },
+                                ),
+                              IconButton(
+                                icon: AppIcon(AppInputIcons.copy,
+                                    size: 18, color: AppColors.orangeAccent),
+                                visualDensity: VisualDensity.compact,
+                                onPressed: () => _copyToClipboard(key, val,
+                                    sensitive: isSensitive),
+                                tooltip: 'Copy $key',
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          SelectableText(
+                            isSensitive && !isRevealed
+                                ? '••••••••••••••••'
+                                : val,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontFamily: isSensitive && !isRevealed
+                                  ? null
+                                  : 'Monospace',
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.offWhite,
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                  ],
+                  );
+                }),
+
+                const SizedBox(height: 12),
+                const Text(
+                  'METADATA & TIMESTAMPS',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textMuted,
+                    letterSpacing: 1.2,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
-
-          Text(
-            'DECRYPTED CREDENTIALS',
-            // Match dashboard section headers: 11px / bold / 1.2 tracking.
-            style: const TextStyle(
-              fontSize: 11,
-              color: AppColors.textMuted,
-              letterSpacing: 1.2,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // Stored fields
-          ...fields.entries.map((entry) {
-            final key = entry.key;
-            final val = entry.value.toString();
-            final isSensitive = key.toLowerCase().contains('password') ||
-                key.toLowerCase().contains('cvv') ||
-                key.toLowerCase().contains('pin') ||
-                key.toLowerCase().contains('secret') ||
-                key.toLowerCase().contains('id_number');
-            final isRevealed = _revealedFields.contains(key);
-
-            return Card(
-              margin: const EdgeInsets.only(bottom: 12),
-              color: AppColors.surfaceZinc,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: const BorderSide(color: AppColors.borderZinc),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          key.replaceAll('_', ' ').toUpperCase(),
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textMuted,
-                            letterSpacing: 1.1,
-                          ),
-                        ),
-                        const Spacer(),
-                        if (isSensitive)
-                          IconButton(
-                            icon: AppIcon(
-                              isRevealed
-                                  ? AppInputIcons.eyeOff
-                                  : AppInputIcons.eye,
-                              size: 18,
-                              color: AppColors.textMuted,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                if (isRevealed) {
-                                  _revealedFields.remove(key);
-                                } else {
-                                  _revealedFields.add(key);
-                                }
-                              });
-                            },
-                          ),
-                        IconButton(
-                          icon: AppIcon(AppInputIcons.copy,
-                              size: 18, color: AppColors.orangeAccent),
-                          onPressed: () => _copyToClipboard(key, val),
-                          tooltip: 'Copy $key',
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    SelectableText(
-                      isSensitive && !isRevealed ? '••••••••••••••••' : val,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontFamily:
-                            isSensitive && !isRevealed ? null : 'Monospace',
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.offWhite,
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceZinc,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: AppColors.borderZinc.withValues(alpha: 0.5)),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          const AppIcon(AppIcons.calendar,
+                              size: 16, color: AppColors.textMuted),
+                          const SizedBox(width: 8),
+                          const Text('Created At',
+                              style: TextStyle(
+                                  fontSize: 12, color: AppColors.textMuted)),
+                          const Spacer(),
+                          Text(_formatDateTime(_currentItem.createdAt),
+                              style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.offWhite,
+                                  fontWeight: FontWeight.w600)),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }),
-
-          const SizedBox(height: 12),
-          Text(
-            'METADATA & TIMESTAMPS',
-            // Match dashboard section headers: 11px / bold / 1.2 tracking.
-            style: const TextStyle(
-              fontSize: 11,
-              color: AppColors.textMuted,
-              letterSpacing: 1.2,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceZinc,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                  color: AppColors.borderZinc.withValues(alpha: 0.5)),
-            ),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    AppIcon(AppIcons.calendar,
-                        size: 16, color: AppColors.textMuted),
-                    const SizedBox(width: 8),
-                    const Text('Created At',
-                        style: TextStyle(
-                            fontSize: 12, color: AppColors.textMuted)),
-                    const Spacer(),
-                    Text(_formatDateTime(_currentItem.createdAt),
-                        style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.offWhite,
-                            fontWeight: FontWeight.w600)),
-                  ],
-                ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8),
-                  child: Divider(color: AppColors.borderZinc, height: 1),
-                ),
-                Row(
-                  children: [
-                    AppIcon(AppIcons.history,
-                        size: 16, color: AppColors.textMuted),
-                    const SizedBox(width: 8),
-                    const Text('Last Updated',
-                        style: TextStyle(
-                            fontSize: 12, color: AppColors.textMuted)),
-                    const Spacer(),
-                    Text(_formatDateTime(_currentItem.updatedAt),
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.orangeAccent,
-                            fontWeight: FontWeight.w600)),
-                  ],
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8),
+                        child: Divider(color: AppColors.borderZinc, height: 1),
+                      ),
+                      Row(
+                        children: [
+                          const AppIcon(AppIcons.history,
+                              size: 16, color: AppColors.textMuted),
+                          const SizedBox(width: 8),
+                          const Text('Last Updated',
+                              style: TextStyle(
+                                  fontSize: 12, color: AppColors.textMuted)),
+                          const Spacer(),
+                          Text(_formatDateTime(_currentItem.updatedAt),
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.orangeAccent,
+                                  fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -804,6 +606,21 @@ class _CredentialViewScreenState extends ConsumerState<CredentialViewScreen>
         return AppIcons.typeNote;
       case ItemType.developerSecret:
         return AppIcons.typeDeveloperSecret;
+    }
+  }
+
+  String _getItemCutoutPath(ItemType type) {
+    switch (type) {
+      case ItemType.login:
+        return 'assets/icons/cutouts_dark/user-login.png';
+      case ItemType.card:
+        return 'assets/icons/cutouts_dark/credit-card.png';
+      case ItemType.identity:
+        return 'assets/icons/cutouts_dark/passport.png';
+      case ItemType.note:
+        return 'assets/icons/cutouts_dark/secure-note.png';
+      case ItemType.developerSecret:
+        return 'assets/icons/cutouts_dark/api-key.png';
     }
   }
 }
@@ -848,7 +665,7 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer> {
         backgroundColor: Colors.black.withValues(alpha: 0.8),
         elevation: 0,
         leading: IconButton(
-          icon: AppIcon(AppIcons.arrowLeft, color: Colors.white),
+          icon: const AppIcon(AppIcons.arrowLeft, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text('Identity Document Preview',
@@ -858,8 +675,8 @@ class _FullscreenImageViewerState extends State<_FullscreenImageViewer> {
                 fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
-            icon:
-                AppIcon(HugeIcons.strokeRoundedRefresh, color: Colors.white70),
+            icon: const AppIcon(HugeIcons.strokeRoundedRefresh,
+                color: Colors.white70),
             tooltip: 'Reset Zoom',
             onPressed: () {
               _transformationController.value = Matrix4.identity();

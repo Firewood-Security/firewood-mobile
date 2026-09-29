@@ -25,6 +25,36 @@ void main() {
     }
   });
 
+  group('V-031 sanitizeFileName (hostile BLE frame names)', () {
+    test('path separators and traversal cannot survive', () {
+      for (final hostile in [
+        '../../.bashrc',
+        '..%2F..%2Fetc%2Fpasswd',
+        'a/b\\c',
+        '....//....//x',
+      ]) {
+        final safe = FileCryptoService.sanitizeFileName(hostile);
+        expect(safe, isNot(contains('/')), reason: hostile);
+        expect(safe, isNot(contains('\\')), reason: hostile);
+        expect(safe, isNotEmpty, reason: hostile);
+        expect(safe, isNot(equals('.')), reason: hostile);
+        expect(safe, isNot(equals('..')), reason: hostile);
+        expect(safe, isNot(startsWith('.')),
+            reason: '$hostile must not plant a hidden file');
+      }
+    });
+
+    test('degenerate names map to unnamed; normal names pass through', () {
+      expect(FileCryptoService.sanitizeFileName('..'), 'unnamed');
+      expect(FileCryptoService.sanitizeFileName('.'), 'unnamed');
+      expect(FileCryptoService.sanitizeFileName(''), 'unnamed');
+      expect(FileCryptoService.sanitizeFileName('.bashrc'), 'bashrc');
+      expect(FileCryptoService.sanitizeFileName('notes.pdf'), 'notes.pdf');
+      expect(FileCryptoService.sanitizeFileName('my report (2).pdf'),
+          'my_report__2_.pdf');
+    });
+  });
+
   test('encrypts and decrypts file bytes with metadata', () async {
     final bytes = List<int>.generate(4096, (i) => i % 256);
 

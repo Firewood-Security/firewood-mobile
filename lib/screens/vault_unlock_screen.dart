@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:local_auth/local_auth.dart';
 import '../providers/auth_provider.dart';
 import '../services/vault_service.dart';
@@ -30,7 +31,7 @@ class VaultUnlockScreen extends ConsumerStatefulWidget {
 }
 
 class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final _vaultService = VaultService();
   final _burnerService = BurnerService();
   final _backupService = BackupService();
@@ -42,6 +43,7 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
   bool _isBurning = false;
   String? _error;
   bool _biometricTriggered = false;
+  bool _biometricPendingResumed = false;
 
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
@@ -49,6 +51,7 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 500),
       vsync: this,
@@ -70,29 +73,94 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
         return;
       }
 
+      // V-015: one-shot purge of any legacy raw master-password entry before
+      // anything on this screen can read it (migrate-and-delete; never used
+      // for unlock decisions afterwards).
+      await _migrateLegacyBiometricPassword();
+      if (!mounted) return;
+
       final isBiometricEnabled = ref.read(biometricAuthEnabledProvider);
       if (isBiometricEnabled) {
-        _authenticateBiometricUnlock();
-      } else {
-        try {
-          final storedPwd =
-              await _secureStorage.read(key: _biometricPasswordKey);
-          if (storedPwd != null && storedPwd.isNotEmpty && mounted) {
-            _authenticateBiometricUnlock();
-          }
-        } catch (_) {}
+        _maybeAutoBiometric();
       }
     });
   }
 
+  /// V-015: one-shot migrate-and-delete of the legacy raw master-password
+  /// entry (`biometric_master_password`, written by the pre-Keystore flow
+  /// with plugin default options).
+  ///
+  /// The entry is read exactly once — with the same default options it was
+  /// written with — and is deleted unconditionally afterwards:
+  ///  * if the canonical Keystore path has no wrapping key yet, the password
+  ///    is carried over (create key + wrap) so biometric unlock keeps working;
+  ///  * if the canonical path is already set up its blob is authoritative
+  ///    (it tracks password changes) and must not be overwritten by a
+  ///    possibly stale legacy entry — delete only.
+  /// Any residual case fails to the password-entry path, never to a raw read.
+  Future<void> _migrateLegacyBiometricPassword() async {
+    String? legacy;
+    try {
+      legacy = await _secureStorage.read(key: _biometricPasswordKey);
+    } catch (_) {
+      legacy = null;
+    }
+    if (legacy == null || legacy.isEmpty) return;
+
+    try {
+      if (!await NativeSecurityBridge.hasWrappingKey()) {
+        await NativeSecurityBridge.createWrappingKey();
+        await NativeSecurityBridge.wrapMasterPassword(legacy);
+      }
+    } catch (_) {
+      // Could not carry the password over — biometric unlock degrades to
+      // password entry (fail closed).
+    } finally {
+      try {
+        await _secureStorage.delete(key: _biometricPasswordKey);
+      } catch (_) {}
+    }
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _fadeController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
   // --- Biometric ---
+
+  /// Access hardening: the lock can land while the app is *not* in the
+  /// foreground — the inactivity timer may fire in the background, or an
+  /// auto-lock-off background exit locks on the way out. The native
+  /// prompt must then never be raised from a paused activity: it would
+  /// fail silently (leaving no auto-prompt on return) or surface over
+  /// whatever screen the lock interrupted. Defer the one-shot prompt to
+  /// the next resume, where it always lands on the lock screen itself.
+  ///
+  /// `lifecycleState == null` means "no lifecycle event observed yet"
+  /// (cold start) — prompt immediately, preserving the original
+  /// cold-start-to-unlock behavior.
+  void _maybeAutoBiometric() {
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    if (lifecycle == null || lifecycle == AppLifecycleState.resumed) {
+      _authenticateBiometricUnlock();
+    } else {
+      _biometricPendingResumed = true;
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _biometricPendingResumed) {
+      _biometricPendingResumed = false;
+      if (mounted && ref.read(biometricAuthEnabledProvider)) {
+        _authenticateBiometricUnlock();
+      }
+    }
+  }
 
   Future<void> _authenticateBiometricUnlock() async {
     if (_biometricTriggered) return;
@@ -115,15 +183,27 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
       );
       if (didAuth && mounted) {
         HapticFeedback.mediumImpact();
+        // V-015: canonical Keystore unwrap only — the legacy raw-password
+        // fallback read is gone; failure below falls to password entry.
         String? password;
         try {
           password = await NativeSecurityBridge.unwrapMasterPassword();
+        } on PlatformException catch (e) {
+          // V-026: the native unlock path enforces the throttle itself —
+          // surface its lockout instead of falling through to a generic
+          // "enter your password" that would keep the lockout hidden.
+          if (e.code == 'LOCKED_OUT') {
+            _biometricTriggered = false;
+            if (mounted) {
+              final waitSecs =
+                  e.details is num ? (e.details as num).toInt() ~/ 1000 : null;
+              setState(() => _error = waitSecs != null
+                  ? 'Too many failed attempts. Wait ${waitSecs}s.'
+                  : 'Too many failed attempts. Try again later.');
+            }
+            return;
+          }
         } catch (_) {}
-        if (password == null || password.isEmpty) {
-          try {
-            password = await _secureStorage.read(key: _biometricPasswordKey);
-          } catch (_) {}
-        }
         if (password != null && password.isNotEmpty) {
           _passwordController.text = password;
           await _unlock();
@@ -154,11 +234,22 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
     final password = _passwordController.text.trim();
     if (password.isEmpty) return;
 
-    // Check lockout rate limiting
-    final lockout = await NativeSecurityBridge.getLockoutStatus();
-    if (lockout.isLockedOut) {
-      setState(() => _error =
-          'Too many failed attempts. Wait ${lockout.lockoutRemainingMs ~/ 1000}s.');
+    // Check lockout rate limiting. V-026: fail closed — if the native
+    // status cannot be read, refuse the attempt instead of proceeding
+    // without throttling.
+    bool isLockedOut;
+    int lockoutWaitMs;
+    try {
+      final lockout = await NativeSecurityBridge.getLockoutStatus();
+      isLockedOut = lockout.isLockedOut;
+      lockoutWaitMs = lockout.lockoutRemainingMs;
+    } catch (_) {
+      setState(() => _error = 'Could not verify unlock rate limit. Try again.');
+      return;
+    }
+    if (isLockedOut) {
+      setState(() =>
+          _error = 'Too many failed attempts. Wait ${lockoutWaitMs ~/ 1000}s.');
       return;
     }
 
@@ -211,7 +302,9 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
       }
 
       _passwordController.clear();
-      await NativeSecurityBridge.resetFailedAttempts();
+      // V-026: no Dart-callable counter reset remains — a successful unlock
+      // clears the counter only inside native code, and only when it is
+      // backed by a Keystore-authenticated unwrap (see SecureMethodChannel).
 
       if (mounted) {
         HapticFeedback.lightImpact();
@@ -425,7 +518,7 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
     final isBiometricEnabled = ref.watch(biometricAuthEnabledProvider);
 
     ref.listen<bool>(biometricAuthEnabledProvider, (prev, next) {
-      if (next && !_biometricTriggered) _authenticateBiometricUnlock();
+      if (next && !_biometricTriggered) _maybeAutoBiometric();
     });
 
     return Scaffold(
@@ -452,23 +545,29 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
                             children: [
                               Image.asset(
                                 'assets/FWS.png',
-                                width: 72,
-                                height: 72,
+                                width: 64,
+                                height: 64,
                                 fit: BoxFit.contain,
                               ),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 12),
                               Text(
-                                'Firewood',
-                                style: theme.textTheme.headlineMedium?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.offWhite,
-                                  letterSpacing: -0.5,
+                                'FIREWOOD',
+                                style: GoogleFonts.syncopate(
+                                  textStyle:
+                                      theme.textTheme.headlineMedium?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.offWhite,
+                                    letterSpacing: 1.5,
+                                    fontSize: 22,
+                                  ),
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 24),
 
                         // Error banner
                         if (_error != null)
@@ -500,55 +599,6 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
                             ),
                           ),
 
-                        // Biometric Button (if enabled)
-                        if (isBiometricEnabled)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 16),
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: _authenticateBiometricUnlock,
-                                borderRadius: BorderRadius.circular(16),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 14, horizontal: 16),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.periwinkleContainer
-                                        .withValues(alpha: 0.4),
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
-                                        color: AppColors.periwinkleBorder
-                                            .withValues(alpha: 0.6)),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      AppIcon(
-                                        AppIcons.fingerprint,
-                                        color: _biometricTriggered
-                                            ? AppColors.orangeAccent
-                                            : AppColors.periwinkleAccent,
-                                        size: 24,
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Text(
-                                        _biometricTriggered
-                                            ? 'Verifying biometrics...'
-                                            : 'Unlock with Biometrics',
-                                        style: TextStyle(
-                                          color: AppColors.periwinkleOnContainer
-                                              .withValues(alpha: 0.9),
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-
                         // --- MAIN MASTER PASSWORD UNLOCK CARD ---
                         Container(
                           padding: const EdgeInsets.all(20),
@@ -563,7 +613,6 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              const SizedBox(height: 18),
                               TextField(
                                 controller: _passwordController,
                                 obscureText: _obscurePassword,
@@ -580,14 +629,6 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
                                   hintText: 'Master password',
                                   hintStyle: const TextStyle(
                                       color: AppColors.textMuted, fontSize: 13),
-                                  prefixIconConstraints: const BoxConstraints(
-                                      minWidth: 42, minHeight: 42),
-                                  prefixIcon: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 12),
-                                    child: AppIcon(AppInputIcons.key,
-                                        size: 18, color: AppColors.textMuted),
-                                  ),
                                   suffixIcon: IconButton(
                                     icon: AppIcon(
                                       _obscurePassword
@@ -616,56 +657,97 @@ class _VaultUnlockScreenState extends ConsumerState<VaultUnlockScreen>
                                 ),
                               ),
                               const SizedBox(height: 16),
-                              AppButton(
-                                label: 'Unlock Vault',
-                                icon: HugeIcons.strokeRoundedArrowRight01,
-                                variant: AppButtonVariant.primary,
-                                isLoading: _isLoading || _isBurning,
-                                loadingLabel: _isBurning
-                                    ? 'Processing...'
-                                    : 'Unlocking...',
-                                fullWidth: true,
-                                height: 48,
-                                onPressed:
-                                    _isLoading || _isBurning ? null : _unlock,
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: AppButton(
+                                      label: 'Unlock Vault',
+                                      icon: AppIcons.lockOpen,
+                                      variant: AppButtonVariant.primary,
+                                      isLoading: _isLoading || _isBurning,
+                                      loadingLabel: _isBurning
+                                          ? 'Processing...'
+                                          : 'Unlocking...',
+                                      fullWidth: true,
+                                      height: 48,
+                                      onPressed: _isLoading || _isBurning
+                                          ? null
+                                          : _unlock,
+                                    ),
+                                  ),
+                                  if (isBiometricEnabled) ...[
+                                    const SizedBox(width: 10),
+                                    Tooltip(
+                                      message: _biometricTriggered
+                                          ? 'Verifying biometrics...'
+                                          : 'Unlock with biometrics',
+                                      child: Material(
+                                        color: Colors.transparent,
+                                        child: InkWell(
+                                          onTap: _authenticateBiometricUnlock,
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          child: Container(
+                                            width: 48,
+                                            height: 48,
+                                            decoration: BoxDecoration(
+                                              color: AppColors.cardZinc,
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              border: Border.all(
+                                                  color: AppColors.borderZinc),
+                                            ),
+                                            child: Center(
+                                              child: _biometricTriggered
+                                                  ? SizedBox(
+                                                      width: 20,
+                                                      height: 20,
+                                                      child:
+                                                          CircularProgressIndicator(
+                                                        strokeWidth: 2,
+                                                        color: AppColors
+                                                            .orangeAccent,
+                                                      ),
+                                                    )
+                                                  : AppIcon(
+                                                      AppIcons.fingerprint,
+                                                      color: AppColors
+                                                          .orangeAccent,
+                                                      size: 22,
+                                                    ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Center(
+                                child: TextButton(
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 4),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  onPressed:
+                                      _isImporting ? null : _importBackup,
+                                  child: Text(
+                                    _isImporting
+                                        ? 'Importing backup...'
+                                        : 'Import backup (.firewood)',
+                                    style: const TextStyle(
+                                      fontSize: 12.5,
+                                      color: AppColors.textMuted,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
                               ),
                             ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // Import Backup Action Button
-                        SizedBox(
-                          height: 46,
-                          child: OutlinedButton.icon(
-                            onPressed: _isImporting ? null : _importBackup,
-                            icon: _isImporting
-                                ? SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: AppColors.orangeAccent),
-                                  )
-                                : AppIcon(HugeIcons.strokeRoundedUpload01,
-                                    size: 18, color: AppColors.orangeAccent),
-                            label: Text(
-                              _isImporting
-                                  ? 'Importing...'
-                                  : 'Import Backup (.firewood)',
-                              style: const TextStyle(
-                                  fontSize: 13,
-                                  color: AppColors.offWhite,
-                                  fontWeight: FontWeight.w500),
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              backgroundColor: AppColors.surfaceZinc,
-                              side:
-                                  const BorderSide(color: AppColors.borderZinc),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14)),
-                            ),
                           ),
                         ),
                       ],

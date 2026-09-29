@@ -1,32 +1,40 @@
 // screens/home_screen.dart
-// Main vault view with floating bottom navigation, logo-only navbar, analytics, password listing, generator, security info, and settings
+// Main vault home view with top navbar actions, classic metrics overview (Credentials, Health Score & Security Advisor Banner), 6-card bare-icon grid (2x size), and floating search button
 
 import 'package:cryptography/cryptography.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 import '../models/item_type.dart';
 import '../providers/auth_provider.dart';
 import '../services/item_service.dart';
 import '../services/lock_service.dart';
+import '../services/reauth_service.dart';
 import '../services/backup_service.dart';
-import 'package:hugeicons/hugeicons.dart';
 import '../theme/app_icons.dart';
 import '../theme/app_theme.dart';
-import '../theme/app_button.dart';
 import '../theme/app_feedback.dart';
+import '../theme/vault_design_system.dart';
+import '../widgets/vault_components.dart';
 import 'credential_view_screen.dart';
+import 'category_items_screen.dart';
 import 'item_detail_screen.dart';
 import 'settings_screen.dart';
+import 'vault_search_screen.dart';
 import '../widgets/guide_modal.dart';
 import '../widgets/security_advisor_sheet.dart';
-import '../widgets/app_floating_navbar.dart';
 import '../services/mini_ml_advisor.dart';
 import '../services/accent_color_service.dart';
-import '../services/generator_service.dart';
-import '../widgets/password_strength_meter.dart';
+import '../services/bundle_service.dart';
+import '../widgets/bundle_settings_sheet.dart';
+import '../widgets/airshare_modal.dart';
+import 'bundle_detail_screen.dart';
+import '../services/autofill_service.dart';
+import '../services/notification_service.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -35,33 +43,21 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen>
-    with TickerProviderStateMixin {
+class _HomeScreenState extends ConsumerState<HomeScreen> {
   final ItemService _itemService = ItemService();
-  final TextEditingController _searchController = TextEditingController();
-
-  int _currentTabIndex = 0;
-  String _searchQuery = '';
-  ItemType? _filterType;
-  bool _sortDescending = true;
-  bool _isGridView = false;
-
-  late AnimationController _fabController;
+  int _selectedView = 0; // 0 = Categories, 1 = Bundles
+  late final PageController _viewPageController;
 
   @override
   void initState() {
     super.initState();
+    _viewPageController = PageController(initialPage: _selectedView);
     AccentColorService.currentColor.addListener(_onAccentColorChanged);
-    _fabController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-    _fabController.forward();
     _checkGuideModal();
   }
 
   void _onAccentColorChanged() {
-    if (mounted) setState(() {});
+    _refreshDashboard();
   }
 
   Future<void> _checkGuideModal() async {
@@ -75,10 +71,134 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   @override
   void dispose() {
+    _viewPageController.dispose();
     AccentColorService.currentColor.removeListener(_onAccentColorChanged);
-    _fabController.dispose();
-    _searchController.dispose();
     super.dispose();
+  }
+
+  void _navigateToBundle(SecretKey key, String bundleName) {
+    HapticFeedback.lightImpact();
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => BundleDetailScreen(
+              secretKey: key,
+              bundleName: bundleName,
+            ),
+          ),
+        )
+        .then((_) => _refreshDashboard());
+  }
+
+  Future<void> _createNewBundlePrompt(SecretKey key) async {
+    final controller = TextEditingController();
+    final bundleName = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceZinc,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: AppColors.borderZinc),
+        ),
+        title: Row(
+          children: [
+            AppIcon(HugeIcons.strokeRoundedFolder01,
+                color: AppColors.orangeAccent, size: 22),
+            const SizedBox(width: 10),
+            Text(
+              'New Credential Bundle',
+              style: TextStyle(
+                color: AppColors.offWhite,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Enter a bundle name to group related credentials (e.g. Housework, Mom, Personal, Work).',
+              style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              style: const TextStyle(color: AppColors.offWhite, fontSize: 14),
+              decoration: const InputDecoration(
+                hintText: 'Bundle Name (e.g. Housework)',
+              ),
+              onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel',
+                style: TextStyle(color: AppColors.textMuted)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.orangeAccent,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('Create Bundle'),
+          ),
+        ],
+      ),
+    );
+
+    if (bundleName != null && bundleName.isNotEmpty && mounted) {
+      await BundleService.registerBundle(bundleName);
+      setState(() => _selectedView = 1);
+      if (_viewPageController.hasClients) {
+        _viewPageController.jumpToPage(1);
+      }
+      await Navigator.of(context).push(
+        PageRouteBuilder(
+          pageBuilder: (_, __, ___) => ItemDetailScreen(
+            secretKey: key,
+            itemService: _itemService,
+            initialBundle: bundleName,
+          ),
+          transitionsBuilder: (_, animation, __, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 1),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            );
+          },
+          transitionDuration: const Duration(milliseconds: 300),
+        ),
+      );
+      if (mounted) setState(() {});
+    }
+  }
+
+  void _openBundleSettings(
+      SecretKey key, String bundleName, List<DecryptedItem> items) {
+    BundleSettingsSheet.show(
+      context: context,
+      secretKey: key,
+      bundleName: bundleName,
+      items: items,
+      onRenamed: (_) {
+        if (mounted) setState(() {});
+      },
+      onEmptied: () {
+        if (mounted) setState(() {});
+      },
+      onDeleted: () {
+        if (mounted) setState(() {});
+      },
+    );
   }
 
   Future<void> _addItem(SecretKey key) async {
@@ -101,17 +221,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         transitionDuration: const Duration(milliseconds: 300),
       ),
     );
-    setState(() {}); // Refresh list
+    _refreshDashboard();
   }
 
   Future<void> _importBackup(SecretKey currentKey) async {
+    // Auth policy: importing overrides credentials in the vault.
+    if (!await ReauthService.confirm(context,
+        reason: 'Authenticate to import a vault backup')) {
+      return;
+    }
+    if (!mounted) return;
     HapticFeedback.lightImpact();
 
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.any,
-      allowMultiple: false,
-      dialogTitle: 'Select .firewood Backup File',
-    );
+    LockService.beginForegroundFlow();
+    FilePickerResult? result;
+    try {
+      result = await FilePicker.platform.pickFiles(
+        type: FileType.any,
+        allowMultiple: false,
+        dialogTitle: 'Select .firewood Backup File',
+      );
+    } finally {
+      LockService.endForegroundFlow();
+    }
 
     if (result == null || result.files.single.path == null || !mounted) return;
     final filePath = result.files.single.path!;
@@ -178,7 +310,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
     try {
       final backupService = BackupService();
-      final result = await backupService.importVault(
+      final importResult = await backupService.importVault(
         filePath,
         password,
         overwrite: false,
@@ -188,10 +320,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       if (mounted) {
         AppToast.show(
           context,
-          message: 'Successfully imported backup: $result',
+          message: 'Successfully imported backup: $importResult',
           type: ToastType.success,
         );
-        setState(() {}); // Refresh list
+        setState(() {});
       }
     } catch (e) {
       if (mounted) {
@@ -212,11 +344,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
+      useSafeArea: true,
       builder: (ctx) {
         return Container(
           decoration: BoxDecoration(
             color: const Color(0xFF16161A),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             border: Border.all(color: AppColors.borderZinc, width: 1),
           ),
           padding: EdgeInsets.fromLTRB(
@@ -233,46 +366,46 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
               Row(
                 children: [
-                  AppIcon(AppIcons.vault, size: 34),
-                  const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Vault Actions',
-                          style: TextStyle(
+                          'Vault actions',
+                          style: GoogleFonts.syncopate(
                             color: AppColors.offWhite,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                            letterSpacing: 0.5,
                           ),
                         ),
-                        Text(
-                          'Choose an action to perform',
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Add, organise or restore credentials',
                           style: TextStyle(
-                              color: AppColors.textMuted, fontSize: 11),
+                              color: AppColors.textMuted, fontSize: 12),
                         ),
                       ],
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
               // Button 1: Add Credentials
               Container(
                 decoration: BoxDecoration(
                   color: AppColors.cardZinc,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.borderZinc, width: 1),
+                  borderRadius: BorderRadius.circular(VaultRadii.lg),
+                  border: VaultBorders.allSubtle(),
                 ),
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(VaultRadii.lg),
                     onTap: () {
                       Navigator.pop(ctx);
                       _addItem(key);
@@ -282,7 +415,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                           horizontal: 16, vertical: 14),
                       child: Row(
                         children: [
-                          AppIcon(AppIcons.add, size: 36),
+                          const AppIcon(AppIcons.add, size: 36),
                           const SizedBox(width: 14),
                           const Expanded(
                             child: Column(
@@ -315,19 +448,71 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               ),
               const SizedBox(height: 12),
 
-              // Button 2: Import Backup
+              // Button 2: New Credential Bundle
               Container(
                 decoration: BoxDecoration(
                   color: AppColors.surfaceZinc,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                      color: AppColors.borderZinc.withValues(alpha: 0.7),
-                      width: 1),
+                  borderRadius: BorderRadius.circular(VaultRadii.lg),
+                  border: VaultBorders.allSubtle(opacity: 0.8),
                 ),
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(VaultRadii.lg),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _createNewBundlePrompt(key);
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
+                      child: Row(
+                        children: [
+                          AppIcon(HugeIcons.strokeRoundedFolder01,
+                              size: 28, color: AppColors.orangeAccent),
+                          const SizedBox(width: 14),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'New Credential Bundle',
+                                  style: TextStyle(
+                                    color: AppColors.offWhite,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Group related credentials across categories',
+                                  style: TextStyle(
+                                      color: AppColors.textMuted, fontSize: 11),
+                                ),
+                              ],
+                            ),
+                          ),
+                          AppIcon(AppIcons.chevronRight,
+                              size: 16, color: activeAccent),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Button 3: Import Backup
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceZinc,
+                  borderRadius: BorderRadius.circular(VaultRadii.lg),
+                  border: VaultBorders.allSubtle(opacity: 0.7),
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(VaultRadii.lg),
                     onTap: () {
                       Navigator.pop(ctx);
                       _importBackup(key);
@@ -386,53 +571,51 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         ),
       ),
     );
-    setState(() {}); // Refresh after view
+    _refreshDashboard();
   }
 
-  Future<void> _deleteItem(SecretKey key, DecryptedItem item) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Row(
-          children: [
-            AppIcon(AppIcons.delete, color: Colors.redAccent, size: 22),
-            SizedBox(width: 8),
-            Text('Delete Item?'),
-          ],
-        ),
-        content: Text('Delete "${item.title}"? This action cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+  void _navigateToCategory(SecretKey key, ItemType? category) {
+    HapticFeedback.lightImpact();
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => CategoryItemsScreen(
+              secretKey: key,
+              category: category,
+            ),
           ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
-            child: const Text('Delete'),
+        )
+        .then((_) => _refreshDashboard());
+  }
+
+  void _navigateToSearch(SecretKey key) {
+    HapticFeedback.lightImpact();
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => VaultSearchScreen(
+              secretKey: key,
+              autoFocusSearch: true,
+            ),
           ),
-        ],
-      ),
-    );
+        )
+        .then((_) => _refreshDashboard());
+  }
 
-    if (confirm != true) return;
+  void _navigateToSettings() {
+    HapticFeedback.lightImpact();
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => const SettingsScreen(),
+          ),
+        )
+        .then((_) => _refreshDashboard());
+  }
 
-    try {
-      await _itemService.deleteItem(item.itemId);
-      if (mounted) {
-        HapticFeedback.mediumImpact();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('"${item.title}" deleted')),
-        );
-        setState(() {});
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to delete: $e')),
-        );
-      }
-    }
+  void _navigateToAirShareSend() {
+    HapticFeedback.heavyImpact();
+    AirShareModal.show(context, role: AirShareRole.send);
   }
 
   @override
@@ -444,1546 +627,733 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       builder: (context, accentColor, _) {
         return Scaffold(
           backgroundColor: AppColors.backgroundZinc,
-          appBar: AppBar(
-            backgroundColor: AppColors.surfaceZinc,
-            elevation: 0,
-            centerTitle: false,
-            title: Row(
-              children: [
-                Image.asset(
-                  'assets/FWS.png',
-                  width: 38,
-                  height: 38,
-                  fit: BoxFit.contain,
-                ),
-                const SizedBox(width: 10),
-                const Text(
-                  'Firewood',
-                  style: TextStyle(
-                    color: AppColors.offWhite,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
+          appBar: VaultAppBar(
+            showLogo: true,
             actions: [
-              IconButton(
-                icon: AppIcon(AppIcons.lock,
-                    color: AppColors.orangeAccent, size: 30),
-                tooltip: 'Lock Vault',
-                onPressed: () {
-                  HapticFeedback.mediumImpact();
-                  ref.read(authProvider.notifier).state = null;
-                },
-              ),
-              const SizedBox(width: 6),
+              if (key != null) ...[
+                IconButton(
+                  icon: const AppIcon(
+                    HugeIcons.strokeRoundedPlusSign,
+                    color: AppColors.offWhite,
+                    size: 22,
+                    strokeWidth: 2.0,
+                  ),
+                  tooltip: 'Add Credentials',
+                  onPressed: () => _showPlusActionSheet(key),
+                ),
+                IconButton(
+                  icon: const AppIcon(
+                    HugeIcons.strokeRoundedSettings02,
+                    color: AppColors.textMuted,
+                    size: 20,
+                  ),
+                  tooltip: 'Settings',
+                  onPressed: _navigateToSettings,
+                ),
+                IconButton(
+                  icon: const AppIcon(
+                    HugeIcons.strokeRoundedLockKey,
+                    color: AppColors.textMuted,
+                    size: 20,
+                  ),
+                  tooltip: 'Lock Vault',
+                  onPressed: () {
+                    HapticFeedback.mediumImpact();
+                    ref.read(authProvider.notifier).state = null;
+                  },
+                ),
+                const SizedBox(width: 4),
+              ],
             ],
           ),
+          floatingActionButton: key == null
+              ? null
+              : FloatingActionButton(
+                  onPressed: () => _navigateToSearch(key),
+                  backgroundColor: accentColor,
+                  foregroundColor: Colors.white,
+                  elevation: 4,
+                  child: const AppIcon(AppInputIcons.search,
+                      size: 24, color: Colors.white),
+                ),
           body: key == null
               ? Center(
-                  child:
-                      CircularProgressIndicator(color: AppColors.orangeAccent),
+                  child: CircularProgressIndicator(color: accentColor),
                 )
-              : Stack(
-                  children: [
-                    IndexedStack(
-                      index: _currentTabIndex,
-                      children: [
-                        _buildHomeDashboardTab(key),
-                        _buildPasswordsListingTab(key),
-                        _buildGeneratorTab(),
-                        const SettingsScreen(),
-                      ],
-                    ),
-                    Positioned(
-                      left: 16,
-                      right: 16,
-                      bottom: MediaQuery.of(context).padding.bottom + 16,
-                      child: AppFloatingNavBar(
-                        currentIndex: _currentTabIndex,
-                        onTap: (index) {
-                          HapticFeedback.selectionClick();
-                          setState(() => _currentTabIndex = index);
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-          floatingActionButton: (key != null && _currentTabIndex <= 1)
-              ? Padding(
-                  padding: EdgeInsets.only(
-                      bottom: MediaQuery.of(context).padding.bottom + 120),
-                  child: ScaleTransition(
-                    scale: _fabController,
-                    child: Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(18),
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            AppColors.orangeAccent,
-                            AppColors.shade(AppColors.orangeAccent, -0.08),
-                          ],
-                        ),
-                        border: Border.all(
-                          color: AppColors.orangeDark,
-                          width: 1,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color:
-                                AppColors.shade(AppColors.orangeAccent, -0.18),
-                            offset: Offset(0, 3),
-                            blurRadius: 0,
-                          ),
-                        ],
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          customBorder: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          onTap: () => _showPlusActionSheet(key),
-                          child: const Center(
-                            child: AppIcon(AppIcons.add,
-                                color: Colors.white,
-                                size: 26,
-                                strokeWidth: 2.2),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                )
-              : null,
+              : _buildDashboard(key, accentColor),
         );
       },
     );
   }
 
-  // --- TAB 0: HOME DASHBOARD (Metrics & Summary) ---
-  Widget _buildHomeDashboardTab(SecretKey key) {
-    return FutureBuilder<List<DecryptedItem>>(
-      future: _itemService.getAllItems(key),
+  _DashboardData? _cachedData;
+  Future<_DashboardData>? _dashboardFuture;
+
+  /// Flicker fix: invalidate cached dashboard data when returning from
+  /// sub-screens so new/edited items appear without a stale flash.
+  void _refreshDashboard() {
+    if (!mounted) return;
+    setState(() {
+      _dashboardFuture = null;
+    });
+  }
+
+  Future<_DashboardData> _loadDashboardData(SecretKey key) async {
+    final results = await Future.wait([
+      _itemService.getAllItems(key),
+      BundleService.getRegisteredBundles(),
+    ]);
+    final items = results[0] as List<DecryptedItem>;
+
+    // 100% Offline native Autofill store synchronization
+    AutofillService.syncDecryptedItems(items);
+
+    // Throttled on-device security tips and findings check
+    _checkSecurityFindings(items);
+
+    return _DashboardData(
+      items: items,
+      registeredBundles: results[1] as List<String>,
+    );
+  }
+
+  void _checkSecurityFindings(List<DecryptedItem> items) {
+    if (items.isEmpty) return;
+    try {
+      final adv = SecurityAdvisorEngine.analyze(items);
+      if (adv.topTip != null) {
+        NotificationAlertService.notifySecurityTip(
+          tipText: '${adv.topTip!.title}: ${adv.topTip!.message}',
+        );
+      }
+    } catch (_) {}
+  }
+
+  Widget _buildDashboard(SecretKey key, Color activeAccent) {
+    return FutureBuilder<_DashboardData>(
+      future: _dashboardFuture ??= _loadDashboardData(key),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        if (snapshot.hasData) {
+          _cachedData = snapshot.data;
+        }
+
+        final data = snapshot.data ?? _cachedData;
+
+        if (data == null &&
+            snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final items = snapshot.data ?? [];
-        final logins = items
+        final itemList = data?.items ?? [];
+        final registeredBundles = data?.registeredBundles ?? [];
+        final logins = itemList
             .where((i) => ItemTypeExt.fromString(i.type) == ItemType.login)
             .toList();
-        final cards = items
+        final cards = itemList
             .where((i) => ItemTypeExt.fromString(i.type) == ItemType.card)
             .length;
-        final identities = items
+        final identities = itemList
             .where((i) => ItemTypeExt.fromString(i.type) == ItemType.identity)
             .length;
-        final notes = items
-            .where((i) => ItemTypeExt.fromString(i.type) == ItemType.note)
-            .length;
-        final devSecrets = items
+        final devSecrets = itemList
             .where((i) =>
                 ItemTypeExt.fromString(i.type) == ItemType.developerSecret)
             .length;
-        final advisory = SecurityAdvisorEngine.analyze(items);
-        final activeAccent = Theme.of(context).colorScheme.primary;
+        final notes = itemList
+            .where((i) => ItemTypeExt.fromString(i.type) == ItemType.note)
+            .length;
 
-        return RefreshIndicator(
-          onRefresh: () async => setState(() {}),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 140),
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ROW 1: OVERVIEW & SECURITY HEALTH
-                Row(
-                  children: [
-                    // Card 1: Total Credentials
-                    Expanded(
-                      child: Container(
-                        height: 122,
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceZinc,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                              color:
-                                  AppColors.borderZinc.withValues(alpha: 0.5)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                AppIcon(AppIcons.shield, size: 40),
-                                const Spacer(),
-                                Text(
-                                  '${advisory.totalItems}',
-                                  style: const TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.offWhite),
-                                ),
-                              ],
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'TOTAL CREDENTIALS',
-                                  style: TextStyle(
-                                      fontSize: 9.5,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 0.8,
-                                      color: AppColors.textMuted),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '${advisory.totalItems} Active & Protected',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                      fontSize: 10.5,
-                                      fontWeight: FontWeight.w600,
-                                      color: activeAccent),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
+        final twoFaCount = logins
+            .where((i) =>
+                (i.fields['totp_secret'] ?? '').toString().trim().isNotEmpty)
+            .length;
 
-                    // Card 2: Security Health Score
-                    Expanded(
-                      child: Container(
-                        height: 122,
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceZinc,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                              color:
-                                  AppColors.borderZinc.withValues(alpha: 0.5)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                AppIcon(
-                                  AppIcons.shieldCheck,
-                                  size: 40,
-                                ),
-                                const Spacer(),
-                                Text(
-                                  '${advisory.securityScore}%',
-                                  style: TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                    color: advisory.securityScore >= 80
-                                        ? const Color(0xFF22C55E)
-                                        : advisory.securityScore >= 50
-                                            ? const Color(0xFFF59E0B)
-                                            : const Color(0xFFEF4444),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'SECURITY HEALTH',
-                                  style: TextStyle(
-                                      fontSize: 9.5,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 0.8,
-                                      color: AppColors.textMuted),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  advisory.securityScore >= 80
-                                      ? 'Optimal Protection'
-                                      : advisory.securityScore >= 50
-                                          ? 'Attention Recommended'
-                                          : 'Action Required',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 10.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: advisory.securityScore >= 80
-                                        ? const Color(0xFF22C55E)
-                                        : advisory.securityScore >= 50
-                                            ? const Color(0xFFF59E0B)
-                                            : const Color(0xFFEF4444),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
+        final Map<String, List<DecryptedItem>> bundleMap = {};
+        for (final b in registeredBundles) {
+          bundleMap.putIfAbsent(b, () => []);
+        }
+        for (final item in itemList) {
+          final b = (item.fields['bundle'] ?? '').toString().trim();
+          if (b.isNotEmpty) {
+            bundleMap.putIfAbsent(b, () => []).add(item);
+          }
+        }
 
-                // ROW 2: MINIMAL SECURITY ADVISOR CARD (tap for per-item issues)
-                Material(
-                  color: Colors.transparent,
-                  borderRadius: BorderRadius.circular(16),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(16),
-                    onTap: () => SecurityAdvisorSheet.show(
-                      context,
-                      key: key,
-                      items: items,
-                      onOpenItem: _viewItem,
-                    ),
-                    child: Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceZinc,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                            color: AppColors.borderZinc.withValues(alpha: 0.4)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 1. TOP METRICS ROW (VaultMetricCard primitives)
+                  Builder(
+                    builder: (context) {
+                      final adv = SecurityAdvisorEngine.analyze(itemList);
+                      final score = adv.securityScore;
+                      return Row(
                         children: [
-                          Row(
-                            children: [
-                              AppIcon(AppIcons.shieldCheck, size: 22),
-                              const SizedBox(width: 8),
-                              const Text(
-                                'SECURITY ADVISOR',
-                                style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 1.1,
-                                    color: AppColors.offWhite),
-                              ),
-                              const Spacer(),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: advisory.issueCount > 0
-                                      ? AppColors.roseAccent
-                                      : AppColors.mintAccent,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  advisory.issueCount > 0
-                                      ? '${advisory.issueCount} issue${advisory.issueCount == 1 ? '' : 's'}'
-                                      : 'All clear',
-                                  style: const TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white),
-                                ),
-                              ),
-                            ],
+                          VaultMetricCard(
+                            label: 'TOTAL CREDENTIALS',
+                            value: '${itemList.length}',
+                            unit: 'items',
+                            accentColor: activeAccent,
+                            onHold3Seconds: _navigateToAirShareSend,
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            advisory.topGroup?.headline ??
-                                'Strong, unique passwords with 2FA coverage',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: advisory.topGroup == null
-                                  ? AppColors.textMuted
-                                  : SecurityAdvisorSheet.colorForSeverity(
-                                      advisory.topGroup!.severity),
+                          const SizedBox(width: 10),
+                          VaultMetricCard(
+                            label: 'HEALTH SCORE',
+                            value: '$score%',
+                            unit: 'health',
+                            accentColor: score >= 80
+                                ? activeAccent
+                                : (score >= 50
+                                    ? const Color(0xFFF59E0B)
+                                    : AppColors.roseAccent),
+                            showAlertDot: score < 80 && itemList.isNotEmpty,
+                            onTap: () => SecurityAdvisorSheet.show(
+                              context,
+                              key: key,
+                              items: itemList,
+                              onOpenItem: (k, item) => _viewItem(k, item),
                             ),
+                            onHold3Seconds: _navigateToAirShareSend,
                           ),
                         ],
-                      ),
-                    ),
+                      );
+                    },
                   ),
-                ),
-                const SizedBox(height: 20),
+                  const SizedBox(height: 14),
 
-                // ROW 3: FIVE CREDENTIAL CATEGORY CARDS
-                Row(
-                  children: [
-                    const Text('CREDENTIAL CATEGORIES',
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.2,
-                            color: AppColors.textMuted)),
-                    const Spacer(),
-                    Text('${items.length} Total',
-                        style: TextStyle(
-                            fontSize: 11,
-                            color: activeAccent,
-                            fontWeight: FontWeight.w600)),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  child: Row(
+                  // View Selector Tabs: Categories vs Bundles
+                  Row(
                     children: [
-                      _CategorySummaryCard(
-                        title: 'Accounts',
-                        count: logins.length,
-                        subtitle:
-                            '${logins.where((i) => (i.fields['totp_secret'] ?? '').toString().trim().isNotEmpty).length} 2FA Active',
-                        icon: AppIcons.categoryLogin,
-                        accentColor: activeAccent,
-                        isSelected: _filterType == ItemType.login,
-                        onTap: () => setState(() {
-                          _filterType = ItemType.login;
-                          _currentTabIndex = 1;
-                        }),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            setState(() => _selectedView = 0);
+                            if (_viewPageController.hasClients) {
+                              _viewPageController.animateToPage(
+                                0,
+                                duration: const Duration(milliseconds: 250),
+                                curve: Curves.easeInOut,
+                              );
+                            }
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            curve: Curves.easeOut,
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: _selectedView == 0
+                                  ? AppColors.surfaceZinc
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: _selectedView == 0
+                                    ? AppColors.offWhite.withValues(alpha: 0.18)
+                                    : AppColors.borderZinc
+                                        .withValues(alpha: 0.5),
+                                width: 1,
+                              ),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              'CATEGORIES',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: _selectedView == 0
+                                    ? FontWeight.bold
+                                    : FontWeight.w400,
+                                letterSpacing: 0.8,
+                                color: _selectedView == 0
+                                    ? AppColors.offWhite
+                                    : AppColors.textMuted,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
-                      _CategorySummaryCard(
-                        title: 'Cards',
-                        count: cards,
-                        subtitle: 'Encrypted CVV',
-                        icon: AppIcons.categoryCard,
-                        accentColor: const Color(0xFF3B82F6),
-                        isSelected: _filterType == ItemType.card,
-                        onTap: () => setState(() {
-                          _filterType = ItemType.card;
-                          _currentTabIndex = 1;
-                        }),
-                      ),
-                      _CategorySummaryCard(
-                        title: 'Identity',
-                        count: identities,
-                        subtitle: 'ID & Passports',
-                        icon: AppIcons.categoryIdentity,
-                        accentColor: const Color(0xFF8B5CF6),
-                        isSelected: _filterType == ItemType.identity,
-                        onTap: () => setState(() {
-                          _filterType = ItemType.identity;
-                          _currentTabIndex = 1;
-                        }),
-                      ),
-                      _CategorySummaryCard(
-                        title: 'Keys',
-                        count: devSecrets,
-                        subtitle: 'Keys & Tokens',
-                        icon: AppIcons.key,
-                        accentColor: const Color(0xFF10B981),
-                        isSelected: _filterType == ItemType.developerSecret,
-                        onTap: () => setState(() {
-                          _filterType = ItemType.developerSecret;
-                          _currentTabIndex = 1;
-                        }),
-                      ),
-                      _CategorySummaryCard(
-                        title: 'Secure Notes',
-                        count: notes,
-                        subtitle: 'Encrypted Notes',
-                        icon: AppIcons.categoryNote,
-                        accentColor: const Color(0xFFF43F5E),
-                        isSelected: _filterType == ItemType.note,
-                        onTap: () => setState(() {
-                          _filterType = ItemType.note;
-                          _currentTabIndex = 1;
-                        }),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            setState(() => _selectedView = 1);
+                            if (_viewPageController.hasClients) {
+                              _viewPageController.animateToPage(
+                                1,
+                                duration: const Duration(milliseconds: 250),
+                                curve: Curves.easeInOut,
+                              );
+                            }
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            curve: Curves.easeOut,
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: _selectedView == 1
+                                  ? AppColors.surfaceZinc
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: _selectedView == 1
+                                    ? AppColors.offWhite.withValues(alpha: 0.18)
+                                    : AppColors.borderZinc
+                                        .withValues(alpha: 0.5),
+                                width: 1,
+                              ),
+                            ),
+                            alignment: Alignment.center,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'BUNDLES',
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: _selectedView == 1
+                                        ? FontWeight.bold
+                                        : FontWeight.w400,
+                                    letterSpacing: 0.8,
+                                    color: _selectedView == 1
+                                        ? AppColors.offWhite
+                                        : AppColors.textMuted,
+                                  ),
+                                ),
+                                if (bundleMap.isNotEmpty) ...[
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 1),
+                                    decoration: BoxDecoration(
+                                      color: _selectedView == 1
+                                          ? AppColors.borderZinc
+                                          : AppColors.borderZinc
+                                              .withValues(alpha: 0.5),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(
+                                      '${bundleMap.length}',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: _selectedView == 1
+                                            ? AppColors.offWhite
+                                            : AppColors.textMuted,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // ROW 4: RECENT ACTIVITY LIST
-                Row(
-                  children: [
-                    const Text('RECENT CREDENTIALS',
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.2,
-                            color: AppColors.textMuted)),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: () => setState(() => _currentTabIndex = 1),
-                      child: Text('View All',
-                          style: TextStyle(
-                              color: activeAccent,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                if (items.isEmpty)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceZinc,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                          color: AppColors.borderZinc.withValues(alpha: 0.4)),
-                    ),
-                    child: const Column(
+                  const SizedBox(height: 12),
+                ],
+              ),
+            ),
+            Expanded(
+              child: PageView(
+                controller: _viewPageController,
+                clipBehavior: Clip.hardEdge,
+                onPageChanged: (idx) {
+                  HapticFeedback.selectionClick();
+                  setState(() => _selectedView = idx);
+                },
+                children: [
+                  // PAGE 0: VAULT CATEGORIES
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        AppIcon(AppIcons.shield,
-                            size: 40, color: AppColors.textMuted),
-                        SizedBox(height: 8),
-                        Text('Vault is Empty',
-                            style: TextStyle(
-                                color: AppColors.offWhite,
-                                fontWeight: FontWeight.bold)),
-                        SizedBox(height: 4),
-                        Text('Tap + to add your first password or card',
-                            style: TextStyle(
-                                fontSize: 12, color: AppColors.textMuted)),
+                        const VaultSectionLabel('VAULT CATEGORIES',
+                            padding: EdgeInsets.symmetric(vertical: 2)),
+                        const SizedBox(height: 8),
+                        Expanded(
+                          child: GridView.count(
+                            physics: const NeverScrollableScrollPhysics(),
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 10,
+                            mainAxisSpacing: 10,
+                            childAspectRatio: 1.35,
+                            children: [
+                              VaultCategoryCard(
+                                title: 'Logins',
+                                count: '${logins.length}',
+                                subtitle: '$twoFaCount 2FA Active',
+                                icon: 'assets/icons/cutouts/user-login.png',
+                                accentColor: activeAccent,
+                                onTap: () =>
+                                    _navigateToCategory(key, ItemType.login),
+                                onHold3Seconds: _navigateToAirShareSend,
+                              ),
+                              VaultCategoryCard(
+                                title: 'Cards',
+                                count: '$cards',
+                                subtitle: 'Payment cards',
+                                icon: 'assets/icons/cutouts/credit-card.png',
+                                accentColor: activeAccent,
+                                onTap: () =>
+                                    _navigateToCategory(key, ItemType.card),
+                                onHold3Seconds: _navigateToAirShareSend,
+                              ),
+                              VaultCategoryCard(
+                                title: 'Identity',
+                                count: '$identities',
+                                subtitle: 'Passports & IDs',
+                                icon: 'assets/icons/cutouts/passport.png',
+                                accentColor: activeAccent,
+                                onTap: () =>
+                                    _navigateToCategory(key, ItemType.identity),
+                                onHold3Seconds: _navigateToAirShareSend,
+                              ),
+                              VaultCategoryCard(
+                                title: 'API Keys',
+                                count: '$devSecrets',
+                                subtitle: 'Developer secrets',
+                                icon: 'assets/icons/cutouts/api-key.png',
+                                accentColor: activeAccent,
+                                onTap: () => _navigateToCategory(
+                                    key, ItemType.developerSecret),
+                                onHold3Seconds: _navigateToAirShareSend,
+                              ),
+                              VaultCategoryCard(
+                                title: 'Secure Notes',
+                                count: '$notes',
+                                subtitle: 'Encrypted notes',
+                                icon: 'assets/icons/cutouts/secure-note.png',
+                                accentColor: activeAccent,
+                                onTap: () =>
+                                    _navigateToCategory(key, ItemType.note),
+                                onHold3Seconds: _navigateToAirShareSend,
+                              ),
+                              VaultCategoryCard(
+                                title: 'All Vault Items',
+                                count: '${itemList.length}',
+                                subtitle: 'Complete vault',
+                                icon: 'assets/icons/cutouts/vault-lock.png',
+                                accentColor: activeAccent,
+                                onTap: () => _navigateToCategory(key, null),
+                                onHold3Seconds: _navigateToAirShareSend,
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
-                  )
-                else
-                  ...items.take(4).map(
-                        (item) => _ItemTile(
-                          item: item,
-                          onTap: () => _viewItem(key, item),
-                          onDelete: () => _deleteItem(key, item),
-                          index: 0,
-                        ),
-                      ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  // --- TAB 1: PASSWORDS / VAULT LISTING (Search, Filter, Sort & Grid inline) ---
-  Widget _buildPasswordsListingTab(SecretKey key) {
-    return FutureBuilder<List<DecryptedItem>>(
-      future: _itemService.getAllItems(key),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        var items = snapshot.data ?? [];
-
-        // Apply inline search
-        if (_searchQuery.isNotEmpty) {
-          items = items.where((item) {
-            final title = item.title.toLowerCase();
-            final query = _searchQuery.toLowerCase();
-            final fields = item.fields.values
-                .map((v) => v.toString().toLowerCase())
-                .join(' ');
-            return title.contains(query) || fields.contains(query);
-          }).toList();
-        }
-
-        // Apply category filter
-        if (_filterType != null) {
-          items = items
-              .where((item) => ItemTypeExt.fromString(item.type) == _filterType)
-              .toList();
-        }
-
-        // Sort items
-        items.sort((a, b) => _sortDescending
-            ? b.updatedAt.compareTo(a.updatedAt)
-            : a.updatedAt.compareTo(b.updatedAt));
-
-        return Column(
-          children: [
-            // Inline Search Bar & Toolbar
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: Column(
-                children: [
-                  TextField(
-                    controller: _searchController,
-                    onChanged: (val) => setState(() => _searchQuery = val),
-                    style: const TextStyle(
-                        color: AppColors.offWhite, fontSize: 14),
-                    decoration: InputDecoration(
-                      hintText: 'Search vault items...',
-                      prefixIcon: const Padding(
-                        padding: EdgeInsets.all(12),
-                        child: AppIcon(AppInputIcons.search,
-                            color: AppColors.textMuted, size: 20),
-                      ),
-                      suffixIcon: _searchQuery.isNotEmpty
-                          ? IconButton(
-                              icon: const AppIcon(AppInputIcons.close,
-                                  color: AppColors.textMuted, size: 18),
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() => _searchQuery = '');
-                              },
-                            )
-                          : null,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
-                      fillColor: AppColors.surfaceZinc,
-                    ),
                   ),
-                  const SizedBox(height: 10),
-                  // Category Dropdown & Styled Controls Row
-                  Row(
-                    children: [
-                      // Category Filter Dropdown
-                      Expanded(
-                        child: DropdownButtonFormField<ItemType?>(
-                          value: _filterType,
-                          isExpanded: true,
-                          dropdownColor: AppColors.surfaceZinc,
-                          borderRadius: BorderRadius.circular(12),
-                          icon: AppIcon(AppIcons.chevronDown,
-                              color: AppColors.orangeAccent, size: 18),
-                          style: const TextStyle(
-                              color: AppColors.offWhite, fontSize: 13),
-                          decoration: InputDecoration(
-                            isDense: true,
-                            filled: true,
-                            fillColor: AppColors.inputZinc,
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 10),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                  color: AppColors.borderZinc
-                                      .withValues(alpha: 0.5)),
+
+                  // PAGE 1: CREDENTIAL BUNDLES
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            VaultSectionLabel(
+                              'CREDENTIAL BUNDLES (${bundleMap.length})',
+                              padding: const EdgeInsets.symmetric(vertical: 2),
                             ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                  color: AppColors.borderZinc
-                                      .withValues(alpha: 0.5)),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                  color: AppColors.orangeAccent, width: 1.5),
-                            ),
-                          ),
-                          items: [
-                            DropdownMenuItem<ItemType?>(
-                              value: null,
-                              child: const Row(
+                            GestureDetector(
+                              onTap: () => _createNewBundlePrompt(key),
+                              child: Row(
                                 children: [
-                                  AppIcon(AppIcons.folder,
-                                      size: 16, color: AppColors.textMuted),
-                                  SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      'All Categories',
-                                      style: TextStyle(
-                                          color: AppColors.offWhite,
-                                          fontSize: 13),
-                                      overflow: TextOverflow.ellipsis,
+                                  AppIcon(HugeIcons.strokeRoundedAddCircle,
+                                      size: 14, color: activeAccent),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'New Bundle',
+                                    style: TextStyle(
+                                      color: activeAccent,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            ...ItemType.values.map(
-                              (t) => DropdownMenuItem<ItemType?>(
-                                value: t,
-                                child: Row(
-                                  children: [
-                                    AppIcon(_getTypeIcon(t),
-                                        size: 16,
-                                        color: AppColors.orangeAccent),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        t.label,
-                                        style: const TextStyle(
-                                            color: AppColors.offWhite,
-                                            fontSize: 13),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
                           ],
-                          onChanged: (val) => setState(() => _filterType = val),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-
-                      // Sort Direction Button
-                      OutlinedButton.icon(
-                        onPressed: () =>
-                            setState(() => _sortDescending = !_sortDescending),
-                        icon: AppIcon(
-                            _sortDescending
-                                ? AppIcons.chevronDown
-                                : AppIcons.chevronUp,
-                            size: 16,
-                            color: AppColors.orangeAccent),
-                        label: Text(_sortDescending ? 'Newest' : 'Oldest',
-                            style: const TextStyle(
-                                fontSize: 12, color: AppColors.offWhite)),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 12),
-                          side: BorderSide(
-                              color:
-                                  AppColors.borderZinc.withValues(alpha: 0.5)),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
+                        const SizedBox(height: 8),
+                        Expanded(
+                          child: bundleMap.isEmpty
+                              ? Center(
+                                  child: Container(
+                                    margin: const EdgeInsets.all(16),
+                                    padding: const EdgeInsets.all(24),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.surfaceZinc,
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(
+                                          color: AppColors.borderZinc,
+                                          width: 1),
+                                    ),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Container(
+                                          width: 56,
+                                          height: 56,
+                                          decoration: BoxDecoration(
+                                            color: activeAccent.withValues(
+                                                alpha: 0.1),
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                                color: activeAccent.withValues(
+                                                    alpha: 0.3)),
+                                          ),
+                                          child: Center(
+                                            child: AppIcon(
+                                              HugeIcons.strokeRoundedFolder01,
+                                              size: 28,
+                                              color: activeAccent,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 16),
+                                        const Text(
+                                          'No Credential Bundles Yet',
+                                          style: TextStyle(
+                                            color: AppColors.offWhite,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        const Text(
+                                          'Group related credentials across categories (e.g. Housework: Mom\'s ID, Gmail, Yahoo login) encrypted together.',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            color: AppColors.textMuted,
+                                            fontSize: 12,
+                                            height: 1.4,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 18),
+                                        ElevatedButton.icon(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: activeAccent,
+                                            foregroundColor: Colors.white,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                            ),
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 16, vertical: 10),
+                                          ),
+                                          icon: const AppIcon(
+                                              HugeIcons.strokeRoundedAdd01,
+                                              size: 16,
+                                              color: Colors.white),
+                                          label: const Text(
+                                              'Create First Bundle',
+                                              style: TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.bold)),
+                                          onPressed: () =>
+                                              _createNewBundlePrompt(key),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                )
+                              : ListView(
+                                  children: bundleMap.entries.map((entry) {
+                                    final bName = entry.key;
+                                    final bItems = entry.value;
+                                    final typeSet = bItems
+                                        .map((i) =>
+                                            ItemTypeExt.fromString(i.type)
+                                                .label)
+                                        .toSet()
+                                        .toList();
+                                    return Container(
+                                      margin: const EdgeInsets.only(bottom: 10),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF15151B),
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(
+                                          color: AppColors.borderZinc
+                                              .withValues(alpha: 0.5),
+                                          width: 1,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black
+                                                .withValues(alpha: 0.3),
+                                            blurRadius: 6,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: HoldToAirshareDetector(
+                                        onTap: () =>
+                                            _navigateToBundle(key, bName),
+                                        onHold3Seconds: _navigateToAirShareSend,
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 14, vertical: 12),
+                                          child: Row(
+                                            children: [
+                                              Container(
+                                                width: 46,
+                                                height: 46,
+                                                decoration: BoxDecoration(
+                                                  color: activeAccent
+                                                      .withValues(alpha: 0.12),
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                  border:
+                                                      VaultBorders.allAccent(
+                                                          activeAccent,
+                                                          opacity: 0.3),
+                                                ),
+                                                child: Center(
+                                                  child: AppIcon(
+                                                    HugeIcons
+                                                        .strokeRoundedFolder01,
+                                                    size: 24,
+                                                    color: activeAccent,
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Row(
+                                                      children: [
+                                                        Expanded(
+                                                          child: Text(
+                                                            bName,
+                                                            maxLines: 1,
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
+                                                            style:
+                                                                const TextStyle(
+                                                              color: AppColors
+                                                                  .offWhite,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w700,
+                                                              fontSize: 14.5,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        Container(
+                                                          padding:
+                                                              const EdgeInsets
+                                                                  .symmetric(
+                                                                  horizontal: 7,
+                                                                  vertical: 2),
+                                                          decoration:
+                                                              BoxDecoration(
+                                                            color: activeAccent
+                                                                .withValues(
+                                                                    alpha:
+                                                                        0.15),
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        20),
+                                                            border: Border.all(
+                                                              color: activeAccent
+                                                                  .withValues(
+                                                                      alpha:
+                                                                          0.3),
+                                                            ),
+                                                          ),
+                                                          child: Text(
+                                                            '${bItems.length}',
+                                                            style: TextStyle(
+                                                              fontSize: 10,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold,
+                                                              color:
+                                                                  activeAccent,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    const SizedBox(height: 4),
+                                                    Text(
+                                                      typeSet.isEmpty
+                                                          ? 'Empty bundle'
+                                                          : typeSet.join(' • '),
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: const TextStyle(
+                                                        color:
+                                                            AppColors.textMuted,
+                                                        fontSize: 11.5,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              GestureDetector(
+                                                onTap: () =>
+                                                    _openBundleSettings(
+                                                        key, bName, bItems),
+                                                child: Container(
+                                                  width: 30,
+                                                  height: 30,
+                                                  decoration: BoxDecoration(
+                                                    color: AppColors.cardZinc,
+                                                    shape: BoxShape.circle,
+                                                    border: Border.all(
+                                                        color: AppColors
+                                                            .borderZinc),
+                                                  ),
+                                                  child: const Center(
+                                                    child: AppIcon(
+                                                        AppIcons.chevronRight,
+                                                        size: 14,
+                                                        color: AppColors
+                                                            .textMuted),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
                         ),
-                      ),
-                      const SizedBox(width: 6),
-
-                      // Grid/List View Toggle Button
-                      OutlinedButton.icon(
-                        onPressed: () =>
-                            setState(() => _isGridView = !_isGridView),
-                        icon: AppIcon(
-                            _isGridView
-                                ? HugeIcons.strokeRoundedListView
-                                : HugeIcons.strokeRoundedGridView,
-                            size: 16,
-                            color: AppColors.orangeAccent),
-                        label: Text(_isGridView ? 'List' : 'Grid',
-                            style: const TextStyle(
-                                fontSize: 12, color: AppColors.offWhite)),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 12),
-                          side: BorderSide(
-                              color:
-                                  AppColors.borderZinc.withValues(alpha: 0.5)),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
-            ),
-
-            // Listing Area
-            Expanded(
-              child: items.isEmpty
-                  ? const Center(
-                      child: Text('No matching items',
-                          style: TextStyle(color: AppColors.textMuted)),
-                    )
-                  : _isGridView
-                      ? GridView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 140),
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
-                            childAspectRatio: 1.1,
-                          ),
-                          itemCount: items.length,
-                          itemBuilder: (context, index) {
-                            final item = items[index];
-                            final type = ItemTypeExt.fromString(item.type);
-                            final sub = item.fields['username']?.toString() ??
-                                item.fields['cardholder']?.toString() ??
-                                '••••••••';
-                            return Card(
-                              color: AppColors.surfaceZinc,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                side: BorderSide(
-                                    color: AppColors.borderZinc
-                                        .withValues(alpha: 0.5)),
-                              ),
-                              child: InkWell(
-                                onTap: () => _viewItem(key, item),
-                                borderRadius: BorderRadius.circular(16),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(14),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          AppIcon(_getTypeIcon(type),
-                                              color: AppColors.orangeAccent,
-                                              size: 20),
-                                          const Spacer(),
-                                          const AppIcon(AppIcons.shield,
-                                              size: 14,
-                                              color: AppColors.textMuted),
-                                        ],
-                                      ),
-                                      const Spacer(),
-                                      Text(
-                                        item.title,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            color: AppColors.offWhite),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        sub,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                            fontSize: 11,
-                                            color: AppColors.textMuted),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 140),
-                          itemCount: items.length,
-                          itemBuilder: (context, index) {
-                            final item = items[index];
-                            return _ItemTile(
-                              item: item,
-                              onTap: () => _viewItem(key, item),
-                              onDelete: () => _deleteItem(key, item),
-                              index: index,
-                            );
-                          },
-                        ),
             ),
           ],
         );
       },
     );
   }
-
-  // --- TAB 2: PASSWORD GENERATOR (Useful Tool Screen) ---
-  Widget _buildGeneratorTab() {
-    return const _GeneratorToolTab();
-  }
-
-  dynamic _getTypeIcon(ItemType type) {
-    switch (type) {
-      case ItemType.login:
-        return AppIcons.categoryLogin;
-      case ItemType.card:
-        return AppIcons.categoryCard;
-      case ItemType.identity:
-        return AppIcons.categoryIdentity;
-      case ItemType.note:
-        return AppIcons.categoryNote;
-      case ItemType.developerSecret:
-        return AppIcons.key;
-    }
-  }
 }
 
-// --- PASSWORD GENERATOR COMPONENT ---
-enum _GeneratorMode { password, passphrase, pin }
-
-class _GeneratorToolTab extends ConsumerStatefulWidget {
-  const _GeneratorToolTab();
-
-  @override
-  ConsumerState<_GeneratorToolTab> createState() => _GeneratorToolTabState();
-}
-
-class _GeneratorToolTabState extends ConsumerState<_GeneratorToolTab> {
-  _GeneratorMode _mode = _GeneratorMode.password;
-
-  // Password options
-  double _passwordLength = 16;
-  bool _includeUpper = true;
-  bool _includeLower = true;
-  bool _includeDigits = true;
-  bool _includeSymbols = true;
-  bool _excludeAmbiguous = false;
-
-  // Passphrase options
-  double _wordCount = 4;
-  String _separator = '-';
-  bool _capitalizePassphrase = true;
-  bool _includePassphraseNumber = true;
-
-  // PIN options
-  double _pinLength = 6;
-
-  String _generatedSecret = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _regenerate();
-  }
-
-  void _regenerate() {
-    String result = '';
-    switch (_mode) {
-      case _GeneratorMode.password:
-        result = GeneratorService.generatePassword(
-          length: _passwordLength.round(),
-          includeUppercase: _includeUpper,
-          includeLowercase: _includeLower,
-          includeDigits: _includeDigits,
-          includeSymbols: _includeSymbols,
-          excludeAmbiguous: _excludeAmbiguous,
-        );
-        break;
-      case _GeneratorMode.passphrase:
-        result = GeneratorService.generatePassphrase(
-          wordCount: _wordCount.round(),
-          separator: _separator,
-          capitalize: _capitalizePassphrase,
-          includeNumber: _includePassphraseNumber,
-        );
-        break;
-      case _GeneratorMode.pin:
-        result = GeneratorService.generatePIN(
-          length: _pinLength.round(),
-        );
-        break;
-    }
-    setState(() => _generatedSecret = result);
-  }
-
-  double get _secretFontSize {
-    final len = _generatedSecret.length;
-    if (len <= 12) return 20;
-    if (len <= 18) return 16;
-    if (len <= 26) return 14;
-    if (len <= 34) return 12.5;
-    return 11;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final activeAccent = Theme.of(context).colorScheme.primary;
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 140),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'GENERATOR',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.2,
-              color: AppColors.textMuted,
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // Mode Selector Segmented Pill Bar
-          Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceZinc,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                  color: AppColors.borderZinc.withValues(alpha: 0.5)),
-            ),
-            child: Row(
-              children: [
-                _buildModeOption(
-                  mode: _GeneratorMode.password,
-                  icon: HugeIcons.strokeRoundedLock,
-                  activeAccent: activeAccent,
-                ),
-                _buildModeOption(
-                  mode: _GeneratorMode.passphrase,
-                  icon: HugeIcons.strokeRoundedText,
-                  activeAccent: activeAccent,
-                ),
-                _buildModeOption(
-                  mode: _GeneratorMode.pin,
-                  icon: HugeIcons.strokeRoundedPinCode,
-                  activeAccent: activeAccent,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Generated Output Box
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceZinc,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: AppColors.borderZinc,
-                width: 1,
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Container(
-                  constraints: const BoxConstraints(minHeight: 52),
-                  alignment: Alignment.center,
-                  child: SelectableText(
-                    _generatedSecret,
-                    style: TextStyle(
-                      fontSize: _secretFontSize,
-                      fontFamily: 'Monospace',
-                      fontWeight: FontWeight.bold,
-                      color: activeAccent,
-                      letterSpacing: _mode == _GeneratorMode.pin ? 3.0 : 0.5,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                // Real-Time Strength Meter
-                PasswordStrengthMeter(
-                  password: _generatedSecret,
-                  compact: true,
-                  showRecommendation: false,
-                ),
-
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () {
-                          HapticFeedback.lightImpact();
-                          _regenerate();
-                        },
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.offWhite,
-                          side: const BorderSide(color: AppColors.borderZinc),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                        ),
-                        child: const AppIcon(HugeIcons.strokeRoundedRefresh,
-                            size: 20),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: AppButton(
-                        icon: HugeIcons.strokeRoundedCopy01,
-                        label: '',
-                        fontSize: 16,
-                        fullWidth: true,
-                        height: 46,
-                        onPressed: () {
-                          ref
-                              .read(lockServiceProvider)
-                              .copySecret(_generatedSecret);
-                          HapticFeedback.selectionClick();
-                          AppToast.show(
-                            context,
-                            message: 'Copied to clipboard',
-                            type: ToastType.success,
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Dynamic Options based on selected Mode
-          if (_mode == _GeneratorMode.password) ...[
-            _buildSliderRow(
-              title: 'Length',
-              value: '${_passwordLength.round()}',
-              activeAccent: activeAccent,
-            ),
-            Slider(
-              value: _passwordLength,
-              min: 6,
-              max: 64,
-              activeColor: activeAccent,
-              onChanged: (val) {
-                setState(() => _passwordLength = val);
-                _regenerate();
-              },
-            ),
-            const SizedBox(height: 6),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _buildIconToggle(
-                  icon: HugeIcons.strokeRoundedArrangeByLettersAZ,
-                  label: 'A-Z',
-                  selected: _includeUpper,
-                  tooltip: 'Uppercase (A-Z)',
-                  onTap: () {
-                    setState(() => _includeUpper = !_includeUpper);
-                    _regenerate();
-                  },
-                ),
-                _buildIconToggle(
-                  icon: HugeIcons.strokeRoundedArrangeByLettersZA,
-                  label: 'a-z',
-                  selected: _includeLower,
-                  tooltip: 'Lowercase (a-z)',
-                  onTap: () {
-                    setState(() => _includeLower = !_includeLower);
-                    _regenerate();
-                  },
-                ),
-                _buildIconToggle(
-                  icon: HugeIcons.strokeRoundedArrangeByNumbers19,
-                  label: '0-9',
-                  selected: _includeDigits,
-                  tooltip: 'Numbers (0-9)',
-                  onTap: () {
-                    setState(() => _includeDigits = !_includeDigits);
-                    _regenerate();
-                  },
-                ),
-                _buildIconToggle(
-                  icon: HugeIcons.strokeRoundedAsterisk,
-                  label: '!#\$',
-                  selected: _includeSymbols,
-                  tooltip: 'Symbols',
-                  onTap: () {
-                    setState(() => _includeSymbols = !_includeSymbols);
-                    _regenerate();
-                  },
-                ),
-                _buildIconToggle(
-                  icon: HugeIcons.strokeRoundedBlocked,
-                  label: 'SAFE',
-                  selected: _excludeAmbiguous,
-                  tooltip: 'Exclude ambiguous characters',
-                  onTap: () {
-                    setState(() => _excludeAmbiguous = !_excludeAmbiguous);
-                    _regenerate();
-                  },
-                ),
-              ],
-            ),
-          ] else if (_mode == _GeneratorMode.passphrase) ...[
-            _buildSliderRow(
-              title: 'Words',
-              value: '${_wordCount.round()}',
-              activeAccent: activeAccent,
-            ),
-            Slider(
-              value: _wordCount,
-              min: 3,
-              max: 8,
-              divisions: 5,
-              activeColor: activeAccent,
-              onChanged: (val) {
-                setState(() => _wordCount = val);
-                _regenerate();
-              },
-            ),
-            const SizedBox(height: 6),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Row(
-                children: [
-                  const Text(
-                    'SEPARATOR',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.0,
-                      color: AppColors.textMuted,
-                    ),
-                  ),
-                  const Spacer(),
-                  for (final sep in ['-', '.', '_', ' '])
-                    GestureDetector(
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        setState(() => _separator = sep);
-                        _regenerate();
-                      },
-                      child: Container(
-                        margin: const EdgeInsets.only(left: 6),
-                        width: 36,
-                        height: 28,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: _separator == sep
-                              ? activeAccent
-                              : AppColors.surfaceZinc,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: _separator == sep
-                                ? AppColors.orangeDark
-                                : AppColors.borderZinc,
-                          ),
-                        ),
-                        child: Text(
-                          sep == ' ' ? 'SPC' : sep,
-                          style: TextStyle(
-                            color: _separator == sep
-                                ? Colors.white
-                                : AppColors.offWhite,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _buildIconToggle(
-                  icon: HugeIcons.strokeRoundedTextFont,
-                  label: 'TITLE',
-                  selected: _capitalizePassphrase,
-                  tooltip: 'Capitalize each word',
-                  onTap: () {
-                    setState(
-                        () => _capitalizePassphrase = !_capitalizePassphrase);
-                    _regenerate();
-                  },
-                ),
-                _buildIconToggle(
-                  icon: HugeIcons.strokeRoundedArrangeByNumbers19,
-                  label: '+123',
-                  selected: _includePassphraseNumber,
-                  tooltip: 'Append 4-digit number',
-                  onTap: () {
-                    setState(() =>
-                        _includePassphraseNumber = !_includePassphraseNumber);
-                    _regenerate();
-                  },
-                ),
-              ],
-            ),
-          ] else if (_mode == _GeneratorMode.pin) ...[
-            _buildSliderRow(
-              title: 'Digits',
-              value: '${_pinLength.round()}',
-              activeAccent: activeAccent,
-            ),
-            Slider(
-              value: _pinLength,
-              min: 4,
-              max: 12,
-              divisions: 8,
-              activeColor: activeAccent,
-              onChanged: (val) {
-                setState(() => _pinLength = val);
-                _regenerate();
-              },
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildModeOption({
-    required _GeneratorMode mode,
-    required dynamic icon,
-    required Color activeAccent,
-  }) {
-    final isSelected = _mode == mode;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          setState(() => _mode = mode);
-          _regenerate();
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: isSelected ? AppColors.orangeAccent : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: isSelected ? AppColors.orangeAccent : Colors.transparent,
-              width: 1,
-            ),
-          ),
-          child: Center(
-            child: AppIcon(
-              icon,
-              size: 22,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Compact generator toggle: glyph + always-visible micro-caption (so the
-  /// option is self-explanatory without long-pressing), plus a tooltip with
-  /// the full description. Selected = accent fill + white, else muted outline.
-  Widget _buildIconToggle({
-    required dynamic icon,
-    required String label,
-    required bool selected,
-    required String tooltip,
-    required VoidCallback onTap,
-  }) {
-    final fg = selected ? Colors.white : AppColors.textMuted;
-    return Tooltip(
-      message: tooltip,
-      child: GestureDetector(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          width: 58,
-          height: 50,
-          decoration: BoxDecoration(
-            color: selected ? AppColors.orangeAccent : AppColors.surfaceZinc,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: selected ? AppColors.orangeDark : AppColors.borderZinc,
-              width: 1,
-            ),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              AppIcon(icon, size: 18, color: fg),
-              const SizedBox(height: 3),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.4,
-                  color: fg,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSliderRow({
-    required String title,
-    required String value,
-    required Color activeAccent,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              color: AppColors.offWhite,
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: activeAccent,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.orangeDark),
-            ),
-            child: Text(
-              value,
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 12.5,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CategorySummaryCard extends StatelessWidget {
-  final String title;
-  final int count;
-  final dynamic icon;
-  final Color? accentColor;
-  final bool isSelected;
-  final VoidCallback onTap;
-  final String? subtitle;
-
-  const _CategorySummaryCard({
-    required this.title,
-    required this.count,
-    required this.icon,
-    this.accentColor,
-    this.isSelected = false,
-    required this.onTap,
-    this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final effectiveAccent =
-        accentColor ?? Theme.of(context).colorScheme.primary;
-
-    return Container(
-      width: 114,
-      height: 96,
-      margin: const EdgeInsets.only(right: 10),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: isSelected ? effectiveAccent : AppColors.surfaceZinc,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isSelected ? effectiveAccent : AppColors.borderZinc,
-              width: isSelected ? 1.5 : 1.0,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  AppIcon(icon, size: 36),
-                  Text(
-                    '$count',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 16,
-                      color: isSelected ? Colors.white : AppColors.offWhite,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: isSelected ? Colors.white : AppColors.offWhite,
-                  letterSpacing: -0.1,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ItemTile extends StatelessWidget {
-  final DecryptedItem item;
-  final VoidCallback onTap;
-  final VoidCallback onDelete;
-  final int index;
-
-  const _ItemTile({
-    required this.item,
-    required this.onTap,
-    required this.onDelete,
-    required this.index,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final type = ItemTypeExt.fromString(item.type);
-    final subtitle = item.fields['username']?.toString() ??
-        item.fields['cardholder']?.toString() ??
-        '••••••••••••';
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceZinc,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderZinc.withValues(alpha: 0.5)),
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        leading: AppIcon(_getTypeIcon(type), size: 42),
-        title: Text(
-          item.title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: 14,
-            color: AppColors.offWhite,
-            letterSpacing: -0.1,
-          ),
-        ),
-        subtitle: Text(
-          subtitle,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
-        ),
-        trailing: const AppIcon(AppIcons.chevronRight,
-            color: AppColors.textMuted, size: 18),
-        onTap: onTap,
-      ),
-    );
-  }
-
-  dynamic _getTypeIcon(ItemType type) {
-    switch (type) {
-      case ItemType.login:
-        return AppIcons.categoryLogin;
-      case ItemType.card:
-        return AppIcons.categoryCard;
-      case ItemType.identity:
-        return AppIcons.categoryIdentity;
-      case ItemType.note:
-        return AppIcons.categoryNote;
-      case ItemType.developerSecret:
-        return AppIcons.key;
-    }
-  }
+class _DashboardData {
+  final List<DecryptedItem> items;
+  final List<String> registeredBundles;
+  const _DashboardData({required this.items, required this.registeredBundles});
 }

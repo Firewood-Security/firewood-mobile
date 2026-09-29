@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  V-032: explicit network security posture for the platform stack
+  (HttpsURLConnection / anything honoring the manifest config).
+
+  Base config: cleartext is denied everywhere; only the system CA store
+  anchors trust (no user-installed CAs — this device is a password vault,
+  and a user-installed CA would otherwise enable local TLS interception).
+
+  dart:io traffic (Dart HttpClient, sockets) is NOT governed by this file —
+  it is constrained in code instead: update downloads require https on the
+  pinned host with an Ed25519-signed manifest and SHA-256 artifact check
+  (V-013), AirShare is loopback/LAN-only behind single-shot receiver tokens
+  (V-005), and the desktop bridge binds localhost (V-002).
+
+  Pinning is deliberately NOT enabled: it breaks silently on CA rotation
+  unless backup pins are maintained, and update content is already
+  protected independently of TLS by the pinned-key manifest signature
+  (V-013). To opt in later, add a domain-config pin-set with at least a
+  primary AND backup pin, e.g.:
+
+      <domain-config>
+          <domain includeSubdomains="true">firewood.aburcloud.com</domain>
+          <pin-set digest="SHA-256" valid-at="2026-01-01">
+              <pin>PRIMARY_SPKI_PIN_BASE64</pin>
+              <pin>BACKUP_SPKI_PIN_BASE64</pin>
+          </pin-set>
+      </domain-config>
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system"/>
+        </trust-anchors>
+    </base-config>
+    <!-- The one server Firewood talks to; cleartext stays denied here too
+         (redundant with base-config, kept explicit for readability). -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">firewood.aburcloud.com</domain>
+    </domain-config>
+</network-security-config>

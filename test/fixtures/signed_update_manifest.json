@@ -1,0 +1,11 @@
+{
+  "version": "1.0.0",
+  "buildNumber": 42,
+  "releaseNotes": "• security fixes",
+  "downloadUrl": "/downloads/firewood-latest-android.apk",
+  "sha256": "fbc34a9a500e23329b18ccefe171001584589546b2eee4d380b53e2068b68255",
+  "mandatory": false,
+  "publishedAt": "2026-09-27T00:00:00Z",
+  "commit": "0000000",
+  "signature": "VO9Gr8vobazSB9+Y64oEMzmT6qGZORkfamQAAwY17KU12BGhTbZTyyjI8VdSFBHKxz87MSdreYUYP7YRE0tDAg=="
+}

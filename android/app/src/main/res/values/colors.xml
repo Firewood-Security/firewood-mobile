@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Firewood dark launch background color - matches app background #1A1A1A -->
-    <color name="launch_background_color">#FF1A1A1A</color>
+    <!-- Firewood launch background - dark matte #0C0C0E -->
+    <color name="launch_background_color">#FF0C0C0E</color>
+    <!-- Deep Orange background for app launcher icon -->
+    <color name="ic_launcher_background">#FFFF5722</color>
 </resources>

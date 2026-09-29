@@ -197,7 +197,8 @@ class FileCryptoService {
       masterPassword: masterPassword,
       path: path,
     );
-    final target = await _resolveExtractPath(outputPath, content.metadata.fileName);
+    final target =
+        await _resolveExtractPath(outputPath, content.metadata.fileName);
     await File(target).writeAsBytes(content.bytes, flush: true);
     return target;
   }
@@ -209,36 +210,54 @@ class FileCryptoService {
           : '$outputPath$fileExtension';
     }
     final dir = await firewoodDirectory();
-    final safe = _sanitize(fileName);
-    final stamp = DateTime.now()
-        .toIso8601String()
-        .replaceAll(':', '-')
-        .split('.')
-        .first;
+    final safe = sanitizeFileName(fileName);
+    final stamp =
+        DateTime.now().toIso8601String().replaceAll(':', '-').split('.').first;
     return '${dir.path}/$safe-$stamp$fileExtension';
   }
 
-  Future<String> _resolveExtractPath(String? outputPath, String fileName) async {
+  Future<String> _resolveExtractPath(
+      String? outputPath, String fileName) async {
     if (outputPath != null && outputPath.isNotEmpty) return outputPath;
     final dir = await firewoodDirectory();
-    return '${dir.path}/${_sanitize(fileName)}';
+    return '${dir.path}/${sanitizeFileName(fileName)}';
   }
 
-  String _sanitize(String name) {
-    final clean = name.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
-    return clean.isEmpty ? 'unnamed' : clean;
+  /// Sanitizes an untrusted file name for safe use as a single path segment
+  /// (V-031): strips everything outside `[A-Za-z0-9._-]` (path separators,
+  /// traversal sequences), removes leading dots so a hostile name can never
+  /// plant a hidden file (`.bashrc` → `bashrc`), and maps empty / `.` / `..`
+  /// remnants to `unnamed`.
+  static String sanitizeFileName(String name) {
+    final clean = name
+        .replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_')
+        .replaceFirst(RegExp(r'^\.+'), '');
+    if (clean.isEmpty || clean == '.' || clean == '..') return 'unnamed';
+    return clean;
   }
 
-  /// Public Downloads/Firewood folder, falling back to app documents.
+  /// Directory for decrypted extracts and `.firewood` containers.
+  ///
+  /// V-021: on Android this is app-private documents storage — NOT the old
+  /// public `/storage/emulated/0/Download/Firewood`, which was readable by
+  /// any file manager/MTP client and survived uninstall. Decrypted bytes
+  /// must never land in shared storage by default; handing a file to the
+  /// outside world happens through an explicit user-chosen picker at that
+  /// moment (Storage Access Framework — e.g. the P2P receive flow's
+  /// `FilePicker.getDirectoryPath()`, or `FilePicker.saveFile(bytes:)` for
+  /// a save dialog), never as a resting place.
   Future<Directory> firewoodDirectory() async {
     try {
       if (Platform.isAndroid) {
-        final downloadDir = Directory('/storage/emulated/0/Download/Firewood');
-        if (!await downloadDir.exists()) {
-          await downloadDir.create(recursive: true);
+        final dir = Directory(
+            '${(await getApplicationDocumentsDirectory()).path}/Firewood');
+        if (!await dir.exists()) {
+          await dir.create(recursive: true);
         }
-        return downloadDir;
+        return dir;
       } else if (!Platform.isIOS) {
+        // Desktop: the user's own Downloads folder (same machine, same user)
+        // — not a shared multi-app surface like Android's media storage.
         final downloads = await getDownloadsDirectory();
         if (downloads != null) {
           final dir = Directory('${downloads.path}/Firewood');
@@ -254,9 +273,7 @@ class FileCryptoService {
 
   Future<String> _sha256Hex(List<int> bytes) async {
     final hash = await Sha256().hash(bytes);
-    return hash.bytes
-        .map((b) => b.toRadixString(16).padLeft(2, '0'))
-        .join();
+    return hash.bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
   }
 }
 

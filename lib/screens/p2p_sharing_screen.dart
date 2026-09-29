@@ -10,9 +10,15 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 
+import '../theme/app_icons.dart';
+import '../theme/app_theme.dart';
+import '../widgets/vault_components.dart';
 import '../services/backup_service.dart';
+import '../services/lock_service.dart';
 import '../services/ble_p2p_service.dart';
 import '../services/file_crypto_service.dart';
 import '../widgets/airshare_modal.dart';
@@ -113,13 +119,15 @@ class _P2pSharingScreenState extends State<P2pSharingScreen> {
     });
   }
 
-  Future<String?> _promptPassword(String title, {String hint = 'Password'}) async {
+  Future<String?> _promptPassword(String title,
+      {String hint = 'Password'}) async {
     final controller = TextEditingController();
     final value = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF18181B),
-        title: Text(title, style: const TextStyle(color: Colors.white, fontSize: 16)),
+        title: Text(title,
+            style: const TextStyle(color: Colors.white, fontSize: 16)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -145,7 +153,8 @@ class _P2pSharingScreenState extends State<P2pSharingScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: Color(0xFFA1A1AA))),
+            child: const Text('Cancel',
+                style: TextStyle(color: Color(0xFFA1A1AA))),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, controller.text),
@@ -205,9 +214,18 @@ class _P2pSharingScreenState extends State<P2pSharingScreen> {
   }
 
   Future<void> _prepareFileAndScan() async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.any);
+    LockService.beginForegroundFlow();
+    FilePickerResult? result;
+    try {
+      result = await FilePicker.platform.pickFiles(type: FileType.any);
+    } finally {
+      LockService.endForegroundFlow();
+    }
     if (result == null || result.files.isEmpty) return;
-    final path = result.files.single.path;
+    // Hoisted: `result` is assigned in a try block, so its null-promotion
+    // does not survive into the setState closure below.
+    final pickedFile = result.files.single;
+    final path = pickedFile.path;
     if (path == null) return;
 
     final password = await _promptPassword(
@@ -218,7 +236,7 @@ class _P2pSharingScreenState extends State<P2pSharingScreen> {
 
     setState(() {
       _stage = _P2pStage.working;
-      _title = 'Sending ${result.files.single.name}';
+      _title = 'Sending ${pickedFile.name}';
       _step = 'Encrypting file…';
       _progress = 0;
       _devices.clear();
@@ -241,7 +259,8 @@ class _P2pSharingScreenState extends State<P2pSharingScreen> {
         outputPath: '${_tempDir!.path}/container',
       );
       final payloadBytes = await File(container.path).readAsBytes();
-      final safeName = result.files.single.name.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
+      final safeName =
+          result.files.single.name.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
 
       setState(() {
         _pendingPayload = (fileName: '$safeName.firewood', bytes: payloadBytes);
@@ -280,7 +299,8 @@ class _P2pSharingScreenState extends State<P2pSharingScreen> {
         fileName: payload.fileName,
         bytes: payload.bytes,
         onProgress: (sent, total) {
-          if (mounted) setState(() => _progress = total == 0 ? 0 : sent / total);
+          if (mounted)
+            setState(() => _progress = total == 0 ? 0 : sent / total);
         },
       );
 
@@ -329,23 +349,389 @@ class _P2pSharingScreenState extends State<P2pSharingScreen> {
       if (!mounted) return;
       setState(() => _step = 'Saving ${received.fileName}…');
 
-      final savePath = await FilePicker.platform.getDirectoryPath();
+      LockService.beginForegroundFlow();
+      String? savePath;
+      try {
+        savePath = await FilePicker.platform.getDirectoryPath();
+      } finally {
+        LockService.endForegroundFlow();
+      }
       if (savePath == null) {
         _reset();
         return;
       }
-      final file = File('$savePath/${received.fileName}');
+      // V-031: the name arrives inside the BLE frame — treat it as hostile.
+      // Sanitize to a bare path segment (no separators, no traversal, no
+      // leading dot), then assert the joined path stays inside the folder
+      // the user picked before writing a single byte.
+      final safeName = FileCryptoService.sanitizeFileName(received.fileName);
+      if (safeName == '.' ||
+          safeName == '..' ||
+          safeName.contains('/') ||
+          safeName.contains(r'\')) {
+        throw const BleException('Peer sent an invalid file name');
+      }
+      final canonicalBase = await Directory(savePath).resolveSymbolicLinks();
+      final file = File('$canonicalBase${Platform.pathSeparator}$safeName');
+      // Containment assert (defense in depth if the sanitizer ever loosens):
+      if (!file.path.startsWith('$canonicalBase${Platform.pathSeparator}')) {
+        throw const BleException('Refusing to write outside the chosen folder');
+      }
       await file.writeAsBytes(received.bytes, flush: true);
+      final savedDisplay = file.path;
 
       if (!mounted) return;
       setState(() {
         _stage = _P2pStage.done;
         _progress = 1;
-        _result = 'Saved ${received.fileName} to $savePath';
+        // Show what was actually written (sanitized name, canonical folder)
+        // rather than the peer-supplied label.
+        _result = 'Saved $savedDisplay';
       });
     } catch (e) {
       _fail(e);
     }
+  }
+
+  void _showAirShareGuide(BuildContext context) {
+    HapticFeedback.lightImpact();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surfaceZinc,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.orangeAccent.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: HugeIcon(
+                    icon: HugeIcons.strokeRoundedBookOpen01,
+                    size: 18,
+                    color: AppColors.orangeAccent,
+                    strokeWidth: 2,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'AirShare Guide',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.offWhite,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Encrypted peer-to-peer sharing',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _buildGuideStep('1', 'Instant QR Transfer',
+                'Sender picks a credential and scans the receiver QR code over local Wi-Fi.'),
+            _buildGuideStep('2', 'Offline Bluetooth Vault',
+                'Both devices enable Bluetooth to transfer an entire encrypted vault archive without internet.'),
+            _buildGuideStep('3', 'Zero-Knowledge Security',
+                'Peer-to-peer with ephemeral in-memory encryption (X25519 + ChaCha20). Zero cloud relays.'),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.orangeAccent,
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text(
+                'Got It',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGuideStep(String step, String title, String desc) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.cardZinc,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.borderZinc.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: AppColors.orangeAccent.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: AppColors.orangeAccent.withValues(alpha: 0.4),
+              ),
+            ),
+            child: Center(
+              child: Text(
+                step,
+                style: TextStyle(
+                  color: AppColors.orangeAccent,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: AppColors.offWhite,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  desc,
+                  style: const TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 12,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showBluetoothSheet(BuildContext context) {
+    HapticFeedback.lightImpact();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surfaceZinc,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.orangeAccent.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: HugeIcon(
+                    icon: HugeIcons.strokeRoundedBluetooth,
+                    size: 18,
+                    color: AppColors.orangeAccent,
+                    strokeWidth: 2,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Bluetooth Transfer',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.offWhite,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Offline peer-to-peer exchange',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            _buildBluetoothOption(
+              icon: HugeIcons.strokeRoundedUpload04,
+              title: 'Send Vault',
+              subtitle:
+                  'Export and transmit encrypted vault to a nearby device',
+              onTap: () {
+                Navigator.pop(ctx);
+                _prepareVaultAndScan();
+              },
+            ),
+            const SizedBox(height: 10),
+            _buildBluetoothOption(
+              icon: HugeIcons.strokeRoundedDownload04,
+              title: 'Receive Vault',
+              subtitle:
+                  'Listen for incoming vault transfers and save to device',
+              onTap: () {
+                Navigator.pop(ctx);
+                _receive();
+              },
+            ),
+            const SizedBox(height: 10),
+            _buildBluetoothOption(
+              icon: HugeIcons.strokeRoundedFile01,
+              title: 'Send Encrypted File',
+              subtitle: 'Encrypt and transfer any file via Bluetooth P2P',
+              onTap: () {
+                Navigator.pop(ctx);
+                _prepareFileAndScan();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBluetoothOption({
+    required dynamic icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        splashColor: AppColors.orangeAccent.withValues(alpha: 0.1),
+        highlightColor: AppColors.orangeAccent.withValues(alpha: 0.05),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.cardZinc,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppColors.borderZinc.withValues(alpha: 0.4),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceZinc,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: AppColors.borderZinc.withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Center(
+                  child: HugeIcon(
+                    icon: icon,
+                    color: AppColors.orangeAccent,
+                    size: 20,
+                    strokeWidth: 2,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: AppColors.offWhite,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 11.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const HugeIcon(
+                icon: HugeIcons.strokeRoundedArrowRight01,
+                color: AppColors.textMuted,
+                size: 16,
+                strokeWidth: 2,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   // ---------- build ----------
@@ -356,189 +742,91 @@ class _P2pSharingScreenState extends State<P2pSharingScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFF09090B),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF18181B),
-        title: const Text('P2P Sharing'),
+      appBar: VaultAppBar(
+        title: 'AirShare',
+        leading: IconButton(
+          icon: const AppIcon(AppIcons.arrowLeft,
+              color: AppColors.offWhite, size: 22),
+          onPressed: () => Navigator.pop(context),
+        ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 14),
+            child: Center(
+              child: InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: () => _showAirShareGuide(context),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceZinc,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.borderZinc),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      HugeIcon(
+                        icon: HugeIcons.strokeRoundedInformationCircle,
+                        size: 14,
+                        color: AppColors.orangeAccent,
+                        strokeWidth: 2,
+                      ),
+                      const SizedBox(width: 5),
+                      const Text(
+                        'Guide',
+                        style: TextStyle(
+                          color: AppColors.offWhite,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'Bluetooth Sharing',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
+            // 1. AIRSHARE CARD
+            _SharingOptionCard(
+              tag: 'WI-FI & QR',
+              title: 'AirShare',
+              subtitle:
+                  'Encrypted credential sync via QR code over local Wi-Fi.',
+              icon: HugeIcons.strokeRoundedQrCode,
+              busy: busy,
+              onTap: () {
+                HapticFeedback.lightImpact();
+                AirShareModal.show(context);
+              },
             ),
-            const SizedBox(height: 4),
-            const Text(
-              'Send and receive .firewood files between Firewood devices via BLE.',
-              style: TextStyle(color: Color(0xFFA1A1AA), fontSize: 13),
-            ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 14),
 
-            // AirShare (Spark QR & 4-Digit Flame Code) Hero Card
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E1E24),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFE5533D).withOpacity(0.4)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE5533D).withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(Icons.bolt, color: Color(0xFFE5533D), size: 20),
-                      ),
-                      const SizedBox(width: 10),
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'AirShare (Spark & Flame)',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              'Spark QR + 4-Digit Flame Code',
-                              style: TextStyle(color: Color(0xFFE5533D), fontSize: 10, fontWeight: FontWeight.w600),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    'Over-the-air zero-leak credential transfer. Ephemeral X25519 & ChaCha20-Poly1305 with volatile in-RAM decryption.',
-                    style: TextStyle(color: Color(0xFFA1A1AA), fontSize: 11, height: 1.3),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          icon: const HugeIcon(
-                            icon: HugeIcons.strokeRoundedUpload04,
-                            size: 15,
-                            color: Colors.black,
-                            strokeWidth: 2,
-                          ),
-                          label: const Text('Send Item', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 12)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFE5533D),
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                          ),
-                          onPressed: () => AirShareModal.show(context, role: AirShareRole.send),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          icon: const HugeIcon(
-                            icon: HugeIcons.strokeRoundedDownload04,
-                            size: 15,
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                          label: const Text('Receive', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Color(0xFF3F3F46)),
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                          ),
-                          onPressed: () => AirShareModal.show(context, role: AirShareRole.receive),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Sender card
-            _SharingCard(
-              leadingIcon: const HugeIcon(
-                icon: HugeIcons.strokeRoundedUpload04,
-                color: Color(0xFFFF9163),
-                size: 24,
-                strokeWidth: 1.8,
-              ),
-              title: 'Sender',
-              description: 'Scan for nearby Firewood devices and send an encrypted vault or file.',
-              buttons: [
-                _ActionButton(
-                  label: 'Send Vault',
-                  leadingIcon: const HugeIcon(
-                    icon: HugeIcons.strokeRoundedFolderSecurity,
-                    color: Colors.white,
-                    size: 18,
-                    strokeWidth: 1.8,
-                  ),
-                  primary: true,
-                  enabled: !busy,
-                  onPressed: _prepareVaultAndScan,
-                ),
-                const SizedBox(height: 8),
-                _ActionButton(
-                  label: 'Send File',
-                  leadingIcon: const HugeIcon(
-                    icon: HugeIcons.strokeRoundedFile01,
-                    color: Colors.white70,
-                    size: 18,
-                    strokeWidth: 1.8,
-                  ),
-                  enabled: !busy,
-                  onPressed: _prepareFileAndScan,
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Receiver card
-            _SharingCard(
-              leadingIcon: const HugeIcon(
-                icon: HugeIcons.strokeRoundedDownload04,
-                color: Color(0xFFFF9163),
-                size: 24,
-                strokeWidth: 1.8,
-              ),
-              title: 'Receiver',
-              description: 'Advertise and wait for an incoming transfer from any Firewood device.',
-              buttons: [
-                _ActionButton(
-                  label: 'Receive Vault',
-                  leadingIcon: const HugeIcon(
-                    icon: HugeIcons.strokeRoundedInbox,
-                    color: Colors.white,
-                    size: 18,
-                    strokeWidth: 1.8,
-                  ),
-                  primary: true,
-                  enabled: !busy,
-                  onPressed: _receive,
-                ),
-              ],
+            // 2. BLUETOOTH CARD
+            _SharingOptionCard(
+              tag: 'OFFLINE BLE',
+              title: 'Bluetooth',
+              subtitle:
+                  'Direct device-to-device vault and file exchange without Wi-Fi.',
+              icon: HugeIcons.strokeRoundedBluetooth,
+              busy: busy,
+              onTap: () {
+                HapticFeedback.lightImpact();
+                _showBluetoothSheet(context);
+              },
             ),
 
             // Discovered peers
             if (_devices.isNotEmpty) ...[
-              const SizedBox(height: 24),
+              const SizedBox(height: 18),
               _DeviceList(
                 devices: _devices,
                 onSelect: _sendTo,
@@ -547,7 +835,7 @@ class _P2pSharingScreenState extends State<P2pSharingScreen> {
             ],
 
             if (_stage != _P2pStage.idle) ...[
-              const SizedBox(height: 24),
+              const SizedBox(height: 18),
               _ProcessingPanel(
                 stage: _stage,
                 title: _title,
@@ -560,14 +848,135 @@ class _P2pSharingScreenState extends State<P2pSharingScreen> {
                 onRetry: _reset,
               ),
             ],
-
-            const SizedBox(height: 16),
-            const Text(
-              'App-to-app only — both devices must be running Firewood.',
-              style: TextStyle(color: Color(0xFF71717A), fontSize: 12),
-              textAlign: TextAlign.center,
-            ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SharingOptionCard extends StatelessWidget {
+  final String tag;
+  final String title;
+  final String subtitle;
+  final dynamic icon;
+  final bool busy;
+  final VoidCallback onTap;
+
+  const _SharingOptionCard({
+    required this.tag,
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.busy,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: busy ? null : onTap,
+        borderRadius: BorderRadius.circular(16),
+        splashColor: AppColors.orangeAccent.withValues(alpha: 0.1),
+        highlightColor: AppColors.orangeAccent.withValues(alpha: 0.05),
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 200),
+          opacity: busy ? 0.6 : 1.0,
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: AppColors.cardZinc,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: AppColors.borderZinc.withValues(alpha: 0.6),
+                width: 1,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceZinc,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: AppColors.borderZinc.withValues(alpha: 0.5),
+                        ),
+                      ),
+                      child: Center(
+                        child: HugeIcon(
+                          icon: icon,
+                          color: AppColors.orangeAccent,
+                          size: 24,
+                          strokeWidth: 2,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            tag,
+                            style: GoogleFonts.syncopate(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.2,
+                              color: AppColors.orangeAccent,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            title,
+                            style: const TextStyle(
+                              color: AppColors.offWhite,
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceZinc,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: AppColors.borderZinc.withValues(alpha: 0.4),
+                        ),
+                      ),
+                      child: Center(
+                        child: HugeIcon(
+                          icon: HugeIcons.strokeRoundedArrowRight01,
+                          color: AppColors.offWhite.withValues(alpha: 0.7),
+                          size: 16,
+                          strokeWidth: 2,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -576,100 +985,7 @@ class _P2pSharingScreenState extends State<P2pSharingScreen> {
 
 enum _P2pStage { idle, working, done, error }
 
-// --- Shared widgets (same visual language as desktop) ---
-
-class _SharingCard extends StatelessWidget {
-  final Widget leadingIcon;
-  final String title;
-  final String description;
-  final List<Widget> buttons;
-
-  const _SharingCard({
-    required this.leadingIcon,
-    required this.title,
-    required this.description,
-    required this.buttons,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0xFF18181B),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF3F3F46)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: const Color(0xFFFF5722).withAlpha(31),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFFF5722).withAlpha(89)),
-            ),
-            child: Center(child: leadingIcon),
-          ),
-          const SizedBox(height: 16),
-          Text(title,
-              style: const TextStyle(
-                  color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          Text(description,
-              style: const TextStyle(
-                  color: Color(0xFFA1A1AA), fontSize: 12, height: 1.4)),
-          const SizedBox(height: 16),
-          ...buttons,
-        ],
-      ),
-    );
-  }
-}
-
-class _ActionButton extends StatelessWidget {
-  final String label;
-  final Widget leadingIcon;
-  final bool primary;
-  final bool enabled;
-  final VoidCallback onPressed;
-
-  const _ActionButton({
-    required this.label,
-    required this.leadingIcon,
-    required this.onPressed,
-    this.primary = false,
-    this.enabled = true,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 44,
-      child: ElevatedButton.icon(
-        onPressed: enabled ? onPressed : null,
-        icon: leadingIcon,
-        label: Text(label),
-        style: ElevatedButton.styleFrom(
-          backgroundColor:
-              primary ? const Color(0xFFFF5722) : const Color(0xFF18181B),
-          disabledBackgroundColor: const Color(0xFF242427),
-          foregroundColor: Colors.white,
-          disabledForegroundColor: const Color(0xFF71717A),
-          side: BorderSide(
-            color: primary
-                ? const Color(0xFFFF5722)
-                : const Color(0xFF3F3F46),
-          ),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      ),
-    );
-  }
-}
+// --- Shared widgets ---
 
 class _DeviceList extends StatelessWidget {
   final List<BleDevice> devices;
@@ -687,9 +1003,9 @@ class _DeviceList extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF18181B),
+        color: AppColors.cardZinc,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF3F3F46)),
+        border: Border.all(color: AppColors.borderZinc),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -698,9 +1014,9 @@ class _DeviceList extends StatelessWidget {
             children: [
               const Expanded(
                 child: Text(
-                  'Nearby devices',
+                  'Nearby Devices',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: AppColors.offWhite,
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
                   ),
@@ -708,7 +1024,8 @@ class _DeviceList extends StatelessWidget {
               ),
               TextButton(
                 onPressed: onCancel,
-                child: const Text('Cancel', style: TextStyle(color: Color(0xFFA1A1AA))),
+                child: const Text('Cancel',
+                    style: TextStyle(color: AppColors.textMuted)),
               ),
             ],
           ),
@@ -716,16 +1033,18 @@ class _DeviceList extends StatelessWidget {
           ...devices.map(
             (d) => ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.bluetooth, color: Color(0xFFFF9163)),
+              leading: Icon(Icons.bluetooth, color: AppColors.orangeAccent),
               title: Text(
                 d.name,
-                style: const TextStyle(color: Colors.white, fontSize: 14),
+                style: const TextStyle(color: AppColors.offWhite, fontSize: 14),
               ),
               subtitle: Text(
                 '${d.rssi} dBm',
-                style: const TextStyle(color: Color(0xFFA1A1AA), fontSize: 11),
+                style:
+                    const TextStyle(color: AppColors.textMuted, fontSize: 11),
               ),
-              trailing: const Icon(Icons.chevron_right, color: Color(0xFFA1A1AA)),
+              trailing:
+                  const Icon(Icons.chevron_right, color: AppColors.textMuted),
               onTap: () => onSelect(d),
             ),
           ),
@@ -763,25 +1082,28 @@ class _ProcessingPanel extends StatelessWidget {
     final isWorking = stage == _P2pStage.working;
     final isDone = stage == _P2pStage.done;
     final color = isDone
-        ? const Color(0xFF22C55E)
+        ? AppColors.mintAccent
         : stage == _P2pStage.error
-            ? const Color(0xFFEF4444)
-            : const Color(0xFFFF9163);
+            ? AppColors.roseAccent
+            : AppColors.orangeAccent;
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF18181B),
+        color: AppColors.cardZinc,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withAlpha(102)),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Row(
         children: [
           if (isWorking)
-            const SizedBox(
+            SizedBox(
               width: 24,
               height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2.5),
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: AppColors.orangeAccent,
+              ),
             )
           else
             Icon(
@@ -795,16 +1117,19 @@ class _ProcessingPanel extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isWorking ? title : (isDone ? 'Transfer complete' : 'Transfer failed'),
+                  isWorking
+                      ? title
+                      : (isDone ? 'Transfer complete' : 'Transfer failed'),
                   style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.offWhite,
                       fontSize: 15,
                       fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   isWorking ? step : result,
-                  style: const TextStyle(color: Color(0xFFA1A1AA), fontSize: 12),
+                  style:
+                      const TextStyle(color: AppColors.textMuted, fontSize: 12),
                 ),
                 if (showProgress) ...[
                   const SizedBox(height: 10),
@@ -813,14 +1138,16 @@ class _ProcessingPanel extends StatelessWidget {
                     child: LinearProgressIndicator(
                       value: progress.clamp(0.0, 1.0),
                       minHeight: 6,
-                      backgroundColor: const Color(0xFF3F3F46),
-                      valueColor: const AlwaysStoppedAnimation(Color(0xFFFF5722)),
+                      backgroundColor: AppColors.surfaceZinc,
+                      valueColor:
+                          AlwaysStoppedAnimation(AppColors.orangeAccent),
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     '${(progress * 100).clamp(0, 100).toStringAsFixed(0)}%',
-                    style: const TextStyle(color: Color(0xFFA1A1AA), fontSize: 11),
+                    style: const TextStyle(
+                        color: AppColors.textMuted, fontSize: 11),
                   ),
                 ],
               ],
@@ -830,17 +1157,19 @@ class _ProcessingPanel extends StatelessWidget {
             ElevatedButton(
               onPressed: isDone ? onDone : onRetry,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF242427),
-                foregroundColor: Colors.white,
-                side: const BorderSide(color: Color(0xFF3F3F46)),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                backgroundColor: AppColors.surfaceZinc,
+                foregroundColor: AppColors.offWhite,
+                side: const BorderSide(color: AppColors.borderZinc),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
               child: Text(isDone ? 'Done' : 'Close'),
             )
           else if (onCancel != null)
             TextButton(
               onPressed: onCancel,
-              child: const Text('Cancel', style: TextStyle(color: Color(0xFFA1A1AA))),
+              child: const Text('Cancel',
+                  style: TextStyle(color: AppColors.textMuted)),
             ),
         ],
       ),

@@ -1,6 +1,5 @@
-import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
-import '../lib/services/airshare_service.dart';
+import 'package:firewood/services/airshare_service.dart';
 
 void main() {
   late AirShareService service;
@@ -18,6 +17,7 @@ void main() {
       publicKey: pk,
       nonce: nonce,
       deviceName: 'Redmi-Mobile',
+      token: 'TEST-TOKEN-xyz789',
     );
 
     expect(uri.startsWith('firewood://spark?'), isTrue);
@@ -27,9 +27,20 @@ void main() {
     expect(parsed.deviceName, equals('Redmi-Mobile'));
     expect(parsed.nonce, equals(nonce));
     expect(parsed.publicKey.bytes, equals(pk.bytes));
+    // V-005: the transfer token must survive the QR roundtrip.
+    expect(parsed.token, equals('TEST-TOKEN-xyz789'));
+
+    // V-005: no token in the URI ⇒ parsed as null (sender will be rejected).
+    final uriNoToken = service.createSparkUri(
+      publicKey: pk,
+      nonce: nonce,
+      deviceName: 'Redmi-Mobile',
+    );
+    expect(service.parseSparkUri(uriNoToken).token, isNull);
   });
 
-  test('AirShare generates identical 4-digit Flame Code across peers', () async {
+  test('AirShare generates identical 4-digit Flame Code across peers',
+      () async {
     final aliceKp = await service.generateKeyPair();
     final alicePk = await aliceKp.extractPublicKey();
 

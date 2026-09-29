@@ -51,6 +51,21 @@ const VaultSchema = CollectionSchema(
       id: 6,
       name: r'verifierToken',
       type: IsarType.longList,
+    ),
+    r'version': PropertySchema(
+      id: 7,
+      name: r'version',
+      type: IsarType.long,
+    ),
+    r'wrappedMekNonce': PropertySchema(
+      id: 8,
+      name: r'wrappedMekNonce',
+      type: IsarType.longList,
+    ),
+    r'wrappedMekToken': PropertySchema(
+      id: 9,
+      name: r'wrappedMekToken',
+      type: IsarType.longList,
     )
   },
   estimateSize: _vaultEstimateSize,
@@ -102,6 +117,18 @@ int _vaultEstimateSize(
       bytesCount += 3 + value.length * 8;
     }
   }
+  {
+    final value = object.wrappedMekNonce;
+    if (value != null) {
+      bytesCount += 3 + value.length * 8;
+    }
+  }
+  {
+    final value = object.wrappedMekToken;
+    if (value != null) {
+      bytesCount += 3 + value.length * 8;
+    }
+  }
   return bytesCount;
 }
 
@@ -118,6 +145,9 @@ void _vaultSerialize(
   writer.writeString(offsets[4], object.vaultId);
   writer.writeLongList(offsets[5], object.verifierNonce);
   writer.writeLongList(offsets[6], object.verifierToken);
+  writer.writeLong(offsets[7], object.version);
+  writer.writeLongList(offsets[8], object.wrappedMekNonce);
+  writer.writeLongList(offsets[9], object.wrappedMekToken);
 }
 
 Vault _vaultDeserialize(
@@ -135,6 +165,9 @@ Vault _vaultDeserialize(
   object.vaultId = reader.readString(offsets[4]);
   object.verifierNonce = reader.readLongList(offsets[5]);
   object.verifierToken = reader.readLongList(offsets[6]);
+  object.version = reader.readLong(offsets[7]);
+  object.wrappedMekNonce = reader.readLongList(offsets[8]);
+  object.wrappedMekToken = reader.readLongList(offsets[9]);
   return object;
 }
 
@@ -158,6 +191,12 @@ P _vaultDeserializeProp<P>(
     case 5:
       return (reader.readLongList(offset)) as P;
     case 6:
+      return (reader.readLongList(offset)) as P;
+    case 7:
+      return (reader.readLong(offset)) as P;
+    case 8:
+      return (reader.readLongList(offset)) as P;
+    case 9:
       return (reader.readLongList(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -1171,6 +1210,378 @@ extension VaultQueryFilter on QueryBuilder<Vault, Vault, QFilterCondition> {
       );
     });
   }
+
+  QueryBuilder<Vault, Vault, QAfterFilterCondition> versionEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'version',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Vault, Vault, QAfterFilterCondition> versionGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'version',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Vault, Vault, QAfterFilterCondition> versionLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'version',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Vault, Vault, QAfterFilterCondition> versionBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'version',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<Vault, Vault, QAfterFilterCondition> wrappedMekNonceIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'wrappedMekNonce',
+      ));
+    });
+  }
+
+  QueryBuilder<Vault, Vault, QAfterFilterCondition> wrappedMekNonceIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'wrappedMekNonce',
+      ));
+    });
+  }
+
+  QueryBuilder<Vault, Vault, QAfterFilterCondition>
+      wrappedMekNonceElementEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'wrappedMekNonce',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Vault, Vault, QAfterFilterCondition>
+      wrappedMekNonceElementGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'wrappedMekNonce',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Vault, Vault, QAfterFilterCondition>
+      wrappedMekNonceElementLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'wrappedMekNonce',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Vault, Vault, QAfterFilterCondition>
+      wrappedMekNonceElementBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'wrappedMekNonce',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<Vault, Vault, QAfterFilterCondition>
+      wrappedMekNonceLengthEqualTo(int length) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'wrappedMekNonce',
+        length,
+        true,
+        length,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Vault, Vault, QAfterFilterCondition> wrappedMekNonceIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'wrappedMekNonce',
+        0,
+        true,
+        0,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Vault, Vault, QAfterFilterCondition>
+      wrappedMekNonceIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'wrappedMekNonce',
+        0,
+        false,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Vault, Vault, QAfterFilterCondition>
+      wrappedMekNonceLengthLessThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'wrappedMekNonce',
+        0,
+        true,
+        length,
+        include,
+      );
+    });
+  }
+
+  QueryBuilder<Vault, Vault, QAfterFilterCondition>
+      wrappedMekNonceLengthGreaterThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'wrappedMekNonce',
+        length,
+        include,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Vault, Vault, QAfterFilterCondition>
+      wrappedMekNonceLengthBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'wrappedMekNonce',
+        lower,
+        includeLower,
+        upper,
+        includeUpper,
+      );
+    });
+  }
+
+  QueryBuilder<Vault, Vault, QAfterFilterCondition> wrappedMekTokenIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'wrappedMekToken',
+      ));
+    });
+  }
+
+  QueryBuilder<Vault, Vault, QAfterFilterCondition> wrappedMekTokenIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'wrappedMekToken',
+      ));
+    });
+  }
+
+  QueryBuilder<Vault, Vault, QAfterFilterCondition>
+      wrappedMekTokenElementEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'wrappedMekToken',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Vault, Vault, QAfterFilterCondition>
+      wrappedMekTokenElementGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'wrappedMekToken',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Vault, Vault, QAfterFilterCondition>
+      wrappedMekTokenElementLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'wrappedMekToken',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Vault, Vault, QAfterFilterCondition>
+      wrappedMekTokenElementBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'wrappedMekToken',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<Vault, Vault, QAfterFilterCondition>
+      wrappedMekTokenLengthEqualTo(int length) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'wrappedMekToken',
+        length,
+        true,
+        length,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Vault, Vault, QAfterFilterCondition> wrappedMekTokenIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'wrappedMekToken',
+        0,
+        true,
+        0,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Vault, Vault, QAfterFilterCondition>
+      wrappedMekTokenIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'wrappedMekToken',
+        0,
+        false,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Vault, Vault, QAfterFilterCondition>
+      wrappedMekTokenLengthLessThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'wrappedMekToken',
+        0,
+        true,
+        length,
+        include,
+      );
+    });
+  }
+
+  QueryBuilder<Vault, Vault, QAfterFilterCondition>
+      wrappedMekTokenLengthGreaterThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'wrappedMekToken',
+        length,
+        include,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<Vault, Vault, QAfterFilterCondition>
+      wrappedMekTokenLengthBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'wrappedMekToken',
+        lower,
+        includeLower,
+        upper,
+        includeUpper,
+      );
+    });
+  }
 }
 
 extension VaultQueryObject on QueryBuilder<Vault, Vault, QFilterCondition> {}
@@ -1223,6 +1634,18 @@ extension VaultQuerySortBy on QueryBuilder<Vault, Vault, QSortBy> {
   QueryBuilder<Vault, Vault, QAfterSortBy> sortByVaultIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'vaultId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Vault, Vault, QAfterSortBy> sortByVersion() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'version', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Vault, Vault, QAfterSortBy> sortByVersionDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'version', Sort.desc);
     });
   }
 }
@@ -1287,6 +1710,18 @@ extension VaultQuerySortThenBy on QueryBuilder<Vault, Vault, QSortThenBy> {
       return query.addSortBy(r'vaultId', Sort.desc);
     });
   }
+
+  QueryBuilder<Vault, Vault, QAfterSortBy> thenByVersion() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'version', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Vault, Vault, QAfterSortBy> thenByVersionDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'version', Sort.desc);
+    });
+  }
 }
 
 extension VaultQueryWhereDistinct on QueryBuilder<Vault, Vault, QDistinct> {
@@ -1331,6 +1766,24 @@ extension VaultQueryWhereDistinct on QueryBuilder<Vault, Vault, QDistinct> {
   QueryBuilder<Vault, Vault, QDistinct> distinctByVerifierToken() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'verifierToken');
+    });
+  }
+
+  QueryBuilder<Vault, Vault, QDistinct> distinctByVersion() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'version');
+    });
+  }
+
+  QueryBuilder<Vault, Vault, QDistinct> distinctByWrappedMekNonce() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'wrappedMekNonce');
+    });
+  }
+
+  QueryBuilder<Vault, Vault, QDistinct> distinctByWrappedMekToken() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'wrappedMekToken');
     });
   }
 }
@@ -1381,6 +1834,24 @@ extension VaultQueryProperty on QueryBuilder<Vault, Vault, QQueryProperty> {
   QueryBuilder<Vault, List<int>?, QQueryOperations> verifierTokenProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'verifierToken');
+    });
+  }
+
+  QueryBuilder<Vault, int, QQueryOperations> versionProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'version');
+    });
+  }
+
+  QueryBuilder<Vault, List<int>?, QQueryOperations> wrappedMekNonceProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'wrappedMekNonce');
+    });
+  }
+
+  QueryBuilder<Vault, List<int>?, QQueryOperations> wrappedMekTokenProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'wrappedMekToken');
     });
   }
 }

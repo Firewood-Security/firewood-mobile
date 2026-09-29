@@ -121,18 +121,23 @@ class _CameraQrScannerScreenState extends State<CameraQrScannerScreen>
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.camera_alt_outlined, size: 56, color: Colors.white38),
+                      const Icon(Icons.camera_alt_outlined,
+                          size: 56, color: Colors.white38),
                       const SizedBox(height: 16),
                       Text(
                         'Camera unavailable (${error.errorCode.name})',
-                        style: const TextStyle(color: Colors.white70, fontSize: 15),
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 15),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 20),
                       ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(backgroundColor: AppColors.orangeAccent),
-                        icon: const Icon(Icons.photo_library, color: Colors.black),
-                        label: const Text('Pick QR from Gallery', style: TextStyle(color: Colors.black)),
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.orangeAccent),
+                        icon: const Icon(Icons.photo_library,
+                            color: Colors.black),
+                        label: const Text('Pick QR from Gallery',
+                            style: TextStyle(color: Colors.black)),
                         onPressed: _pickImage,
                       ),
                     ],
@@ -167,7 +172,8 @@ class _CameraQrScannerScreenState extends State<CameraQrScannerScreen>
                         color: AppColors.orangeAccent,
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.orangeAccent.withValues(alpha: 0.8),
+                            color:
+                                AppColors.orangeAccent.withValues(alpha: 0.8),
                             blurRadius: 10,
                             spreadRadius: 2,
                           ),
@@ -185,11 +191,13 @@ class _CameraQrScannerScreenState extends State<CameraQrScannerScreen>
             child: Align(
               alignment: Alignment.topCenter,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Row(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white, size: 24),
+                      icon: const Icon(Icons.close,
+                          color: Colors.white, size: 24),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                     const SizedBox(width: 8),
@@ -206,7 +214,9 @@ class _CameraQrScannerScreenState extends State<CameraQrScannerScreen>
                     IconButton(
                       icon: Icon(
                         _torchEnabled ? Icons.flash_on : Icons.flash_off,
-                        color: _torchEnabled ? AppColors.orangeAccent : Colors.white70,
+                        color: _torchEnabled
+                            ? AppColors.orangeAccent
+                            : Colors.white70,
                       ),
                       onPressed: () async {
                         await _controller.toggleTorch();
@@ -214,7 +224,8 @@ class _CameraQrScannerScreenState extends State<CameraQrScannerScreen>
                       },
                     ),
                     IconButton(
-                      icon: const Icon(Icons.cameraswitch, color: Colors.white70),
+                      icon:
+                          const Icon(Icons.cameraswitch, color: Colors.white70),
                       onPressed: () async {
                         await _controller.switchCamera();
                         setState(() {
@@ -235,12 +246,14 @@ class _CameraQrScannerScreenState extends State<CameraQrScannerScreen>
             child: Align(
               alignment: Alignment.bottomCenter,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
                         color: Colors.black54,
                         borderRadius: BorderRadius.circular(20),
@@ -256,12 +269,15 @@ class _CameraQrScannerScreenState extends State<CameraQrScannerScreen>
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.white,
                         side: const BorderSide(color: Colors.white24),
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
                         backgroundColor: Colors.black45,
                       ),
                       icon: const Icon(Icons.photo_library_outlined, size: 18),
-                      label: const Text('Scan Image / Screenshot', style: TextStyle(fontSize: 13)),
+                      label: const Text('Scan Image / Screenshot',
+                          style: TextStyle(fontSize: 13)),
                       onPressed: _pickImage,
                     ),
                   ],
@@ -294,7 +310,8 @@ class _ScannerOverlayPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
 
     final center = Offset(size.width / 2, size.height / 2);
-    final rect = Rect.fromCenter(center: center, width: boxSize, height: boxSize);
+    final rect =
+        Rect.fromCenter(center: center, width: boxSize, height: boxSize);
     final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(16));
 
     // Darkened outer mask with transparent cutout
@@ -307,28 +324,41 @@ class _ScannerOverlayPainter extends CustomPainter {
     // Corner Reticles
     const cornerLength = 26.0;
     // Top-Left
-    canvas.drawLine(Offset(rect.left, rect.top + cornerLength), Offset(rect.left, rect.top + 8), borderPaint);
-    canvas.drawLine(Offset(rect.left, rect.top + 8), Offset(rect.left + 8, rect.top), borderPaint);
-    canvas.drawLine(Offset(rect.left + 8, rect.top), Offset(rect.left + cornerLength, rect.top), borderPaint);
+    canvas.drawLine(Offset(rect.left, rect.top + cornerLength),
+        Offset(rect.left, rect.top + 8), borderPaint);
+    canvas.drawLine(Offset(rect.left, rect.top + 8),
+        Offset(rect.left + 8, rect.top), borderPaint);
+    canvas.drawLine(Offset(rect.left + 8, rect.top),
+        Offset(rect.left + cornerLength, rect.top), borderPaint);
 
     // Top-Right
-    canvas.drawLine(Offset(rect.right - cornerLength, rect.top), Offset(rect.right - 8, rect.top), borderPaint);
-    canvas.drawLine(Offset(rect.right - 8, rect.top), Offset(rect.right, rect.top + 8), borderPaint);
-    canvas.drawLine(Offset(rect.right, rect.top + 8), Offset(rect.right, rect.top + cornerLength), borderPaint);
+    canvas.drawLine(Offset(rect.right - cornerLength, rect.top),
+        Offset(rect.right - 8, rect.top), borderPaint);
+    canvas.drawLine(Offset(rect.right - 8, rect.top),
+        Offset(rect.right, rect.top + 8), borderPaint);
+    canvas.drawLine(Offset(rect.right, rect.top + 8),
+        Offset(rect.right, rect.top + cornerLength), borderPaint);
 
     // Bottom-Left
-    canvas.drawLine(Offset(rect.left, rect.bottom - cornerLength), Offset(rect.left, rect.bottom - 8), borderPaint);
-    canvas.drawLine(Offset(rect.left, rect.bottom - 8), Offset(rect.left + 8, rect.bottom), borderPaint);
-    canvas.drawLine(Offset(rect.left + 8, rect.bottom), Offset(rect.left + cornerLength, rect.bottom), borderPaint);
+    canvas.drawLine(Offset(rect.left, rect.bottom - cornerLength),
+        Offset(rect.left, rect.bottom - 8), borderPaint);
+    canvas.drawLine(Offset(rect.left, rect.bottom - 8),
+        Offset(rect.left + 8, rect.bottom), borderPaint);
+    canvas.drawLine(Offset(rect.left + 8, rect.bottom),
+        Offset(rect.left + cornerLength, rect.bottom), borderPaint);
 
     // Bottom-Right
-    canvas.drawLine(Offset(rect.right - cornerLength, rect.bottom), Offset(rect.right - 8, rect.bottom), borderPaint);
-    canvas.drawLine(Offset(rect.right - 8, rect.bottom), Offset(rect.right, rect.bottom - 8), borderPaint);
-    canvas.drawLine(Offset(rect.right, rect.bottom - 8), Offset(rect.right, rect.bottom - cornerLength), borderPaint);
+    canvas.drawLine(Offset(rect.right - cornerLength, rect.bottom),
+        Offset(rect.right - 8, rect.bottom), borderPaint);
+    canvas.drawLine(Offset(rect.right - 8, rect.bottom),
+        Offset(rect.right, rect.bottom - 8), borderPaint);
+    canvas.drawLine(Offset(rect.right, rect.bottom - 8),
+        Offset(rect.right, rect.bottom - cornerLength), borderPaint);
   }
 
   @override
   bool shouldRepaint(covariant _ScannerOverlayPainter oldDelegate) {
-    return oldDelegate.boxSize != boxSize || oldDelegate.borderColor != borderColor;
+    return oldDelegate.boxSize != boxSize ||
+        oldDelegate.borderColor != borderColor;
   }
 }

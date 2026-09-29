@@ -1,5 +1,10 @@
 // services/accent_color_service.dart
 // Service to manage curated accent color themes across Firewood app with robust persistence
+//
+// V-015: this (non-secret) preference no longer round-trips through
+// FlutterSecureStorage — the only remaining legacy copy is migrated into
+// SharedPreferences once, then removed, so the plugin carries no default-
+// options reads/writes anymore.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -20,7 +25,6 @@ class AccentColorOption {
 class AccentColorService {
   static const String _prefKey = 'firewood_accent_color_hex';
   static const String _prefIntKey = 'firewood_accent_color_value';
-  static const _secureStorage = FlutterSecureStorage();
 
   static const AccentColorOption defaultAccent = AccentColorOption(
     name: 'Deep Orange',
@@ -51,10 +55,18 @@ class AccentColorService {
       String? hex = prefs.getString(_prefKey);
       int? colorVal = prefs.getInt(_prefIntKey);
 
-      // Fallback to secure storage if shared_preferences was empty or cleared
+      // V-015 one-shot migration: a legacy secure-storage copy of this
+      // non-secret color moves into SharedPreferences and the plugin entry
+      // is deleted (read with the same default options it was written with).
       if (hex == null && colorVal == null) {
         try {
-          hex = await _secureStorage.read(key: _prefKey);
+          final legacyHex =
+              await const FlutterSecureStorage().read(key: _prefKey);
+          if (legacyHex != null && legacyHex.isNotEmpty) {
+            hex = legacyHex;
+            await prefs.setString(_prefKey, legacyHex);
+            await const FlutterSecureStorage().delete(key: _prefKey);
+          }
         } catch (_) {}
       }
 
@@ -94,12 +106,6 @@ class AccentColorService {
       await prefs.setInt(_prefIntKey, option.color.toARGB32());
     } catch (e) {
       debugPrint('Error writing to SharedPreferences: $e');
-    }
-
-    try {
-      await _secureStorage.write(key: _prefKey, value: option.hex);
-    } catch (e) {
-      debugPrint('Error writing to SecureStorage: $e');
     }
   }
 }
