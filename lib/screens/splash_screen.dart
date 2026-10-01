@@ -59,17 +59,17 @@ class _SplashScreenState extends State<SplashScreen>
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
         statusBarColor: Colors.transparent,
-        systemNavigationBarColor: const Color(0xFF0C0C0E),
+        systemNavigationBarColor: AppColors.orangeAccent,
       ),
       child: Scaffold(
-        backgroundColor: const Color(0xFF0C0C0E),
+        backgroundColor: AppColors.orangeAccent,
         body: Stack(
           fit: StackFit.expand,
           children: [
             // 1. Background Layer: Procedural 3D isometric glass cube matrix (blocks)
             const _ProceduralCubeMatrixBackground(),
 
-            // 2. Subtle Dark Shading Overlay (Fades upwards to reveal 3D cubes on middle-top & top-right)
+            // 2. Subtle Shading Overlay (Fades upwards to reveal 3D cubes on middle-top & top-right)
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -77,16 +77,16 @@ class _SplashScreenState extends State<SplashScreen>
                   end: Alignment.topRight,
                   stops: const [0.0, 0.45, 0.8, 1.0],
                   colors: [
-                    const Color(0xFF0C0C0E).withValues(alpha: 0.98),
-                    const Color(0xFF0C0C0E).withValues(alpha: 0.80),
-                    const Color(0xFF0C0C0E).withValues(alpha: 0.35),
+                    AppColors.orangeAccent.withValues(alpha: 0.98),
+                    AppColors.orangeAccent.withValues(alpha: 0.80),
+                    AppColors.orangeAccent.withValues(alpha: 0.35),
                     Colors.transparent,
                   ],
                 ),
               ),
             ),
 
-            // 3. Dark Vignette at Corners
+            // 3. Subtle Vignette at Corners
             Container(
               decoration: BoxDecoration(
                 gradient: RadialGradient(
@@ -94,8 +94,8 @@ class _SplashScreenState extends State<SplashScreen>
                   radius: 1.25,
                   colors: [
                     Colors.transparent,
-                    Colors.black.withValues(alpha: 0.4),
-                    const Color(0xFF0C0C0E).withValues(alpha: 0.9),
+                    Colors.black.withValues(alpha: 0.25),
+                    AppColors.orangeAccent.withValues(alpha: 0.9),
                   ],
                   stops: const [0.3, 0.7, 1.0],
                 ),
@@ -135,14 +135,14 @@ class _SplashScreenState extends State<SplashScreen>
                       children: [
                         AppIcon(
                           AppIcons.shield,
-                          color: AppColors.orangeAccent,
+                          color: AppColors.offWhite.withValues(alpha: 0.9),
                           size: 14,
                         ),
                         const SizedBox(width: 6),
-                        const Text(
+                        Text(
                           'Zero-Knowledge Vault',
                           style: TextStyle(
-                            color: AppColors.textMuted,
+                            color: AppColors.offWhite.withValues(alpha: 0.85),
                             fontSize: 12.5,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0.2,
@@ -177,7 +177,7 @@ class _ProceduralCubeMatrixBackground extends StatelessWidget {
 class _CubeMatrixPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final bgPaint = Paint()..color = const Color(0xFF0A0A0D);
+    final bgPaint = Paint()..color = AppColors.orangeAccent;
     canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), bgPaint);
 
     // Origin centered near top-right quadrant
