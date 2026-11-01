@@ -373,4 +373,98 @@ void main() {
       expect(loaded.session, equals(const Duration(hours: 1)));
     });
   });
+
+  group('LockService foreground-flow grace window (import flows)', () {
+    test(
+        'idle timeout inside a foreground flow postpones instead of '
+        'locking', () async {
+      final service = LockService();
+      var locks = 0;
+      service.setAutoLockCallback(() => locks++);
+      service.setLockTimeout(const Duration(milliseconds: 100));
+
+      // The confirm-dialog tap arms the idle timer, then the bulk import
+      // runs untouched behind its progress dialog.
+      service.onUserInteraction();
+      LockService.beginForegroundFlow();
+      await Future.delayed(const Duration(milliseconds: 250));
+      expect(locks, 0,
+          reason: 'import work generates no touches — the idle timeout '
+              'must not lock while the flow runs in the foreground');
+
+      LockService.endForegroundFlow();
+      await Future.delayed(const Duration(milliseconds: 150));
+      expect(locks, 1,
+          reason: 'once the flow ends the postponed timeout must still '
+              'lock — the exemption may never outlive the flow');
+      service.dispose();
+    });
+
+    test(
+        'a backgrounded flow still locks at the timeout (bounded '
+        'exemption)', () async {
+      final service = LockService();
+      var locks = 0;
+      service.setAutoLockCallback(() => locks++);
+      service.setLockTimeout(const Duration(milliseconds: 100));
+
+      LockService.beginForegroundFlow();
+      service.onAppPaused(); // user leaves the app while the flow is open
+      await Future.delayed(const Duration(milliseconds: 250));
+      expect(locks, 1,
+          reason: 'wandering off during a picker/import longer than the '
+              'timeout must still lock — the flow never opens an '
+              'unbounded window');
+      LockService.endForegroundFlow();
+      service.dispose();
+    });
+
+    test(
+        'resume right after endForegroundFlow ignores the flow pause '
+        '(stale timestamp guard)', () async {
+      final service = LockService();
+      var locks = 0;
+      service.setAutoLockCallback(() => locks++);
+      service.setLockTimeout(const Duration(milliseconds: 100));
+
+      LockService.beginForegroundFlow();
+      service.onAppPaused(); // synthetic pause from opening the picker
+      LockService.endForegroundFlow(); // picker future completed first
+
+      // The engine delivers `resumed` after the picker future resolves.
+      await Future.delayed(const Duration(milliseconds: 30));
+      service.onAppResumed();
+      expect(locks, 0,
+          reason: 'the resume of a just-closed flow must not judge the '
+              'flow pause as a real background exit');
+
+      // Normal backgrounding outside a flow keeps working.
+      service.onAppPaused();
+      expect(locks, 1,
+          reason: 'recents/background lock is restored right after the '
+              'grace window logic runs');
+      service.dispose();
+    });
+
+    test('a resume delivered while the flow is still open never locks',
+        () async {
+      final service = LockService();
+      var locks = 0;
+      service.setAutoLockCallback(() => locks++);
+      service.setLockTimeout(const Duration(milliseconds: 80));
+
+      LockService.beginForegroundFlow();
+      service.onAppPaused(); // picker opened
+      await Future.delayed(const Duration(milliseconds: 30));
+      service.onAppResumed(); // back from the picker, future still pending
+      expect(locks, 0,
+          reason: 'an in-flow resume only cancels the armed timer');
+      await Future.delayed(const Duration(milliseconds: 120));
+      expect(locks, 0,
+          reason: 'the timer cancelled by the in-flow resume must not '
+              'fire later while the flow still runs');
+      LockService.endForegroundFlow();
+      service.dispose();
+    });
+  });
 }

@@ -8,10 +8,12 @@ import '../theme/app_theme.dart';
 /// Full-screen camera QR scanner screen for AirShare Spark bootstrap.
 class CameraQrScannerScreen extends StatefulWidget {
   final String title;
+  final String? hintText;
 
   const CameraQrScannerScreen({
     super.key,
     this.title = 'Scan Spark QR Code',
+    this.hintText,
   });
 
   @override
@@ -259,9 +261,12 @@ class _CameraQrScannerScreenState extends State<CameraQrScannerScreen>
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: Colors.white12),
                       ),
-                      child: const Text(
-                        'Align Spark QR code within the frame to connect',
-                        style: TextStyle(color: Colors.white70, fontSize: 12),
+                      child: Text(
+                        widget.hintText ??
+                            'Align Spark QR code within the frame to connect',
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 12),
+                        textAlign: TextAlign.center,
                       ),
                     ),
                     const SizedBox(height: 16),

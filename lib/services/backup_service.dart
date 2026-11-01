@@ -410,6 +410,31 @@ class BackupService {
     bool overwrite = false,
     SecretKey? activeVaultKey,
   }) async {
+    // The decrypt/re-encrypt merge loop is long and generates no pointer
+    // events — hold a foreground flow over it so an idle timeout armed by
+    // the password-dialog tap cannot lock mid-restore and dump the user
+    // back to the lock screen (LockService postpones foreground idle locks
+    // while a flow is open; a real background exit still locks through the
+    // bounded idle timer).
+    LockService.beginForegroundFlow();
+    try {
+      return await _importVault(
+        filePath,
+        masterPassword,
+        overwrite: overwrite,
+        activeVaultKey: activeVaultKey,
+      );
+    } finally {
+      LockService.endForegroundFlow();
+    }
+  }
+
+  Future<String> _importVault(
+    String filePath,
+    String masterPassword, {
+    bool overwrite = false,
+    SecretKey? activeVaultKey,
+  }) async {
     final isar = await _isarService.instance;
 
     // Read file

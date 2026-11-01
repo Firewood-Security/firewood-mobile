@@ -28,12 +28,29 @@ class LockService {
   /// Riverpod reference (backup/csv import) must be able to open a flow.
   static int _foregroundFlowDepth = 0;
 
+  // Timestamp of the last endForegroundFlow() that closed the outermost
+  // flow. The lifecycle `resumed` for a system flow is delivered AFTER the
+  // flow's future completes (the picker result races the engine's resume
+  // event), so a resume landing just after the flow closed must still be
+  // treated as part of it — see the grace check in onAppResumed().
+  static DateTime? _foregroundFlowEndedAt;
+
+  // Grace window for those late flow resumes. Short and bounded: it only
+  // skips the stale-pause clock check on the resume itself, never a pause.
+  static const Duration _foregroundFlowGrace = Duration(seconds: 3);
+
   static void beginForegroundFlow() {
     _foregroundFlowDepth++;
+    _foregroundFlowEndedAt = null;
   }
 
   static void endForegroundFlow() {
-    if (_foregroundFlowDepth > 0) _foregroundFlowDepth--;
+    if (_foregroundFlowDepth > 0) {
+      _foregroundFlowDepth--;
+      if (_foregroundFlowDepth == 0) {
+        _foregroundFlowEndedAt = DateTime.now();
+      }
+    }
   }
 
   static bool get inForegroundFlow => _foregroundFlowDepth > 0;
@@ -80,9 +97,17 @@ class LockService {
   // and lock spuriously.
   DateTime? _pausedAt;
 
+  // Whether the app is currently in the background (set on pause, cleared on
+  // resume). Tells apart "the user wandered off during a system flow" —
+  // backgrounded, the bounded idle lock must still fire — from "import work
+  // running untouched in the foreground behind an open flow", where the idle
+  // timeout is postponed instead (see _onIdleTimeout).
+  bool _backgrounded = false;
+
   // Called when the app actually leaves the foreground (paused/detached).
   // NOT called for transient `inactive` focus loss — see app.dart.
   void onAppPaused() {
+    _backgrounded = true;
     _pausedAt = DateTime.now();
     if (_foregroundFlowDepth > 0) {
       // App-initiated system flow in progress (file picker, permission or
@@ -113,6 +138,23 @@ class LockService {
   void onAppResumed() {
     final pausedAt = _pausedAt;
     _pausedAt = null;
+    _backgrounded = false;
+    // A resume belonging to a foreground flow — whether delivered while the
+    // flow is still open or within the grace window after it closed (the
+    // engine sends `resumed` after the picker future completes) — must never
+    // consult the pause recorded when the flow opened: that pause was
+    // synthetic (the system picker merely took focus), so judging it as a
+    // real background exit would lock the vault right as an import finished
+    // and dump the user back to the login screen. The flow's own pause is
+    // still bounded: it armed the idle timer, and a backgrounded idle timer
+    // fires normally in _onIdleTimeout.
+    final flowEndedAt = _foregroundFlowEndedAt;
+    if (_foregroundFlowDepth > 0 ||
+        (flowEndedAt != null &&
+            DateTime.now().difference(flowEndedAt) < _foregroundFlowGrace)) {
+      cancelAutoLockTimer();
+      return;
+    }
     if (!_isEnabled) {
       // A foreground-flow pause arms the idle timer even when auto-lock is
       // OFF — cancel it now that the user is back, or it would fire while
@@ -138,17 +180,30 @@ class LockService {
 
   void _startLockTimer() {
     cancelAutoLockTimer();
-    _lockTimer = Timer(_lockTimeout, () {
-      _triggerAutoLock();
-    });
+    _lockTimer = Timer(_lockTimeout, _onIdleTimeout);
   }
 
   void _resetLockTimer() {
     if (!_isEnabled) return;
     cancelAutoLockTimer();
-    _lockTimer = Timer(_lockTimeout, () {
-      _triggerAutoLock();
-    });
+    _lockTimer = Timer(_lockTimeout, _onIdleTimeout);
+  }
+
+  // Idle-timeout edge. Inside an app-initiated flow the app receives no
+  // pointer events: a bulk CSV/vault import legitimately runs untouched
+  // behind its progress dialog, so locking on schedule would dump the
+  // in-progress action back to the lock screen (the reported
+  // import-lands-on-login bug). While such a flow runs IN THE FOREGROUND
+  // the timeout is postponed one window at a time instead. The exemption
+  // stays bounded: a real background exit (app actually hidden — user
+  // wandered off during the flow) still locks through here at the timeout,
+  // and the absolute session cap locks unconditionally regardless.
+  void _onIdleTimeout() {
+    if (_foregroundFlowDepth > 0 && !_backgrounded) {
+      _startLockTimer();
+      return;
+    }
+    _triggerAutoLock();
   }
 
   void cancelAutoLockTimer() {

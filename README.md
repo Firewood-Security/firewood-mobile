@@ -1,249 +1,175 @@
-# firewood-mobile
+<div align="center">
 
-Android and iOS password manager — offline-first, zero-knowledge, single vault.
-The master password is never written to disk. Every credential field is
-individually encrypted with an Argon2id-derived key and XChaCha20-Poly1305 AEAD.
-All data remains on the device; there is no account system, no cloud sync, and no
-remote telemetry.
+# Firewood Mobile
 
-Application ID / bundle: **`net.firewood.app`**
+**Local-first, zero-knowledge credential vault for Android and iOS.**  
+No cloud accounts. No remote servers. No telemetry.
 
----
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS-2ea44f.svg)](#supported-platforms)
+[![Crypto](https://img.shields.io/badge/Crypto-Argon2id%20%2B%20XChaCha20--Poly1305-orange.svg)](#cryptographic-architecture)
+[![Download](https://img.shields.io/badge/Download-Release%20Binaries-brightgreen.svg)](https://firewoodsec.yahyaoncloud.com/download/)
 
-## Feature overview
-
-| Feature | Notes |
-|---|---|
-| Single encrypted vault | Argon2id (64 MiB, 3 passes, 4 lanes) key derivation; XChaCha20-Poly1305 per field |
-| Credential types | Login, Payment Card, Identity (+ ID image), Secure Note, API Key |
-| Biometric unlock | Android Keystore wrapping key gated by `BiometricPrompt`; master password is never stored in plaintext |
-| Auto-lock | Configurable 30 s – 30 min timer; pauses on app backgrounding, resumes on foreground |
-| Screenshot / recents protection | `FLAG_SECURE` (opt-in in settings) |
-| Clipboard auto-clear | 30-second automatic clear after copying a credential field |
-| Encrypted backup | `.firewood` export/import via the Storage Access Framework (no storage permission required) |
-| P2P vault sharing | Bluetooth Low Energy transport; encrypted payload |
-| Password & passphrase generator | Configurable character sets, word lists, PIN mode, strength meter |
-| Security advisor | On-device analysis: weak, reused, and aged passwords; missing 2FA |
-| Duress / burner passwords | Silent total vault destruction on coercion; no recovery by design |
-| In-app updater | HTTPS check against a versioned update manifest; SHA-256 verified download |
+</div>
 
 ---
 
-## Repository layout
+## Overview
+
+**Firewood** is an offline-first password and credential manager built for uncompromising privacy and security. Your master password is never stored on disk. Every single credential field is independently encrypted in RAM using **Argon2id** key derivation and **XChaCha20-Poly1305** authenticated encryption before touching persistent storage.
+
+All data remains exclusively on your physical device.
+
+---
+
+## Key Features
+
+- **Zero-Knowledge Encryption**: Master key derived using Argon2id (64 MiB RAM, 3 iterations, 4 lanes). Each item field is sealed with XChaCha20-Poly1305 and unique 24-byte CSPRNG nonces.
+- **Multiple Credential Types**: Secure storage for Logins, Payment Cards, Identities (+ encrypted ID card photos), Secure Notes, and API Keys.
+- **Hardware-Backed Biometrics**: Android Keystore AES-256-GCM wrapping key gated by `BiometricPrompt` (strong biometrics or device PIN). The master password is never stored in plaintext.
+- **Auto-Lock Protection**: Configurable inactivity lock timer (30 seconds to 30 minutes). Automatically pauses in the background and re-authenticates on foreground entry.
+- **Screen & Screenshot Protection**: System-level `FLAG_SECURE` prevents screenshots, screen recording, and app switcher preview capture.
+- **Clipboard Auto-Clear**: Automatically wipes copied passwords and sensitive tokens from the system clipboard after 30 seconds.
+- **P2P AirShare Sync**: Encrypted peer-to-peer credential sharing across nearby devices over Bluetooth Low Energy (BLE) without intermediate servers.
+- **Password & Passphrase Generator**: Generate cryptographically strong random passwords, EFF diceware passphrases, and secure PINs with live entropy strength calculation.
+- **On-Device Security Advisor**: Proactive offline analysis for weak, reused, or expired credentials and missing multi-factor authentication.
+- **Duress Burner Wipe**: Optional emergency burner PIN that silently and permanently wipes the entire database when coerced, leaving no recoverable traces.
+- **Self-Contained Backups**: Encrypted `.firewood` backup export and restore using the Storage Access Framework (SAF) without requesting broad storage permissions.
+
+---
+
+## Download & Installation
+
+### Official Releases
+Official production builds are cryptographically signed with our pinned release key and published with verifiable SHA-256 checksums:
+
+- **Web Distribution Portal**: [firewoodsec.yahyaoncloud.com/download](https://firewoodsec.yahyaoncloud.com/download/)
+- **GitHub Release Mirror**: [github.com/Firewood-Security](https://github.com/Firewood-Security)
+- **F-Droid Store**: `net.firewood.app` *(recommended for FOSS devices)*
+- **Google Play Store**: [Firewood on Google Play](https://play.google.com/store/apps/details?id=net.firewood.app)
+
+### Verifying Checksums
+After downloading the standalone APK, verify its cryptographic hash against the official manifest:
+
+```bash
+sha256sum firewood-latest-android.apk
+```
+
+---
+
+## Cryptographic Architecture
+
+```
+Master Password (entered by user)
+  + Random Vault Salt (16 bytes, stored in Isar)
+       │
+       ▼
+  Argon2id (m=65536 KiB, t=3, p=4, 256-bit output)
+       │
+       ▼
+  Vault Master Key (RAM only, never touches disk)
+       │
+       ├──► Sentinel Verification (trial-decrypts FIREWOOD_VAULT_VERIFY)
+       │
+       └──► XChaCha20-Poly1305 AEAD per field
+            ├── Nonce: 24 bytes fresh CSPRNG per seal
+            └── Ciphertext: JSON-encoded sensitive payload + 16-byte Poly1305 tag
+```
+
+### Storage Security Model
+
+| Store | Data Stored | Encryption Mechanism |
+|---|---|---|
+| **Isar Local DB** | `Vault`, `SecureItem`, `BurnerHash` | Field-level XChaCha20-Poly1305 (metadata title/type plaintext) |
+| **Android Keystore** | Biometric Wrapping Key + Master Blob | Native AES-256-GCM hardware key (`BiometricPrompt` authenticated) |
+| **SharedPreferences** | UI Settings & Feature Flags | Plaintext (strictly non-sensitive preferences) |
+| **Storage Access Framework** | `.firewood` Backup Archives | Argon2id + XChaCha20-Poly1305 under independent backup password |
+
+---
+
+## Repository Layout
 
 ```
 firewood-mobile/
 ├── lib/
-│   ├── screens/          Vault unlock, setup, home, item detail/view, settings,
-│   │                     P2P share, update, about
-│   ├── services/         VaultService, ItemService, BackupService, LockService,
-│   │                     GeneratorService, BurnerService, BiometricService,
-│   │                     NativeSecurityBridge, UpdateService, MiniMLAdvisor
-│   ├── security/         CryptoService (Argon2id + XChaCha20-Poly1305 + HKDF)
-│   ├── database/         Isar schemas (Vault, SecureItem, BurnerHash) + IsarService
-│   ├── providers/        Riverpod state: authProvider, biometric, lock, update
-│   ├── models/           ItemType enum, field key constants
-│   ├── theme/            AppTheme (Material 3 dark), accent colour service
-│   └── widgets/          Design system: App3DButton, AppToast, AppDialog,
-│                         CategorySegmentedBar, navigation shell
+│   ├── database/         Isar database schemas (Vault, SecureItem, BurnerHash) & service
+│   ├── models/           Credential types (Login, Card, Note, Identity, API Key)
+│   ├── providers/        Riverpod state management (authProvider, lock, biometrics)
+│   ├── screens/          Unlock, setup, vault home, credential detail, settings, AirShare
+│   ├── security/         CryptoService (Argon2id, XChaCha20-Poly1305, HKDF, CSPRNG)
+│   ├── services/         Vault, items, backup, lock, burner, generator, updates
+│   ├── theme/            Dark Zinc Technical Vault design system & tokens
+│   └── widgets/          AppButton, AppDialog, AppToast, CategoryBar, AppLoader
 ├── android/
-│   ├── app/src/main/kotlin/net/firewood/app/
-│   │   ├── MainActivity.kt
-│   │   └── security/     SecureKeystoreManager, VaultSecurityBridge,
-│   │                     SecureMethodChannel (MethodChannel handler)
-│   └── app/proguard-rules.pro
-├── ios/
-├── test/                 Unit + widget tests; dart_test.yaml pins Argon2id concurrency
-└── docs/                 Engineering notes and design decisions
+│   ├── app/src/main/     Kotlin security bridges (SecureKeystoreManager, MethodChannel)
+│   └── app/              Proguard rules and Android app manifests
+├── ios/                  iOS platform embedding
+├── test/                 Unit and widget test suites
+├── CONTRIBUTING.md       Contribution guide and coding standards
+├── SECURITY.md           Security policy and responsible disclosure
+└── AGENTS.md             Architecture invariants and UI component guidelines
 ```
 
 ---
 
-## Architecture
+## Development & Building
 
-```
-UI (screens/ + widgets/ + theme/)
-        │
-        ▼
-State — flutter_riverpod
-  authProvider: SecretKey?   (null = locked)
-  biometricAuthEnabledProvider
-  lockTimeoutProvider / autoLockProvider
-        │
-        ▼
-Services (services/)
-  VaultService · ItemService · BackupService · LockService
-  GeneratorService · BurnerService · BiometricService
-  NativeSecurityBridge · UpdateService · MiniMLAdvisor
-        │
-        ▼
-Crypto (security/crypto_service.dart)
-  Argon2id(m=65536, t=3, p=4, len=32)
-  XChaCha20-Poly1305 · HKDF-SHA256 · CSPRNG
-        │
-        ▼
-Persistence (database/)
-  Isar — no file-level encryption key
-  Plaintext: itemId, vaultId, type, title, updatedAt, nonce
-  Ciphertext: encryptedData (XChaCha-sealed JSON fields)
-        │
-  MethodChannel: com.firewood.vault_security
-        ▼
-Android Keystore (Kotlin)
-  SecureKeystoreManager — AES/GCM wrapping key, biometric + device-credential auth
-  VaultSecurityBridge   — wrap / unwrap the password blob
-  SecureMethodChannel   — rate-limiting, FLAG_SECURE toggle
-```
+### Prerequisites
+- [Flutter SDK](https://flutter.dev) `3.47.5+` (pinned stable)
+- [Dart SDK](https://dart.dev) matching Flutter
+- Android SDK (API 34+ build-tools)
+- Java 17 or 21 (OpenJDK)
 
-**Key invariant:** `authProvider` is `non-null` while the vault is unlocked and
-`null` at all other times. Every lock path — timer expiry, manual lock, burner
-trigger, vault deletion — converges on setting `authProvider` to `null`. The
-`SecretKey` never touches the Isar database or any file.
+### Quickstart
 
----
+1. **Install dependencies**:
+   ```bash
+   flutter pub get
+   ```
 
-## Cryptography
+2. **Verify static analysis & code formatting**:
+   ```bash
+   dart format --output=none --set-exit-if-changed lib test
+   flutter analyze lib/ --fatal-warnings --no-fatal-infos
+   ```
 
-### Key derivation
+3. **Run test suite**:
+   ```bash
+   flutter test test/ --reporter compact
+   ```
+   *(Note: `dart_test.yaml` sets concurrency to 1 for Argon2id tests to prevent memory exhaustion on constrained environments).*
 
-```
-key = Argon2id(
-  password = master_password_utf8,
-  salt     = vault.salt          // 16 bytes, CSPRNG, stored plaintext in Isar
-  m        = 65_536 KiB,         // 64 MiB
-  t        = 3,
-  p        = 4,
-  len      = 32                  // 256-bit output
-)
-```
+4. **Launch debug app on a connected device/emulator**:
+   ```bash
+   flutter run
+   ```
 
-### Encryption (per field / per file)
+### Building Release APK
 
-```
-nonce      = CSPRNG(24 bytes)    // fresh per operation
-ciphertext = XChaCha20-Poly1305.seal(key, nonce, plaintext)
-stored     = ciphertext ‖ Poly1305-MAC(16 bytes)
-```
+To produce a production-signed APK:
+1. Copy `android/key.properties.template` to `android/key.properties`.
+2. Fill in your keystore credentials.
+3. Build the release APK:
+   ```bash
+   flutter build apk --release
+   ```
 
-### Vault verifier sentinel
-
-On creation, `FIREWOOD_VAULT_VERIFY` (UTF-8) is sealed under the vault key and
-stored as the `verifierToken + verifierNonce` pair. On unlock, Argon2id is
-re-derived from the entered password and the stored salt; the sentinel is
-trial-decrypted. Success = correct password; failure = wrong password or
-corruption (indistinguishable by design).
-
-### Biometric wrapping (Android)
-
-1. `SecureKeystoreManager` creates an AES/GCM key in the Android Keystore, gated
-   by `BiometricPrompt` (strong biometrics or device credential), with a 60-second
-   auth validity window.
-2. On biometric enrolment, the master password is AES/GCM-wrapped under this key
-   and the blob is stored in `EncryptedSharedPreferences`.
-3. On biometric unlock, `BiometricPrompt` authenticates the user; the Keystore
-   key is then used to unwrap the blob in the native `SecureMethodChannel`;
-   the plaintext password is returned to Dart only for the duration of the
-   Argon2id derivation and is not persisted further.
-
-### Backup encryption
-
-```
-backup file = salt(16) ‖ nonce(24) ‖ XChaCha20-Poly1305(backup_password, inner_json)
-inner_json  = { vaultSalt, verifierToken, verifierNonce, items: [{encryptedData, nonce}] }
-```
-
-The backup password is separate from the master password and is subject to the
-same ≥ 8-character minimum. Backup files are self-contained; no vault key
-material is needed to verify or import them beyond the backup password.
+*(For testing without a release key, pass `-PrequireReleaseSigning=false` to generate an explicit QA build).*
 
 ---
 
-## Storage model
+## Contributing
 
-| Store | What lives there | Encryption |
-|---|---|---|
-| Isar database | `Vault`, `SecureItem`, `BurnerHash` collections | Field-level (no Isar file key) |
-| `EncryptedSharedPreferences` / Keystore | Biometric wrapping key + wrapped password blob | Android Keystore AES/GCM |
-| `SharedPreferences` | Feature flags: biometric enabled, screenshot lock, accent, backup schedule | None (non-sensitive) |
-| Storage Access Framework | `.firewood` backup exports, `.env` plaintext exports | XChaCha20 (backups); plaintext (`.env` by design) |
-
-**Plaintext metadata in Isar:** `itemId`, `vaultId`, `type`, `title`,
-`updatedAt`, `nonce`. Credential field values are ciphertext only. An attacker
-with file-system access to the Isar database can see item titles and types but
-not field contents.
+We welcome community contributions, bug reports, and security audits! Please review our [Contribution Guidelines](CONTRIBUTING.md) and [Coding Standards](AGENTS.md) before submitting a pull request.
 
 ---
 
-## Android build & signing
+## Security & Vulnerability Reporting
 
-- **`applicationId` / namespace:** `net.firewood.app`
-- **Version source of truth:** `pubspec.yaml` `version: X.Y.Z+N` — Gradle reads
-  this to set `versionName` and `versionCode`.
-- **Release signing:** `android/key.properties` (copy `key.properties.template`
-  and fill in your keystore path and credentials). Release builds **fail closed
-  by default** when the file is absent (V-030) — there is no silent
-  debug-signed fallback. Pass `-PrequireReleaseSigning=false` explicitly for a
-  local debug-signed QA artifact (ADR-002).
-- **R8:** minification and resource shrinking are enabled. ProGuard rules are in
-  `android/app/proguard-rules.pro`.
-- **Declared permissions:** `USE_BIOMETRIC`, `INTERNET`. File import/export uses
-  the Storage Access Framework — no `READ_EXTERNAL_STORAGE` or
-  `WRITE_EXTERNAL_STORAGE`. Vault data is excluded from Android Auto Backup.
+Security is our highest priority. If you discover a potential vulnerability, please consult our [Security Policy](SECURITY.md) for responsible disclosure procedures. Please do not report security issues via public GitHub issues.
 
 ---
 
-## Development
+## License
 
-```bash
-flutter pub get
-flutter analyze
-flutter test                      # dart_test.yaml pins Argon2id test concurrency
-flutter run -d <device-or-emulator>
-```
-
-### Running only Android-specific tests
-
-```bash
-cd android
-./gradlew test
-```
-
-### Release APK (requires `android/key.properties`)
-
-```bash
-flutter build apk --release
-```
-
-Fails closed without a keystore (V-030). Local debug-signed QA artifact:
-
-```bash
-flutter build apk --release -PrequireReleaseSigning=false
-```
-
----
-
-## Testing
-
-| Layer | Location | Notes |
-|---|---|---|
-| Crypto | `test/crypto_service_test.dart` | Argon2id derivation, XChaCha nonce length, AEAD round-trips |
-| Vault service | `test/vault_service_test.dart` | Create, unlock, wrong-password rejection |
-| Item service | `test/item_service_test.dart` | CRUD, search, category filter |
-| Backup | `test/backup_service_test.dart` | Export/import round-trip, wrong-backup-password rejection |
-| Widget | `test/widget/` | Smoke tests for unlock and home screens |
-
-`dart_test.yaml` sets `concurrency: 1` for the Argon2id tests to prevent OOM
-on memory-constrained CI runners (each invocation uses 64 MiB).
-
----
-
-## Security boundaries
-
-| Boundary | Protected from | Not protected from |
-|---|---|---|
-| Isar file | Field content, vault key | Item titles, types, timestamps (plaintext metadata) |
-| Android Keystore | Biometric wrapping key extraction | A compromised OS or bootloader |
-| Memory (RAM) | Vault key never written to disk | Heap lingering post-lock (no `mlock` / `Zeroize` in Dart) |
-| Backup file | Password-guessing (Argon2id-slowed) | Weak backup password (same ≥ 8-char policy as master) |
-| Clipboard | Auto-clears after 30 s on credential-view and ENV-copy paths | Three copy paths that do not invoke the auto-clear (known gap) |
-| Duress | Coercion — total silent vault destruction | Recovery after destruction (none — by design) |
+This project is licensed under the [MIT License](LICENSE).

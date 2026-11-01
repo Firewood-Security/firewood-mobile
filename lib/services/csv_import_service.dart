@@ -278,17 +278,19 @@ class CsvImportService {
     required SecretKey secretKey,
     String? targetBundle,
   }) async {
+    // Hold the foreground-flow guard across the WHOLE pipeline — picker,
+    // parse, confirmation and the encrypted writes — not just the picker:
+    // the import itself generates no pointer events, so an idle timeout
+    // armed by the confirm tap would otherwise fire mid-import and dump
+    // the user back to the lock screen (LockService postpones foreground
+    // idle locks while a flow is open; a real background exit still locks
+    // through the bounded idle timer).
+    LockService.beginForegroundFlow();
     try {
-      FilePickerResult? picked;
-      LockService.beginForegroundFlow();
-      try {
-        picked = await FilePicker.platform.pickFiles(
-          type: FileType.custom,
-          allowedExtensions: ['csv', 'txt'],
-        );
-      } finally {
-        LockService.endForegroundFlow();
-      }
+      final picked = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['csv', 'txt'],
+      );
 
       final path = picked?.files.single.path;
       if (path == null) return null;
@@ -345,6 +347,8 @@ class CsvImportService {
         );
       }
       return null;
+    } finally {
+      LockService.endForegroundFlow();
     }
   }
 

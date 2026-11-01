@@ -109,15 +109,20 @@ object AntiLeakActivityManager {
      * Returns a map of findings – caller should decide mitigation strategy.
      *
      * Detection signals:
+     *  - Root binaries & package managers (Magisk, KernelSU, APatch)
+     *  - Dynamic hooking frameworks (Frida memory map injection, Frida server)
+     *  - Attached debuggers / TracerPid
      *  - Developer options enabled
-     *  - USB debugging active
-     *  - Running in an emulator (optional, configurable)
      *  - Accessibility services with overlay permission enabled
      */
     fun auditEnvironment(context: Context): EnvironmentAuditResult {
         val findings = mutableListOf<String>()
 
-        // Check if developer options are likely enabled
+        // 1. Run Anti-Tampering & Root / Hook / Debugger checks
+        val tamperResult = AntiTamperGuard.performAudit(context)
+        findings.addAll(tamperResult.findings)
+
+        // 2. Check if developer options are likely enabled
         val devOptionsEnabled = try {
             val cls = Class.forName("android.provider.Settings\$Global")
             val getInt = cls.getMethod("getInt",
@@ -133,7 +138,7 @@ object AntiLeakActivityManager {
             findings.add("Developer options enabled")
         }
 
-        // Check for accessibility services (potential overlays/keyloggers)
+        // 3. Check for accessibility services (potential overlays/keyloggers)
         val accessibilityServices = try {
             val cls = Class.forName("android.provider.Settings\$Secure")
             val getString = cls.getMethod("getString",
@@ -148,7 +153,7 @@ object AntiLeakActivityManager {
             findings.add("Active accessibility services: $accessibilityServices")
         }
 
-        val isCompromised = findings.isNotEmpty()
+        val isCompromised = tamperResult.isCompromised || findings.isNotEmpty()
 
         return EnvironmentAuditResult(
             isCompromised = isCompromised,
@@ -179,3 +184,4 @@ data class EnvironmentAuditResult(
     val isCompromised: Boolean,
     val findings: List<String>
 )
+
